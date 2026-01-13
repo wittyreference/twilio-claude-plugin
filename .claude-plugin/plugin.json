@@ -2,7 +2,10 @@
   "name": "twilio-claude-plugin",
   "version": "1.0.0",
   "description": "Twilio CPaaS prototyping expertise for Claude Code - brings Voice, Messaging, Verify, Sync, TaskRouter, and ConversationRelay knowledge to any project",
-  "author": "wittyreference",
+  "author": {
+    "name": "wittyreference",
+    "url": "https://github.com/wittyreference"
+  },
   "repository": "https://github.com/wittyreference/twilio-claude-plugin",
   "license": "MIT",
   "keywords": [
