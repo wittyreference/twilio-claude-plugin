@@ -102,6 +102,44 @@ Automated guardrails that run during development:
 | `subagent-log.sh` | After Subagent | Logs workflow activity |
 | `notify-ready.sh` | On Stop | Desktop notification when done |
 
+> **⚠️ Known Limitation**: Due to a [Claude Code bug](https://github.com/anthropics/claude-code/issues/10225), plugin hooks may not execute automatically. To enable hooks, copy the configuration to your user settings:
+
+<details>
+<summary>Manual Hook Installation</summary>
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/plugins/cache/twilio-claude-plugin/twilio-claude-plugin/1.0.0/hooks/pre-write-validate.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/plugins/cache/twilio-claude-plugin/twilio-claude-plugin/1.0.0/hooks/pre-bash-validate.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+After adding, restart Claude Code with `Shift+Cmd+R` (macOS) or `Shift+Ctrl+R` (Linux).
+
+</details>
+
 ## TDD Workflow
 
 This plugin enforces Test-Driven Development:

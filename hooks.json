@@ -1,4 +1,5 @@
 {
+  "description": "Twilio development guardrails - blocks hardcoded credentials and enforces code standards",
   "hooks": {
     "PreToolUse": [
       {
