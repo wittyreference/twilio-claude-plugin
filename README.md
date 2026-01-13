@@ -17,18 +17,41 @@ git clone https://github.com/wittyreference/twilio-claude-plugin.git
 claude plugin add ./twilio-claude-plugin
 ```
 
+## Permissions
+
+Some commands require specific Claude Code permissions:
+
+| Command | Required Permission | Why |
+|---------|---------------------|-----|
+| `/twilio-docs` | `WebSearch`, `WebFetch` | Searches live Twilio documentation |
+| `/twilio-logs` | `Bash` | Runs `twilio debugger:logs:list` CLI command |
+
+If you encounter "auto-denied in dontAsk mode" errors, grant permissions via:
+```bash
+/permissions
+```
+
+Or add to your `~/.claude/settings.json`:
+```json
+{
+  "permissions": {
+    "allow": ["WebSearch", "WebFetch", "Bash"]
+  }
+}
+```
+
 ## What's Included
 
 ### Slash Commands (User-Invocable)
 
 These commands can be run directly in your Claude Code session:
 
-| Command | Description |
-|---------|-------------|
-| `/deploy [env]` | Deploy to Twilio Serverless with pre/post validation |
-| `/test [scope]` | Run tests with coverage requirements |
-| `/twilio-docs [topic]` | Search Twilio documentation |
-| `/twilio-logs` | Fetch and analyze Twilio debugger logs |
+| Command | Description | Permissions |
+|---------|-------------|-------------|
+| `/deploy [env]` | Deploy to Twilio Serverless with pre/post validation | Bash |
+| `/test [scope]` | Run tests with coverage requirements | Bash |
+| `/twilio-docs [topic]` | Search Twilio documentation | WebSearch |
+| `/twilio-logs` | Fetch and analyze Twilio debugger logs | Bash |
 
 ### Subagents (Claude-Invoked)
 
