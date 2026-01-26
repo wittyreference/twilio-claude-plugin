@@ -1,0 +1,11 @@
+{
+  "name": "twilio-claude-plugin",
+  "version": "1.0.0",
+  "plugins": [
+    {
+      "name": "twilio-claude-plugin",
+      "path": ".",
+      "description": "Twilio CPaaS prototyping expertise for Claude Code"
+    }
+  ]
+}
