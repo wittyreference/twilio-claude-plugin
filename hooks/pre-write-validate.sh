@@ -48,6 +48,32 @@ if echo "$CONTENT" | grep -qE "(authToken|AUTH_TOKEN)['\"]?\s*[:=]\s*['\"][a-f0-
 fi
 
 # ============================================
+# MAGIC TEST NUMBER GUARD
+# ============================================
+
+# Twilio magic test numbers (+15005550xxx) should only appear in test files
+if echo "$CONTENT" | grep -qE "\+1500555[0-9]{4}"; then
+    if [[ ! "$FILE_PATH" =~ (\.test\.|__tests__|\.spec\.|test/|tests/|\.env) ]]; then
+        echo "BLOCKED: Twilio magic test number detected in non-test file!" >&2
+        echo "" >&2
+        echo "Numbers matching +15005550xxx are Twilio test numbers." >&2
+        echo "They should only appear in test files, not production code." >&2
+        echo "" >&2
+        exit 2
+    fi
+fi
+
+# ============================================
+# NON-EVERGREEN NAMING WARNING (not blocking)
+# ============================================
+
+if echo "$CONTENT" | grep -qEi "(Improved|Enhanced|New|Better|Updated|Refactored)(Handler|Function|Service|Manager|Client|Helper|Util)"; then
+    echo "WARNING: Non-evergreen naming detected (e.g., 'ImprovedHandler', 'NewService')." >&2
+    echo "Consider a name that describes what it does, not when it was written." >&2
+    echo "" >&2
+fi
+
+# ============================================
 # ABOUTME VALIDATION FOR NEW JS FILES
 # ============================================
 

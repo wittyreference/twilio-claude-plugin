@@ -814,6 +814,147 @@ exports.handler = function(context, event, callback) {
 
 ---
 
+## TwiML Control Model
+
+**Critical**: In almost all cases, only ONE TwiML document controls a call at any given time.
+
+### Exception: Background Operations
+
+Some TwiML verbs start background processes that continue running even after the call moves to subsequent TwiML documents:
+
+- **`<Start><Stream>`** - Media streaming continues in the background
+- **`<Start><Recording>`** - Recording continues until explicitly stopped
+- **`<Start><Siprec>`** - SIPREC streaming continues in the background
+
+```javascript
+// Recording starts and continues through subsequent TwiML
+const start = twiml.start();
+start.recording({
+  recordingStatusCallback: '/recording-complete',
+  recordingStatusCallbackEvent: 'completed',
+});
+twiml.say('This is being recorded...');
+twiml.redirect('/next-handler'); // Recording continues!
+```
+
+> **Note**: The method is `.recording()`, NOT `.record()`. `twiml.start().recording({...})` is correct.
+
+### Key Implications
+
+1. **Updating participant TwiML exits current state**: If a participant is in a conference and you update their call with new TwiML, they immediately exit the conference and execute the new TwiML.
+
+2. **Conference teardown risk**: If the exiting participant had `endConferenceOnExit=true`, the entire conference tears down — appearing as a "dropped call" to other participants.
+
+3. **Call transfer in conference context**: "Transfer" means adding a new participant to the existing conference, NOT replacing TwiML.
+
+### Safe Conference Transfer Pattern
+
+```javascript
+// Add specialist to existing conference (they join, nobody leaves)
+await client.conferences('support-12345')
+  .participants
+  .create({
+    from: context.TWILIO_PHONE_NUMBER,
+    to: specialistNumber,
+    startConferenceOnEnter: true,
+    endConferenceOnExit: false
+  });
+
+// Agent can drop off by removing their participant:
+await client.conferences('support-12345')
+  .participants(agentCallSid)
+  .update({ status: 'completed' });
+```
+
+### Dangerous Pattern (Avoid)
+
+```javascript
+// DON'T: Update participant with new TwiML - exits them from conference
+await client.calls(participantCallSid)
+  .update({
+    twiml: '<Response><Dial>+15551234567</Dial></Response>'
+  });
+// This removes them from conference and may tear it down!
+```
+
+---
+
+## Conference via REST API (Preferred)
+
+Use the Conferences Participants API for programmatic control:
+
+```javascript
+// Create conference by adding first participant
+const participant = await client.conferences('my-conference')
+  .participants
+  .create({
+    from: context.TWILIO_PHONE_NUMBER,
+    to: participantNumber,
+    timeout: 30,
+    timeLimit: 600,
+    startConferenceOnEnter: true,
+    endConferenceOnExit: false,
+    muted: false,
+    beep: true
+  });
+
+// Add additional participants
+await client.conferences('my-conference')
+  .participants
+  .create({
+    from: context.TWILIO_PHONE_NUMBER,
+    to: anotherParticipant,
+    timeout: 30,
+    timeLimit: 600
+  });
+
+// End conference
+await client.conferences(conferenceSid)
+  .update({ status: 'completed' });
+```
+
+### Finding Conferences by Name
+
+```javascript
+const conferences = await client.conferences.list({
+  friendlyName: 'my-conference',
+  status: 'in-progress',
+  limit: 1
+});
+
+if (conferences.length > 0) {
+  const conference = conferences[0];
+  console.log(`SID: ${conference.sid}`);
+}
+```
+
+---
+
+## Logging and Response Rules
+
+Twilio Functions generate debugger alerts based on log level:
+
+| Log Level | Alert Code | Effect |
+|-----------|------------|--------|
+| `console.log` | None | Silent — use for all operational logging |
+| `console.warn` | 82004 | Generates warning alert — avoid |
+| `console.error` | 82005 | Generates error alert — avoid |
+
+Use `console.log` for **all** logging, including error conditions and catch blocks.
+
+**Response bodies**: Always pass a string to `Twilio.Response.setBody()`, not a plain object. Use `JSON.stringify()` and set `Content-Type: application/json`. Passing an object causes `Buffer.from(object)` TypeError in the runtime.
+
+```javascript
+// WRONG — triggers Buffer TypeError
+response.setBody({ success: true });
+
+// RIGHT — explicit JSON serialization
+response.appendHeader('Content-Type', 'application/json');
+response.setBody(JSON.stringify({ success: true }));
+```
+
+---
+
 ## File Naming Conventions
 
 | Suffix | Access Level | Use Case |

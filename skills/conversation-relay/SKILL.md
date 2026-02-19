@@ -25,7 +25,7 @@ const connect = twiml.connect();
 
 connect.conversationRelay({
   url: 'wss://your-server.com/relay',
-  voice: 'Polly.Amy',
+  voice: 'Google.en-US-Neural2-F',
   language: 'en-US'
 });
 
@@ -36,18 +36,19 @@ return callback(null, twiml);
 ```javascript
 connect.conversationRelay({
   url: 'wss://your-server.com/relay',        // WebSocket endpoint
-  voice: 'Polly.Amy',                        // TTS voice
+  voice: 'Google.en-US-Neural2-F',           // TTS voice (use Google Neural, not Polly)
   language: 'en-US',                         // Language code
   transcriptionProvider: 'google',           // 'google' or 'deepgram'
   speechModel: 'telephony',                  // Speech recognition model
   profanityFilter: 'true',                   // Filter profanity
   dtmfDetection: 'true',                     // Detect DTMF tones
   interruptible: 'true',                     // Allow interruptions
-  interruptByDtmf: 'true',                   // DTMF can interrupt
   welcomeGreeting: 'Hello, how can I help?', // Initial greeting
   partialPrompts: 'true'                     // Enable partial transcripts
 });
 ```
+
+**Note**: `interruptByDtmf` is NOT a valid ConversationRelay attribute. DTMF detection is controlled by `dtmfDetection`, and interruption behavior is controlled by `interruptible`.
 
 ## WebSocket Message Protocol
 
@@ -70,9 +71,11 @@ connect.conversationRelay({
   "type": "prompt",
   "voicePrompt": "Hello, I need help with my account",
   "confidence": 0.95,
-  "isFinal": true
+  "last": true
 }
 ```
+
+> **Critical**: The field is `last`, NOT `isFinal`. Checking `isFinal` silently drops all follow-up utterances.
 
 #### DTMF Message
 ```json
@@ -129,7 +132,7 @@ wss.on('connection', (ws) => {
         break;
 
       case 'prompt':
-        if (message.isFinal) {
+        if (message.last) {
           // Process with your LLM
           const response = await processWithLLM(message.voicePrompt);
           ws.send(JSON.stringify({
@@ -194,16 +197,18 @@ async function processWithLLM(userMessage) {
 
 ## Voice Options
 
-### Amazon Polly Voices
-- `Polly.Amy` - British English, Female
-- `Polly.Brian` - British English, Male
-- `Polly.Joanna` - US English, Female
-- `Polly.Matthew` - US English, Male
-- `Polly.Ivy` - US English, Child Female
+> **Important**: Use Google Neural voices for ConversationRelay. Polly voices may be blocked (error 64101).
 
-### Google Voices
-- `Google.en-US-Neural2-A` - US English Neural
-- `Google.en-GB-Neural2-B` - British English Neural
+### Google Neural Voices (Recommended)
+- `Google.en-US-Neural2-F` - US English, Female (recommended default)
+- `Google.en-US-Neural2-A` - US English, Male
+- `Google.en-GB-Neural2-B` - British English, Male
+- `Google.en-GB-Neural2-F` - British English, Female
+
+### Amazon Polly Voices (May Not Work)
+- `Polly.Amy` - British English, Female
+- `Polly.Joanna` - US English, Female
+- Polly voices may be blocked by ConversationRelay with error 64101. Use Google Neural voices instead.
 
 ## Best Practices
 
@@ -243,7 +248,7 @@ For local WebSocket development, use ngrok to expose your local server:
    ```javascript
    connect.conversationRelay({
      url: 'wss://abc123.ngrok.io/relay',  // Use the ngrok URL
-     voice: 'Polly.Amy'
+     voice: 'Google.en-US-Neural2-F'
    });
    ```
 

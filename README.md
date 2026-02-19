@@ -52,6 +52,10 @@ These commands can be run directly in your Claude Code session:
 | `/test [scope]` | Run tests with coverage requirements | Bash |
 | `/twilio-docs [topic]` | Search Twilio documentation | WebSearch |
 | `/twilio-logs` | Fetch and analyze Twilio debugger logs | Bash |
+| `/preflight` | Verify CLI profile, env vars, and auth before starting work | Bash |
+| `/commit [scope]` | Stage and commit with pre-commit validation | Bash |
+| `/push` | Push to remote with test verification | Bash |
+| `/context [action]` | Context optimization — summarize, load, or analyze | — |
 
 ### Subagents (Claude-Invoked)
 
@@ -82,6 +86,10 @@ The plugin loads domain knowledge automatically when relevant:
 
 **Reference:**
 - `twilio-cli` - Comprehensive CLI command reference
+- `twilio-invariants` - 9 proven gotchas that cause silent failures (credential formats, protocol fields, deployment traps)
+- `voice-use-case-map` - Definitive product mapping for 10 voice use cases (notifications through AI transcription)
+- `deep-validation` - Validation patterns beyond HTTP 200 (status polling, debugger checks, Voice Insights)
+- `tdd-workflow` - TDD Red/Green/Refactor patterns for Twilio projects
 
 **Context Engineering:**
 - `context-fundamentals` - Context management principles
@@ -95,11 +103,12 @@ Automated guardrails that run during development:
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| `pre-write-validate.sh` | Before Write/Edit | Blocks hardcoded credentials |
-| `pre-bash-validate.sh` | Before Bash | Blocks `--no-verify`, validates deploys |
+| `pre-write-validate.sh` | Before Write/Edit | Blocks hardcoded credentials, magic test numbers in non-test files, non-evergreen naming |
+| `pre-bash-validate.sh` | Before Bash | Blocks `--no-verify`, validates deploys, coverage warnings |
 | `post-write.sh` | After Write/Edit | Auto-lints JavaScript files |
 | `post-bash.sh` | After Bash | Deployment notifications |
 | `subagent-log.sh` | After Subagent | Logs workflow activity |
+| `session-checklist.sh` | On Stop | Warns about uncommitted changes and unpushed commits |
 | `notify-ready.sh` | On Stop | Desktop notification when done |
 
 > **⚠️ Known Limitation**: Due to a [Claude Code bug](https://github.com/anthropics/claude-code/issues/10225), plugin hooks may not execute automatically. To enable hooks, copy the configuration to your user settings:

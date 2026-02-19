@@ -90,6 +90,15 @@ if echo "$COMMAND" | grep -qE "(twilio\s+serverless:deploy|npm\s+run\s+deploy)";
     fi
     echo "✓ Tests passed"
 
+    # Check coverage if available
+    if npm run test:coverage --silent 2>/dev/null; then
+        COVERAGE=$(npm run test:coverage --silent 2>&1 | grep -E "All files\s*\|" | awk -F'|' '{print $2}' | tr -d ' ' | cut -d'.' -f1)
+        if [ -n "$COVERAGE" ] && [ "$COVERAGE" -lt 80 ] 2>/dev/null; then
+            echo "WARNING: Test coverage is ${COVERAGE}% (recommended: 80%+)." >&2
+            echo "" >&2
+        fi
+    fi
+
     # Run linting
     echo "Running linter..."
     if ! npm run lint --silent 2>/dev/null; then

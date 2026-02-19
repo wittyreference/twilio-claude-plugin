@@ -246,12 +246,30 @@ For US messaging, A2P 10DLC registration is required for reliable delivery.
 | Medium | 10 msg/sec | Marketing, notifications |
 | High | Up to 225+ msg/sec | Large enterprises |
 
+### Checking A2P Status
+
+```bash
+# Check brand registrations
+twilio api:messaging:v1:brand-registrations:list
+
+# Check A2P campaigns on a Messaging Service
+twilio api:messaging:v1:services:us-app-to-person:list \
+  --messaging-service-sid $TWILIO_MESSAGING_SERVICE_SID
+```
+
+### Workarounds During Development
+
+- **Toll-free numbers**: Don't require A2P 10DLC (but need toll-free verification)
+- **Short codes**: Pre-approved for high-volume, but expensive
+- **Trial accounts**: May have different filtering behavior
+
 ### Gotchas
 
 - Registration can take days/weeks
 - Unregistered numbers have very low throughput
 - Different campaign types have different requirements
 - Opt-in evidence may be required
+- Without registration, messages get error 30034 (blocked by carrier)
 
 ---
 
