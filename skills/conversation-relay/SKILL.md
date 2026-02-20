@@ -224,7 +224,7 @@ async function processWithLLM(userMessage) {
 
 ## Local Development
 
-> **Note**: For standard voice handlers (IVR, call routing, SMS), use `twilio serverless:start --ngrok --live` instead. It includes built-in tunneling and matches the production runtime. Only use standalone ngrok (below) for ConversationRelay, which requires raw WebSocket connections that Serverless can't host.
+> **Note**: ConversationRelay requires **two servers** running locally: (1) `twilio serverless:start --ngrok --live` for the TwiML function that initiates the call with `<Connect><ConversationRelay>`, and (2) a standalone ngrok tunnel exposing your WebSocket server that handles the AI conversation. Serverless can't host WebSocket connections, so the WebSocket piece needs its own tunnel.
 
 ### ngrok for WebSocket Development
 
