@@ -260,13 +260,13 @@ twilio serverless:promote \
 
 | Building... | Use | Why |
 |-------------|-----|-----|
-| Voice IVR, call routing, SMS handlers | `twilio serverless:start` | Built-in ngrok tunnel, auto-reloads, matches production runtime |
-| ConversationRelay (WebSocket) | ngrok + local WebSocket server | Serverless can't host WebSocket servers |
+| Voice IVR, call routing, SMS handlers | `twilio serverless:start --ngrok --live` | Built-in ngrok tunnel, auto-reloads, matches production runtime |
+| ConversationRelay (voice AI) | Serverless for TwiML **+** ngrok for WebSocket server | TwiML handler runs on Serverless; LLM WebSocket needs separate ngrok tunnel |
 | Voice SDK (browser calling) | Express server + ngrok | Needs custom token endpoint + WebSocket |
 
 **Default**: Always start with `twilio serverless:start`. It includes built-in ngrok tunneling (`--ngrok` flag), auto-reloads on file changes (`--live` flag), and runs the same runtime as production.
 
-Only reach for standalone ngrok when you need a protocol that Twilio Serverless doesn't support (WebSocket, SSE).
+Add standalone ngrok **alongside** Serverless when you need a protocol it doesn't support (WebSocket, SSE). ConversationRelay is the common case: Serverless serves the TwiML that initiates the call, while a separate ngrok tunnel exposes the WebSocket server that handles the AI conversation.
 
 ---
 
