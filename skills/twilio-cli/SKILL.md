@@ -256,6 +256,20 @@ twilio serverless:promote \
 
 ---
 
+## Local Development Decision Tree
+
+| Building... | Use | Why |
+|-------------|-----|-----|
+| Voice IVR, call routing, SMS handlers | `twilio serverless:start` | Built-in ngrok tunnel, auto-reloads, matches production runtime |
+| ConversationRelay (WebSocket) | ngrok + local WebSocket server | Serverless can't host WebSocket servers |
+| Voice SDK (browser calling) | Express server + ngrok | Needs custom token endpoint + WebSocket |
+
+**Default**: Always start with `twilio serverless:start`. It includes built-in ngrok tunneling (`--ngrok` flag), auto-reloads on file changes (`--live` flag), and runs the same runtime as production.
+
+Only reach for standalone ngrok when you need a protocol that Twilio Serverless doesn't support (WebSocket, SSE).
+
+---
+
 ## Critical Gotchas
 
 | Issue | Problem | Solution |

@@ -222,7 +222,11 @@ async function processWithLLM(userMessage) {
 
 5. **Graceful Endings**: Send the `end` message when the conversation should conclude.
 
-## Local Development with ngrok
+## Local Development
+
+> **Note**: For standard voice handlers (IVR, call routing, SMS), use `twilio serverless:start --ngrok --live` instead. It includes built-in tunneling and matches the production runtime. Only use standalone ngrok (below) for ConversationRelay, which requires raw WebSocket connections that Serverless can't host.
+
+### ngrok for WebSocket Development
 
 For local WebSocket development, use ngrok to expose your local server:
 

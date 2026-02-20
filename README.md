@@ -2,6 +2,28 @@
 
 A Claude Code plugin that brings Twilio CPaaS expertise to any project. Provides specialized agents, commands, and skills for building voice, messaging, and real-time communication applications with Twilio.
 
+## Prerequisites
+
+The plugin requires these tools to be installed:
+
+| Tool | Required Version | Purpose |
+|------|-----------------|---------|
+| Node.js | 20+ | Runtime for Twilio Functions |
+| npm | (bundled with Node) | Package management |
+| Twilio CLI | Latest | Deploy, manage numbers, debug |
+| Serverless Plugin | Latest | `twilio serverless:start` and `serverless:deploy` |
+| Claude Code | Latest | AI development environment |
+
+**Quick install**: Run the dependency installer to check and install everything:
+
+```bash
+# Clone the plugin first, then run the installer
+git clone https://github.com/wittyreference/twilio-claude-plugin.git
+./twilio-claude-plugin/scripts/install-deps.sh
+```
+
+The script is idempotent — it skips anything already installed and never upgrades existing tools.
+
 ## Installation
 
 Install directly from GitHub:
@@ -56,6 +78,8 @@ These commands can be run directly in your Claude Code session:
 | `/commit [scope]` | Stage and commit with pre-commit validation | Bash |
 | `/push` | Push to remote with test verification | Bash |
 | `/context [action]` | Context optimization — summarize, load, or analyze | — |
+| `/validate [type] [SID]` | Deep validation of Twilio resources beyond HTTP 200 | — |
+| `/wrap-up [scope]` | End-of-session review — capture learnings, update docs | — |
 
 ### Subagents (Claude-Invoked)
 
