@@ -2,7 +2,16 @@
 # ABOUTME: Pre-bash validation hook for git and deployment safety.
 # ABOUTME: Blocks dangerous git operations and validates test status before deploy.
 
-COMMAND="${CLAUDE_TOOL_INPUT_COMMAND:-}"
+# Claude Code passes tool input as JSON on stdin, not env vars.
+HOOK_INPUT=""
+if [ ! -t 0 ]; then
+    HOOK_INPUT="$(cat)"
+fi
+
+COMMAND=""
+if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
+    COMMAND="$(echo "$HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+fi
 
 # Exit if no command
 if [ -z "$COMMAND" ]; then
@@ -33,6 +42,135 @@ if echo "$COMMAND" | grep -qE "git\s+commit.*\s-n(\s|$)"; then
     echo "Pre-commit hooks must run to ensure code quality." >&2
     echo "" >&2
     exit 2
+fi
+
+# ============================================
+# PRE-COMMIT DOCUMENTATION REMINDER
+# ============================================
+
+# Check if this is a git commit (but not the --no-verify checks above which already exited)
+if echo "$COMMAND" | grep -qE "^git\s+commit"; then
+    # Determine project root and source environment detection
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    # ============================================
+    # META REFERENCE LEAKAGE WARNING
+    # ============================================
+    # Warn if staged files contain .meta/ references (potential leakage)
+    if git diff --staged 2>/dev/null | grep -qE '\.meta/'; then
+        echo "" >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "⚠️  WARNING: Staged changes reference .meta/" >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "" >&2
+        echo "This may indicate meta-development content leaking into shipped code." >&2
+        echo "Review with: git diff --staged | grep '.meta/'" >&2
+        echo "" >&2
+        echo "If this is intentional documentation about the separation, proceed." >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "" >&2
+    fi
+
+    fi
+
+    # ============================================
+    # ============================================
+        STAGED_FILES=$(git diff --staged --name-only 2>/dev/null)
+        if [ -n "$STAGED_FILES" ]; then
+            CLEARED_COUNT=0
+            TEMP_FILE=$(mktemp)
+            while IFS= read -r line; do
+                if echo "$line" | grep -q "^\- \["; then
+                    # Extract doc path: text between "• " and " - "
+                    DOC_PATH=$(echo "$line" | sed -n 's/.*• \(.*\) - .*/\1/p')
+                    # Resolve aliases
+                    case "$DOC_PATH" in
+                        "Root CLAUDE.md") RESOLVED="CLAUDE.md" ;;
+                        ".meta/design-decisions.md") RESOLVED="DESIGN_DECISIONS.md" ;;
+                        "Verify doc-map.md"*) RESOLVED=".claude/references/doc-map.md" ;;
+                        ".meta/"*) RESOLVED="" ;;  # gitignored, skip
+                        "Relevant "*) RESOLVED="" ;;  # too vague, skip
+                        *) RESOLVED="$DOC_PATH" ;;
+                    esac
+                    # Check if resolved path is in staged files
+                    if [ -n "$RESOLVED" ] && echo "$STAGED_FILES" | grep -qF "$RESOLVED"; then
+                        TIMESTAMP=$(echo "$line" | sed -n 's/.*\[\(.*\)\].*/\1/p')
+                        CLEARED_COUNT=$((CLEARED_COUNT + 1))
+                    else
+                        echo "$line" >> "$TEMP_FILE"
+                    fi
+                else
+                    echo "$line" >> "$TEMP_FILE"
+                fi
+            if [ "$CLEARED_COUNT" -gt 0 ]; then
+                echo "" >&2
+            fi
+        fi
+    fi
+
+    # ============================================
+    # PLUGIN SYNC AWARENESS (Non-blocking)
+    # ============================================
+    SYNC_MAP="$PROJECT_ROOT/.claude/plugin-sync-map.json"
+    if [[ -f "$SYNC_MAP" ]] && command -v jq &>/dev/null; then
+        STAGED_LIST=$(git diff --staged --name-only 2>/dev/null)
+        if [[ -n "$STAGED_LIST" ]]; then
+            SYNCABLE_PATHS=$(jq -r '.mappings | to_entries[] | .value[] | .factory' "$SYNC_MAP" 2>/dev/null)
+            SYNCABLE_STAGED=0
+            while IFS= read -r staged_file; do
+                if echo "$SYNCABLE_PATHS" | grep -qF "$staged_file"; then
+                    SYNCABLE_STAGED=$((SYNCABLE_STAGED + 1))
+                fi
+            done <<< "$STAGED_LIST"
+            if [[ "$SYNCABLE_STAGED" -gt 0 ]]; then
+                echo "Note: $SYNCABLE_STAGED syncable file(s) staged. Plugin may need updating after commit." >&2
+            fi
+        fi
+    fi
+
+    # ============================================
+    # COMMIT CHECKLIST PROMPT (Non-blocking)
+    # ============================================
+    echo "" >&2
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+    echo "COMMIT CHECKLIST" >&2
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+    echo "  [ ] Updated .meta/todo.md?" >&2
+    echo "  [ ] Captured learnings in .claude/learnings.md?" >&2
+    echo "  [ ] Design decision documented if architectural?" >&2
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+    echo "" >&2
+
+    # ============================================
+    # PENDING DOCUMENTATION ACTIONS (BLOCKING)
+    # ============================================
+    # Block commit if pending-actions.md has items (unless escape hatch used)
+        # Count non-empty, non-header lines (actual action items)
+        if [ "$ACTION_COUNT" -gt 0 ]; then
+            echo "" >&2
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+            echo "PENDING DOCUMENTATION ACTIONS ($ACTION_COUNT items)" >&2
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+            echo "" >&2
+            # Show the action items (lines starting with "- [")
+            echo "" >&2
+
+            # Check for escape hatch (environment variable)
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "" >&2
+            else
+                echo "BLOCKED: Pending documentation actions must be addressed!" >&2
+                echo "" >&2
+                echo "Options:" >&2
+                echo "  1. Address the pending actions and clear the file" >&2
+                echo "" >&2
+                echo "To clear after addressing:" >&2
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "" >&2
+                exit 2
+            fi
+        fi
+    fi
 fi
 
 # ============================================
@@ -90,13 +228,58 @@ if echo "$COMMAND" | grep -qE "(twilio\s+serverless:deploy|npm\s+run\s+deploy)";
     fi
     echo "✓ Tests passed"
 
-    # Check coverage if available
-    if npm run test:coverage --silent 2>/dev/null; then
-        COVERAGE=$(npm run test:coverage --silent 2>&1 | grep -E "All files\s*\|" | awk -F'|' '{print $2}' | tr -d ' ' | cut -d'.' -f1)
-        if [ -n "$COVERAGE" ] && [ "$COVERAGE" -lt 80 ] 2>/dev/null; then
-            echo "WARNING: Test coverage is ${COVERAGE}% (recommended: 80%+)." >&2
-            echo "" >&2
+    # Check code coverage (80% threshold)
+    echo "Checking code coverage..."
+    COVERAGE_MIN=80
+    COVERAGE_SUMMARY="coverage/coverage-summary.json"
+
+    # Run tests with coverage if summary doesn't exist or is stale
+    if [ ! -f "$COVERAGE_SUMMARY" ] || [ "package.json" -nt "$COVERAGE_SUMMARY" ]; then
+        npm test -- --coverage --coverageReporters=json-summary --silent 2>/dev/null
+    fi
+
+    if [ -f "$COVERAGE_SUMMARY" ] && command -v jq &> /dev/null; then
+        # Extract coverage percentages
+        STATEMENTS=$(jq -r '.total.statements.pct // 0' "$COVERAGE_SUMMARY" 2>/dev/null)
+        BRANCHES=$(jq -r '.total.branches.pct // 0' "$COVERAGE_SUMMARY" 2>/dev/null)
+        FUNCTIONS=$(jq -r '.total.functions.pct // 0' "$COVERAGE_SUMMARY" 2>/dev/null)
+        LINES=$(jq -r '.total.lines.pct // 0' "$COVERAGE_SUMMARY" 2>/dev/null)
+
+        # Check if any metric is below threshold
+        COVERAGE_FAILED=false
+        FAILED_METRICS=""
+
+        # Use awk for float comparison
+        if [ "$(echo "$STATEMENTS < $COVERAGE_MIN" | bc -l 2>/dev/null || echo "0")" = "1" ]; then
+            COVERAGE_FAILED=true
+            FAILED_METRICS="${FAILED_METRICS}statements: ${STATEMENTS}%, "
         fi
+        if [ "$(echo "$BRANCHES < $COVERAGE_MIN" | bc -l 2>/dev/null || echo "0")" = "1" ]; then
+            COVERAGE_FAILED=true
+            FAILED_METRICS="${FAILED_METRICS}branches: ${BRANCHES}%, "
+        fi
+
+        if [ "$COVERAGE_FAILED" = true ]; then
+            FAILED_METRICS=$(echo "$FAILED_METRICS" | sed 's/, $//')
+            echo "" >&2
+            echo "BLOCKED: Code coverage below ${COVERAGE_MIN}% threshold!" >&2
+            echo "" >&2
+            echo "Failed metrics: $FAILED_METRICS" >&2
+            echo "" >&2
+            echo "Coverage summary:" >&2
+            echo "  Statements: ${STATEMENTS}%" >&2
+            echo "  Branches:   ${BRANCHES}%" >&2
+            echo "  Functions:  ${FUNCTIONS}%" >&2
+            echo "  Lines:      ${LINES}%" >&2
+            echo "" >&2
+            echo "Add tests to increase coverage before deploying." >&2
+            echo "Run 'npm test -- --coverage' to see uncovered lines." >&2
+            echo "" >&2
+            exit 2
+        fi
+        echo "✓ Coverage check passed (statements: ${STATEMENTS}%, branches: ${BRANCHES}%)"
+    else
+        echo "⚠️  Coverage check skipped (missing coverage report or jq)"
     fi
 
     # Run linting
@@ -119,6 +302,7 @@ if echo "$COMMAND" | grep -qE "(twilio\s+serverless:deploy|npm\s+run\s+deploy)";
         echo ""
         echo "Pre-deployment checks:"
         echo "  ✓ All tests passing"
+        echo "  ✓ Coverage meets 80% threshold"
         echo "  ✓ Linting passing"
         echo ""
     fi

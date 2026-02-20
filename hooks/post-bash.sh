@@ -2,7 +2,16 @@
 # ABOUTME: Post-bash hook for tracking command completions.
 # ABOUTME: Logs deployment completions and sends notifications for key operations.
 
-COMMAND="${CLAUDE_TOOL_INPUT_COMMAND:-}"
+# Claude Code passes tool input as JSON on stdin, not env vars.
+HOOK_INPUT=""
+if [ ! -t 0 ]; then
+    HOOK_INPUT="$(cat)"
+fi
+
+COMMAND=""
+if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
+    COMMAND="$(echo "$HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+fi
 
 # Exit if no command
 if [ -z "$COMMAND" ]; then

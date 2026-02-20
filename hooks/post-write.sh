@@ -2,7 +2,16 @@
 # ABOUTME: Post-write hook for auto-linting JavaScript files.
 # ABOUTME: Runs ESLint with auto-fix after Write/Edit operations on JS files.
 
-FILE_PATH="${CLAUDE_TOOL_INPUT_FILE_PATH:-}"
+# Claude Code passes tool input as JSON on stdin, not env vars.
+HOOK_INPUT=""
+if [ ! -t 0 ]; then
+    HOOK_INPUT="$(cat)"
+fi
+
+FILE_PATH=""
+if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
+    FILE_PATH="$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)"
+fi
 
 # Exit early if no file path
 if [ -z "$FILE_PATH" ]; then
@@ -21,12 +30,9 @@ fi
 
 # Run ESLint with auto-fix if file exists
 if [ -f "$FILE_PATH" ]; then
-    # Check if npx is available
     if command -v npx &> /dev/null; then
-        # Run ESLint quietly, only show if there are unfixable issues
         LINT_OUTPUT=$(npx eslint "$FILE_PATH" --fix 2>&1)
         LINT_EXIT=$?
-
         if [ $LINT_EXIT -ne 0 ] && [ -n "$LINT_OUTPUT" ]; then
             echo "ESLint found issues in $(basename "$FILE_PATH"):"
             echo "$LINT_OUTPUT" | head -20

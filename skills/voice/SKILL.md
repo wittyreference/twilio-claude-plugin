@@ -955,6 +955,38 @@ response.setBody(JSON.stringify({ success: true }));
 
 ---
 
+---
+
+## Gotchas
+
+### Conference Participants API vs TwiML Conference
+
+The Participants API and TwiML Conference verb have different parameter formats:
+
+| Parameter | Participants API | TwiML Conference |
+|-----------|-----------------|---------------------|
+| Record / record | Boolean: true or false | String: record-from-start, record-from-answer, etc. |
+
+Passing TwiML values to the Participants API (e.g., Record: record-from-start) returns HTTP 400.
+
+### Recording Callback URLs Must Be Absolute
+
+Start Recording requires absolute callback URLs. Relative paths trigger error 11200. The recording completes, but the status callback never fires.
+
+### Dial action URL Should Not Be the Inbound Handler
+
+When Dial action is set to the same handler, it fires again after the Dial completes. If the handler creates one-time resources, the second invocation produces errors. Use a dedicated Dial-complete handler.
+
+### Conference Recording Captures Hold Music
+
+When using Record=true on the Conference Participants API, recording starts from conference creation. Hold music before the agent joins is recorded. Transcripts get dominated by music tags.
+
+### Avoid Duplicate Recordings
+
+Do not combine --record CLI flag with Start Recording TwiML. This creates two recordings (one OutboundAPI 1-channel, one TwiML 2-channel). Pick one method.
+
+---
+
 ## File Naming Conventions
 
 | Suffix | Access Level | Use Case |
