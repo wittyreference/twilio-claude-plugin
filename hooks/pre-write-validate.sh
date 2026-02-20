@@ -2,8 +2,18 @@
 # ABOUTME: Pre-write validation hook for credential safety and ABOUTME enforcement.
 # ABOUTME: Blocks writes containing hardcoded Twilio credentials or missing required headers.
 
-FILE_PATH="${CLAUDE_TOOL_INPUT_FILE_PATH:-}"
-CONTENT="${CLAUDE_TOOL_INPUT_CONTENT:-}"
+# Claude Code passes tool input as JSON on stdin, not env vars.
+HOOK_INPUT=""
+if [ ! -t 0 ]; then
+    HOOK_INPUT="$(cat)"
+fi
+
+FILE_PATH=""
+CONTENT=""
+if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
+    FILE_PATH="$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)"
+    CONTENT="$(echo "$HOOK_INPUT" | jq -r '.tool_input.content // .tool_input.new_string // empty' 2>/dev/null)"
+fi
 
 # Exit early if no content to validate
 if [ -z "$CONTENT" ]; then
@@ -13,6 +23,13 @@ fi
 # ============================================
 # CREDENTIAL SAFETY CHECK
 # ============================================
+
+# Skip credential checks for test files, docs, and env examples
+if [[ "$FILE_PATH" =~ \.test\.(js|ts)$ ]] || [[ "$FILE_PATH" =~ \.spec\.(js|ts)$ ]] || \
+   [[ "$FILE_PATH" =~ __tests__/ ]] || [[ "$FILE_PATH" =~ \.md$ ]] || \
+   [[ "$FILE_PATH" =~ \.env\.example$ ]] || [[ "$FILE_PATH" =~ \.env\.sample$ ]]; then
+    exit 0
+fi
 
 # Pattern for Twilio Account SID (not in env var reference)
 if echo "$CONTENT" | grep -E "AC[a-f0-9]{32}" | grep -vqE "(process\.env|context\.|TWILIO_ACCOUNT_SID|ACCOUNT_SID)"; then
@@ -77,11 +94,8 @@ fi
 # ABOUTME VALIDATION FOR NEW JS FILES
 # ============================================
 
-# Check if this is a new JavaScript function file (not a test)
 if [[ "$FILE_PATH" =~ functions/.*\.js$ ]] && [[ ! "$FILE_PATH" =~ \.test\.js$ ]]; then
-    # Check if file doesn't exist yet (new file)
     if [ ! -f "$FILE_PATH" ]; then
-        # Validate ABOUTME is present in content being written
         if ! echo "$CONTENT" | head -5 | grep -q "// ABOUTME:"; then
             echo "BLOCKED: New function file missing ABOUTME comment!" >&2
             echo "" >&2
@@ -89,10 +103,6 @@ if [[ "$FILE_PATH" =~ functions/.*\.js$ ]] && [[ ! "$FILE_PATH" =~ \.test\.js$ ]
             echo "" >&2
             echo "// ABOUTME: [What this file does - action-oriented]" >&2
             echo "// ABOUTME: [Additional context - key behaviors, dependencies]" >&2
-            echo "" >&2
-            echo "Example:" >&2
-            echo "// ABOUTME: Handles incoming voice calls with greeting and input gathering." >&2
-            echo "// ABOUTME: Uses Polly.Amy voice and supports DTMF and speech input." >&2
             echo "" >&2
             exit 2
         fi
