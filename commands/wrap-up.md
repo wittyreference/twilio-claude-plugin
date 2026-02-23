@@ -48,11 +48,27 @@ For each changed file, determine if documentation needs updating:
 
 Only update docs where the session's changes actually warrant it. Don't touch docs for unrelated areas.
 
-### 4. Update Todo
+### 4. Sync Auto-Memory and Shipped Docs
+
+**Promote outward**: Check auto-memory for entries that should be in shipped docs:
+
+| Entry Type | Promote To |
+|------------|------------|
+| API/SDK gotcha (clear domain) | Domain CLAUDE.md Gotchas section |
+| Cross-cutting gotcha | A shared gotchas or references doc |
+| CLI quirk | CLI reference doc |
+| High-impact rule | Project CLAUDE.md invariants |
+| Per-developer convention | Keep in auto-memory |
+
+After promoting, replace the detailed item with a pointer (e.g., "See voice/CLAUDE.md#gotchas"). Don't delete — pointers prevent re-discovery of the same gotcha.
+
+**Capture inward**: Add session learnings that should persist across sessions to auto-memory.
+
+### 5. Update Todo
 
 If the session completed or progressed a tracked task, update the project's todo or task tracker.
 
-### 5. Summary
+### 6. Summary
 
 Output what was updated:
 

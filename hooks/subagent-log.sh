@@ -28,6 +28,12 @@ fi
     echo "---"
 } >> "$LOG_FILE"
 
+# Trigger learning exercise generation after autonomous work completes
+LEARNING_HOOK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/generate-learning-exercises.sh"
+if [ -x "$LEARNING_HOOK" ]; then
+    "$LEARNING_HOOK" 2>/dev/null || true
+fi
+
 # Keep log file from growing too large (keep last 500 lines)
 if [ -f "$LOG_FILE" ]; then
     LINES=$(wc -l < "$LOG_FILE" | tr -d ' ')
