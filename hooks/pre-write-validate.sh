@@ -28,6 +28,7 @@ fi
 if [[ "$FILE_PATH" =~ \.test\.(js|ts)$ ]] || [[ "$FILE_PATH" =~ \.spec\.(js|ts)$ ]] || \
    [[ "$FILE_PATH" =~ __tests__/ ]] || [[ "$FILE_PATH" =~ \.md$ ]] || \
    [[ "$FILE_PATH" =~ \.env\.example$ ]] || [[ "$FILE_PATH" =~ \.env\.sample$ ]]; then
+    # Test files, docs, and env examples may contain example credentials
     exit 0
 fi
 
@@ -65,37 +66,14 @@ if echo "$CONTENT" | grep -qE "(authToken|AUTH_TOKEN)['\"]?\s*[:=]\s*['\"][a-f0-
 fi
 
 # ============================================
-# MAGIC TEST NUMBER GUARD
-# ============================================
-
-# Twilio magic test numbers (+15005550xxx) should only appear in test files
-if echo "$CONTENT" | grep -qE "\+1500555[0-9]{4}"; then
-    if [[ ! "$FILE_PATH" =~ (\.test\.|__tests__|\.spec\.|test/|tests/|\.env) ]]; then
-        echo "BLOCKED: Twilio magic test number detected in non-test file!" >&2
-        echo "" >&2
-        echo "Numbers matching +15005550xxx are Twilio test numbers." >&2
-        echo "They should only appear in test files, not production code." >&2
-        echo "" >&2
-        exit 2
-    fi
-fi
-
-# ============================================
-# NON-EVERGREEN NAMING WARNING (not blocking)
-# ============================================
-
-if echo "$CONTENT" | grep -qEi "(Improved|Enhanced|New|Better|Updated|Refactored)(Handler|Function|Service|Manager|Client|Helper|Util)"; then
-    echo "WARNING: Non-evergreen naming detected (e.g., 'ImprovedHandler', 'NewService')." >&2
-    echo "Consider a name that describes what it does, not when it was written." >&2
-    echo "" >&2
-fi
-
-# ============================================
 # ABOUTME VALIDATION FOR NEW JS FILES
 # ============================================
 
+# Check if this is a new JavaScript function file (not a test)
 if [[ "$FILE_PATH" =~ functions/.*\.js$ ]] && [[ ! "$FILE_PATH" =~ \.test\.js$ ]]; then
+    # Check if file doesn't exist yet (new file)
     if [ ! -f "$FILE_PATH" ]; then
+        # Validate ABOUTME is present in content being written
         if ! echo "$CONTENT" | head -5 | grep -q "// ABOUTME:"; then
             echo "BLOCKED: New function file missing ABOUTME comment!" >&2
             echo "" >&2
@@ -103,6 +81,10 @@ if [[ "$FILE_PATH" =~ functions/.*\.js$ ]] && [[ ! "$FILE_PATH" =~ \.test\.js$ ]
             echo "" >&2
             echo "// ABOUTME: [What this file does - action-oriented]" >&2
             echo "// ABOUTME: [Additional context - key behaviors, dependencies]" >&2
+            echo "" >&2
+            echo "Example:" >&2
+            echo "// ABOUTME: Handles incoming voice calls with greeting and input gathering." >&2
+            echo "// ABOUTME: Uses Polly.Amy voice and supports DTMF and speech input." >&2
             echo "" >&2
             exit 2
         fi
@@ -118,6 +100,118 @@ if [[ "$FILE_PATH" =~ \.test\.js$ ]] || [[ "$FILE_PATH" =~ __tests__ ]]; then
         if ! echo "$CONTENT" | head -5 | grep -q "// ABOUTME:"; then
             echo "Note: Consider adding ABOUTME comment to test file." >&2
         fi
+    fi
+fi
+
+# ============================================
+# HIGH-RISK ASSERTION WARNING (not blocking)
+# ============================================
+
+# Check documentation files for high-risk assertion patterns
+if [[ "$FILE_PATH" =~ CLAUDE\.md$ ]] || [[ "$FILE_PATH" =~ \.claude/skills/.*\.md$ ]]; then
+    WARNED=false
+
+    # Check for negative behavioral claims without citation
+    if echo "$CONTENT" | grep -qiE "(cannot|can't|not able to|impossible|not supported|not available)" && \
+       ! echo "$CONTENT" | grep -qE "<!-- (verified|UNVERIFIED):"; then
+        if [ "$WARNED" = false ]; then
+            echo "" >&2
+            echo "⚠️  HIGH-RISK ASSERTION WARNING" >&2
+            echo "   File: $FILE_PATH" >&2
+            WARNED=true
+        fi
+        echo "   → Negative behavioral claim detected (cannot/not supported/etc.)" >&2
+    fi
+
+    # Check for absolute claims without citation
+    if echo "$CONTENT" | grep -qE "\b(always|never|must|only)\b" && \
+       echo "$CONTENT" | grep -qiE "(twilio|twiml|api|webhook|call|sms|message)" && \
+       ! echo "$CONTENT" | grep -qE "<!-- (verified|UNVERIFIED):"; then
+        if [ "$WARNED" = false ]; then
+            echo "" >&2
+            echo "⚠️  HIGH-RISK ASSERTION WARNING" >&2
+            echo "   File: $FILE_PATH" >&2
+            WARNED=true
+        fi
+        echo "   → Absolute claim detected (always/never/must/only)" >&2
+    fi
+
+    # Check for numeric limits without citation (e.g., "max 16KB", "up to 4")
+    if echo "$CONTENT" | grep -qE "(max|maximum|up to|at least|limit)[^a-z]*[0-9]+" && \
+       ! echo "$CONTENT" | grep -qE "<!-- (verified|UNVERIFIED):"; then
+        if [ "$WARNED" = false ]; then
+            echo "" >&2
+            echo "⚠️  HIGH-RISK ASSERTION WARNING" >&2
+            echo "   File: $FILE_PATH" >&2
+            WARNED=true
+        fi
+        echo "   → Numeric limit detected without citation" >&2
+    fi
+
+    if [ "$WARNED" = true ]; then
+        echo "" >&2
+        echo "   Did you verify these claims against official Twilio docs?" >&2
+        echo "   Add citations: <!-- verified: twilio.com/docs/... -->" >&2
+        echo "   Or mark uncertain: <!-- UNVERIFIED: reason -->" >&2
+        echo "" >&2
+    fi
+fi
+
+# ============================================
+# NON-EVERGREEN NAMING PATTERN WARNING (not blocking)
+# ============================================
+
+# Check for naming patterns that indicate temporal context
+# These names will become misleading as codebase evolves
+if echo "$CONTENT" | grep -qE "\b(Improved|Enhanced|Better|Refactored)[A-Z][a-zA-Z]*"; then
+    MATCHED_NAMES=$(echo "$CONTENT" | grep -oE "\b(Improved|Enhanced|Better|Refactored)[A-Z][a-zA-Z]*" | head -5 | tr '\n' ', ' | sed 's/,$//')
+    echo "" >&2
+    echo "⚠️  NON-EVERGREEN NAMING WARNING" >&2
+    echo "   File: $FILE_PATH" >&2
+    echo "   Found: $MATCHED_NAMES" >&2
+    echo "" >&2
+    echo "   Names like 'ImprovedX' or 'BetterY' become misleading over time." >&2
+    echo "   What's 'improved' today will be 'old' tomorrow." >&2
+    echo "   Use descriptive names that explain WHAT it does, not WHEN it was written." >&2
+    echo "" >&2
+fi
+
+# Also check for "New" prefix followed by uppercase (but allow "new" in sentences)
+# Pattern: NewSomething in declarations (not "new something" or "newline")
+if echo "$CONTENT" | grep -qE "(const|let|var|function|class|type|interface)\s+New[A-Z]"; then
+    MATCHED_NAMES=$(echo "$CONTENT" | grep -oE "(const|let|var|function|class|type|interface)\s+New[A-Z][a-zA-Z]*" | sed 's/^[a-z]* //' | head -5 | tr '\n' ', ' | sed 's/,$//')
+    echo "" >&2
+    echo "⚠️  NON-EVERGREEN NAMING WARNING" >&2
+    echo "   File: $FILE_PATH" >&2
+    echo "   Found: $MATCHED_NAMES" >&2
+    echo "" >&2
+    echo "   Names like 'NewHandler' will be outdated when you add another one." >&2
+    echo "   Use descriptive names instead: 'StreamingHandler', 'BatchHandler', etc." >&2
+    echo "" >&2
+fi
+
+# ============================================
+# MAGIC TEST NUMBER CHECK (BLOCKING)
+# ============================================
+
+# Twilio magic test numbers (+15005550xxx) should only be in test files
+# These are special numbers that bypass actual phone networks
+if echo "$CONTENT" | grep -qE "\+?1?5005550[0-9]{3}"; then
+    # Check if this is a test file
+    if [[ ! "$FILE_PATH" =~ (\.test\.|\.spec\.|__tests__|test/|tests/|\.test$|\.spec$) ]]; then
+        MATCHED_NUMBERS=$(echo "$CONTENT" | grep -oE "\+?1?5005550[0-9]{3}" | head -3 | tr '\n' ', ' | sed 's/,$//')
+        echo "BLOCKED: Twilio magic test numbers in non-test file!" >&2
+        echo "" >&2
+        echo "Found: $MATCHED_NUMBERS" >&2
+        echo "File: $FILE_PATH" >&2
+        echo "" >&2
+        echo "Magic test numbers (+15005550xxx) bypass actual phone networks and" >&2
+        echo "should only be used in test files." >&2
+        echo "" >&2
+        echo "For test files: rename to .test.js/.spec.js or move to __tests__/" >&2
+        echo "For production: use environment variables for phone numbers" >&2
+        echo "" >&2
+        exit 2
     fi
 fi
 

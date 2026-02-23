@@ -20,7 +20,17 @@ Review the session's changes and identify anything worth recording:
 - Patterns that worked (or didn't)
 - Configuration pitfalls
 
-If a `CLAUDE.md` or project documentation exists, add learnings inline where relevant. Otherwise, create a learnings section or file to track discoveries.
+Add entries to the project's learnings or documentation using a structured format:
+```markdown
+## [YYYY-MM-DD] Topic
+
+**Discoveries:**
+
+1. **Finding**: What was learned
+   - Context and details
+```
+
+If a learning is stable and broadly applicable, promote it directly to the target doc (CLAUDE.md, README, design docs, etc.) and note "Promoted to: [target]" in the learnings entry.
 
 ### 3. Update Documentation
 
@@ -34,6 +44,7 @@ For each changed file, determine if documentation needs updating:
 | Configuration | README or setup guides |
 | Architecture changes | Design docs |
 | New commands or skills | README command/skill tables |
+| New invariants | Project CLAUDE.md or invariants doc |
 
 Only update docs where the session's changes actually warrant it. Don't touch docs for unrelated areas.
 
