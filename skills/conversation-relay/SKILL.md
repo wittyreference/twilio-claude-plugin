@@ -256,6 +256,12 @@ For local WebSocket development, use ngrok to expose your local server:
    });
    ```
 
+## Troubleshooting
+
+| Issue | Cause/Symptom | Fix |
+|-------|---------------|-----|
+| ngrok tunnel dies during long session | Tunnel expires or disconnects, WebSocket URL becomes unreachable | Verify tunnel is alive (`curl localhost:4040`) before each call; kill and restart if dead |
+
 ## Environment Variables
 
 ```text

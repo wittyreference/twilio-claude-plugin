@@ -270,6 +270,19 @@ Add standalone ngrok **alongside** Serverless when you need a protocol it doesn'
 
 ---
 
+## Voice Intelligence Transcript Creation
+
+The CLI can't handle the nested JSON required for the `channel` parameter when creating transcripts. Use `curl` with the REST API instead:
+
+```bash
+curl -X POST "https://intelligence.twilio.com/v2/Transcripts" \
+  -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" \
+  -d "ServiceSid=$TWILIO_INTELLIGENCE_SERVICE_SID" \
+  -d 'Channel={"media_properties":{"source_sid":"RExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"},"participants":[{"channel_participant":1,"user_id":"caller"},{"channel_participant":2,"user_id":"agent"}]}'
+```
+
+---
+
 ## Critical Gotchas
 
 | Issue | Problem | Solution |
