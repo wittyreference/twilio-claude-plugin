@@ -64,6 +64,29 @@ Or add to your `~/.claude/settings.json`:
 
 ## What's Included
 
+### MCP Tools (310 Twilio API Tools)
+
+The plugin includes an MCP server that gives Claude direct access to 310 Twilio API tools — messaging, voice, conferences, recordings, TaskRouter, Sync, payments, phone numbers, Studio flows, and more. Tools are automatically available when the plugin is enabled and environment variables are set.
+
+**Capabilities include:**
+- Send SMS/MMS, manage messaging services, content templates
+- Make and manage calls, conferences, recordings, media streams
+- TaskRouter: create tasks, list workers, check queue statistics
+- Sync: create/read/update documents, lists, maps
+- Phone numbers: search, purchase, configure webhooks
+- Verify: send and check OTP codes
+- Studio: trigger flows, inspect executions
+- Voice Intelligence: transcriptions, operator analysis
+- And many more (video rooms, proxy, SIP trunking, regulatory bundles, etc.)
+
+**Example prompts:**
+- "Send a test SMS to +15551234567"
+- "List my TaskRouter workers"
+- "Check queue statistics for my support queue"
+- "Search for available phone numbers in area code 415"
+
+The MCP server requires `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_PHONE_NUMBER` at minimum. See [Environment Variables](#environment-variables) for the full list.
+
 ### Slash Commands (User-Invocable)
 
 These commands can be run directly in your Claude Code session:
@@ -204,12 +227,27 @@ your-project/
 
 Your project should define these in `.env`:
 
+**Required** (for MCP tools and CLI operations):
+
 ```bash
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
+```
+
+**Optional** (for specific features):
+
+```bash
+# API keys (for CLI operations)
 TWILIO_API_KEY=SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_API_SECRET=your_api_secret
-TWILIO_PHONE_NUMBER=+1234567890
+
+# MCP tool features
+TWILIO_VERIFY_SERVICE_SID=VAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    # Verify OTP tools
+TWILIO_SYNC_SERVICE_SID=ISxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx      # Sync Documents/Lists/Maps
+TWILIO_TASKROUTER_WORKSPACE_SID=WSxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # TaskRouter tools
+TWILIO_MESSAGING_SERVICE_SID=MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # Messaging Services tools
+TEST_PHONE_NUMBER=+1234567890                                    # Recipient for test messages/calls
 ```
 
 ## Usage Examples
