@@ -562,12 +562,12 @@ await client.queues('QUxxxxxxxx').members(callSid).update({
 ### Setting Up Status Callbacks
 
 ```javascript
-// On outbound call
+// On outbound call (REST API requires absolute URLs)
 const call = await client.calls.create({
   to: '+14155551234',
   from: context.TWILIO_PHONE_NUMBER,
-  url: '/twiml',
-  statusCallback: '/call-events',
+  url: `https://${context.DOMAIN_NAME}/twiml`,
+  statusCallback: `https://${context.DOMAIN_NAME}/call-events`,
   statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
   statusCallbackMethod: 'POST'
 });
@@ -830,7 +830,7 @@ Some TwiML verbs start background processes that continue running even after the
 // Recording starts and continues through subsequent TwiML
 const start = twiml.start();
 start.recording({
-  recordingStatusCallback: '/recording-complete',
+  recordingStatusCallback: `https://${context.DOMAIN_NAME}/recording-complete`,
   recordingStatusCallbackEvent: 'completed',
 });
 twiml.say('This is being recorded...');
@@ -1017,7 +1017,21 @@ Passing TwiML values to the Participants API (e.g., Record: record-from-start) r
 
 ### Recording Callback URLs Must Be Absolute
 
-Start Recording requires absolute callback URLs. Relative paths trigger error 11200. The recording completes, but the status callback never fires.
+`<Start><Recording>` requires absolute callback URLs. Relative paths like `/callbacks/call-status` trigger error 11200. The recording completes, but the status callback never fires.
+
+```javascript
+// WRONG — generates 11200
+start.recording({
+  recordingStatusCallback: '/callbacks/call-status',
+});
+
+// RIGHT — absolute URL
+start.recording({
+  recordingStatusCallback: `https://${context.DOMAIN_NAME}/callbacks/call-status`,
+});
+```
+
+Note: `<Gather action>` and `<Dial action>` resolve relative URLs correctly against the function domain. This inconsistency only affects `<Start><Recording>`.
 
 ### Dial action URL Should Not Be the Inbound Handler
 
@@ -1045,6 +1059,10 @@ When `make_call` targets a Twilio number, two separate call legs are created wit
 Both execute simultaneously and are bridged together. A single `make_call` produces TWO TwiML documents on TWO call SIDs. This means the `Url` handler and the number's webhook both fire — they don't replace each other.
 
 For conference-based patterns (contact center, sales dialer), call each participant separately with their own `Url` TwiML rather than relying on the bridge from a single call.
+
+### Testing Outbound Calls to Twilio Numbers
+
+When calling TO a Twilio number for testing, that number's voice webhook fires for the child leg. If the destination number has no voice URL configured (or it's empty), the call fails silently. Deploy a "stay-on-line" TwiML function (`<Pause length="120"/>`) and configure it as the voice URL on your test destination numbers.
 
 ### Pre-E2E: Verify ALL Phone Numbers Have Voice URLs
 
