@@ -107,6 +107,7 @@ twilio serverless:deploy --runtime node22
 
 ### Gotchas - Serverless Deploy
 
+- **`.env` var names**: `twilio-run` reads `ACCOUNT_SID` and `AUTH_TOKEN` (no `TWILIO_` prefix). If your `.env` uses `TWILIO_ACCOUNT_SID`, add unprefixed aliases or deployment fails with "Missing Credentials"
 - **Runtime version**: Default runtime may be outdated. Explicitly set `--runtime node22` for latest features
 - **Environment names**: Names become URL suffixes (e.g., `foo-1234-dev.twil.io`). Use `--production` for clean URLs
 - **Protected functions**: `.protected.js` suffix requires valid Twilio signature
