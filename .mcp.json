@@ -1,7 +1,7 @@
 {
   "twilio": {
     "command": "npx",
-    "args": ["-y", "@twilio-feature-factory/mcp-twilio"],
+    "args": ["-y", "@twilio-feature-factory/mcp-twilio@latest"],
     "env": {
       "TWILIO_ACCOUNT_SID": "${TWILIO_ACCOUNT_SID}",
       "TWILIO_AUTH_TOKEN": "${TWILIO_AUTH_TOKEN}",
