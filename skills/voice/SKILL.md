@@ -614,27 +614,46 @@ exports.handler = function(context, event, callback) {
 
 ## Media Streams (Real-Time Audio)
 
-### Start Media Stream
+Media Streams provides raw audio access for real-time audio processing, AI agents, live transcription, and audio analysis. **Not to be confused with ConversationRelay** — see the `conversation-relay` skill for structured text-based voice AI.
+
+| Mode | TwiML | Direction | Max per call | Use case |
+|------|-------|-----------|-------------|----------|
+| **Bidirectional** | `<Connect><Stream>` | Send + receive audio | 1 (blocks TwiML) | AI agents, real-time processing |
+| **Unidirectional** | `<Start><Stream>` | Receive only | 4 (background) | Monitoring, transcription, analytics |
+
+### Bidirectional Stream (AI Agents)
 
 ```javascript
 const twiml = new Twilio.twiml.VoiceResponse();
+twiml.say('Connecting you to our AI assistant.');
 const connect = twiml.connect();
 connect.stream({
   url: 'wss://your-server.com/audio-stream',
-  track: 'both_tracks'  // 'inbound_track', 'outbound_track', 'both_tracks'
+  name: 'my-stream'
 });
+// TwiML after <Connect> runs when stream ends
+twiml.say('The stream has ended. Goodbye.');
+twiml.hangup();
 ```
 
-### Stream Events (WebSocket)
+### Unidirectional Stream (Background)
 
-Your WebSocket server receives:
+```javascript
+const twiml = new Twilio.twiml.VoiceResponse();
+twiml.start().stream({
+  url: 'wss://your-server.com/monitor',
+  track: 'both_tracks'  // 'inbound_track', 'outbound_track', 'both_tracks'
+});
+twiml.say('This call is being monitored.');
+twiml.dial('+14155551234'); // Call continues normally
+```
+
+### Stream Events (WebSocket Protocol)
+
+Your WebSocket server receives these events in order:
 
 ```json
-{
-  "event": "connected",
-  "protocol": "Call",
-  "version": "1.0.0"
-}
+{ "event": "connected", "protocol": "Call", "version": "1.0.0" }
 
 {
   "event": "start",
@@ -644,33 +663,61 @@ Your WebSocket server receives:
     "accountSid": "ACxxxxxxxx",
     "callSid": "CAxxxxxxxx",
     "tracks": ["inbound"],
-    "mediaFormat": {
-      "encoding": "audio/x-mulaw",
-      "sampleRate": 8000,
-      "channels": 1
-    }
+    "mediaFormat": { "encoding": "audio/x-mulaw", "sampleRate": 8000, "channels": 1 }
   }
 }
 
 {
   "event": "media",
   "sequenceNumber": "2",
-  "media": {
-    "track": "inbound",
-    "chunk": "1",
-    "timestamp": "5",
-    "payload": "base64-encoded-audio..."
-  }
+  "media": { "track": "inbound", "chunk": "1", "timestamp": "5", "payload": "base64-encoded-audio..." }
 }
 
-{
-  "event": "stop",
-  "sequenceNumber": "100",
-  "stop": {
-    "accountSid": "ACxxxxxxxx",
-    "callSid": "CAxxxxxxxx"
-  }
-}
+{ "event": "stop", "sequenceNumber": "100", "stop": { "accountSid": "ACxxxxxxxx", "callSid": "CAxxxxxxxx" } }
+```
+
+Audio: mulaw 8kHz mono, base64-encoded, ~50 packets/sec (20ms frames).
+
+### Sending Audio Back (Bidirectional Only)
+
+```javascript
+ws.send(JSON.stringify({
+  event: 'media',
+  streamSid: streamSid,  // From the start event
+  media: { payload: base64Audio }
+}));
+```
+
+### WebSocket Server Example
+
+```javascript
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection', (ws) => {
+  let streamSid = null;
+
+  ws.on('message', (data) => {
+    const msg = JSON.parse(data);
+    switch (msg.event) {
+      case 'connected':
+        console.log('Stream connected');
+        break;
+      case 'start':
+        streamSid = msg.start.streamSid;
+        console.log(`Stream started: ${streamSid}`);
+        break;
+      case 'media':
+        // Process audio: msg.media.payload (base64 mulaw)
+        // Echo back for bidirectional:
+        // ws.send(JSON.stringify({ event: 'media', streamSid, media: { payload: msg.media.payload } }));
+        break;
+      case 'stop':
+        console.log('Stream stopped');
+        break;
+    }
+  });
+});
 ```
 
 ---

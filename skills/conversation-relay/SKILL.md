@@ -162,7 +162,33 @@ wss.on('connection', (ws) => {
 
 ## Integration with Claude/LLMs
 
-### Anthropic Claude Integration
+### Anthropic Claude Integration (Streaming — Recommended for Voice)
+
+Streaming delivers tokens as they're generated, enabling natural real-time voice:
+
+```javascript
+const Anthropic = require('@anthropic-ai/sdk');
+const anthropic = new Anthropic();
+
+async function processWithLLM(systemPrompt, messages, ws) {
+  const stream = await anthropic.messages.stream({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: messages,
+  });
+
+  stream.on('text', (text) => {
+    ws.send(JSON.stringify({ type: 'text', token: text }));
+  });
+
+  const finalMessage = await stream.finalMessage();
+  return finalMessage.content[0].text;
+}
+```
+
+### Anthropic Claude Integration (Non-Streaming)
+
 ```javascript
 const Anthropic = require('@anthropic-ai/sdk');
 const anthropic = new Anthropic();
@@ -195,6 +221,16 @@ async function processWithLLM(userMessage) {
 
   return response.choices[0].message.content;
 }
+```
+
+**Anthropic Message Format Gotcha**: When passing conversation history to Anthropic's API, only `role` and `content` are allowed. Extra fields like `timestamp` will cause "Extra inputs are not permitted" errors:
+
+```javascript
+// WRONG - will fail if messages have extra fields
+messages: conversationHistory
+
+// CORRECT - strip to only role and content
+messages: conversationHistory.map(m => ({ role: m.role, content: m.content }))
 ```
 
 ## Voice Options
