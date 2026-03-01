@@ -4,7 +4,7 @@ Rules that have each caused real debugging time loss. These are proven gotchas t
 
 ---
 
-## The 9 Invariants
+## The 10 Invariants
 
 ### 1. `Twilio.Response.setBody()` Requires Strings
 
@@ -147,6 +147,22 @@ twiml.start().recording({ recordingStatusCallback: '/callback' });
 ```
 
 The method name is `.recording()` (noun form), not `.record()` (verb form). This applies specifically to `<Start><Recording>` — the standalone `<Record>` verb does use `.record()`.
+
+---
+
+### 10. SDK Auto-Reads `TWILIO_REGION`/`TWILIO_EDGE` from Environment
+
+Setting `TWILIO_REGION` or `TWILIO_EDGE` in your `.env` file silently routes ALL Twilio SDK API calls to regional endpoints — even when these values are not passed to the `Twilio()` constructor.
+
+**What happens:** US1 auth tokens fail with 401 on regional endpoints. Your code appears to have valid credentials but every API call fails.
+
+**Fix:** Comment out `TWILIO_REGION` and `TWILIO_EDGE` in `.env` when not actively testing regional endpoints.
+
+```bash
+# Comment out when not testing regions
+# TWILIO_REGION=au1
+# TWILIO_EDGE=sydney
+```
 
 ---
 
