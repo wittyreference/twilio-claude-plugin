@@ -27,12 +27,35 @@ Twilio development involves multiple context sources that compete for attention:
 | Error logs | Variable | High when debugging |
 | Test output | 50-500 lines | Low after passing |
 
+## Context Budget
+
+| Task Type | Recommended Load |
+|-----------|-----------------|
+| Simple bug fix | 1 file + error message |
+| New function | Pattern file + domain skill |
+| Feature with tests | 2-3 files max |
+| Complex refactor | 4-5 files, summarized |
+| Full workflow | Use orchestrator, load per-phase |
+
+## Loading Strategy
+
+**Load on demand** (when entering domain):
+- Domain skill for the relevant Twilio product
+- Similar existing function as pattern
+- Relevant test file
+
+**Avoid loading**:
+- Skill files for domains you're not touching
+- Full test suites (just the relevant test)
+- Historical git logs
+- Passing test output (compress to counts)
+
 ## When to Load Context
 
 ### Starting a New Feature
 
 Load:
-- Relevant skill file (e.g., `skills/voice.md`)
+- Relevant skill file (e.g., voice, messaging, sync)
 - Similar existing function as pattern reference
 
 Avoid loading:
@@ -43,7 +66,7 @@ Avoid loading:
 ### Debugging a Failure
 
 Load:
-- `/twilio-logs` output (recent errors only)
+- Twilio debugger logs output (recent errors only)
 - The failing function code
 - Related test file
 - Twilio error code reference
@@ -60,6 +83,17 @@ After 10+ exchanges:
 - Drop resolved discussion threads
 - Keep only active file contents
 - Retain key decisions made
+
+## Session Optimization
+
+**Session summary format**:
+```markdown
+## Session Summary
+### Completed: [tasks done]
+### In Progress: [current work]
+### Key Decisions: [choices made]
+### Files Modified: [file list]
+```
 
 ## Twilio-Specific Context Patterns
 
@@ -131,16 +165,6 @@ Omit:
 - Boilerplate error handling
 - Comments explaining obvious code
 
-## Context Budget Guidelines
-
-| Task Type | Recommended Context Size |
-|-----------|-------------------------|
-| Simple bug fix | 1 file + error message |
-| New function | Pattern file + skill |
-| Feature with tests | 2-3 files max |
-| Complex refactor | 4-5 files, summarized |
-| Full workflow | Use orchestrator, load per-phase |
-
 ## Key Practices
 
 1. **Load on demand**: Don't pre-load all skill files; load relevant ones when entering that domain
@@ -151,7 +175,7 @@ Omit:
 
 4. **Preserve decisions**: Keep key architectural decisions even when dropping implementation details
 
-5. **Use references**: Instead of loading full files, reference them: "See `skills/voice.md` for TwiML patterns"
+5. **Use references**: Instead of loading full files, reference them by skill name
 
 ## Anti-Patterns to Avoid
 

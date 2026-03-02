@@ -1,168 +1,44 @@
+---
+name: twilio-invariants
+description: Proven debugging gotchas from real Twilio development. Load at session start to avoid common pitfalls with TwiML, Functions, ConversationRelay, and deployment.
+---
+
 # Twilio Architectural Invariants
 
 Rules that have each caused real debugging time loss. These are proven gotchas that affect any Twilio developer. Load this skill at the start of any Twilio development session.
 
 ---
 
-## The 10 Invariants
+Rules that have each caused real debugging time loss. These exist in domain-specific CLAUDE.md files — this index ensures they're loaded every session.
 
-### 1. `Twilio.Response.setBody()` Requires Strings
+- **`Twilio.Response.setBody()` requires strings** — Passing objects causes `Buffer.from(object)` TypeError. Always `JSON.stringify()` + Content-Type header. (~29 latent instances across voice/ and conversation-relay/)
+- **`console.error()` → 82005 alerts** — Use `console.log()` for operational logging. Only `console.error()` in catch blocks. `console.warn()` → 82004.
+- **ConversationRelay uses `last`, not `isFinal`** — Protocol sends `{ last: true }`. Checking `isFinal` silently drops all follow-up utterances.
+- **Env vars can reset on deploy** — `twilio serverless:deploy` doesn't preserve runtime env vars. Always verify after deployment.
+- **CLI profile and `.env` are independent** — CLI profile can point to main account while `.env` has subaccount SID. Check both before operations.
+- **TwiML: one document controls a call at a time** — Updating a participant's TwiML exits their current state (conference, queue). Exception: `<Start><Stream>`, `<Start><Recording>`, `<Start><Siprec>` fork background processes.
+- **Voice Intelligence: `source_sid`, not `media_url`** — Use Recording SID for transcript creation. `media_url` requires auth the Intelligence API can't provide.
+- **Google Neural voices for ConversationRelay** — Polly voices may be blocked (error 64101). Use `Google.en-US-Neural2-F` as default.
+- **`<Start><Recording>` syntax is `.recording()`, not `.record()`** — `twiml.start().recording({...})` is correct.
+- **MCP server inherits env at launch, not runtime** — Changing `.env` or exporting variables mid-session does NOT update MCP tools. Must restart Claude Code entirely.
+- **`source .env` doesn't undo commented-out vars** — Shell retains values after commenting out lines. Must explicitly `unset` each variable before re-sourcing.
+- **SDK auto-reads `TWILIO_REGION`/`TWILIO_EDGE` from env** — Setting these in `.env` silently routes all API calls to regional endpoints even when not passed to the constructor. US1 auth tokens fail with 401 on regional endpoints. Comment out when not actively testing regions.
+- **Empty `voiceUrl` on a Twilio number = silent instant call failure** — Calling a number with `voiceUrl: ""` produces `status: failed, duration: 0` with ZERO diagnostics (no debugger alerts, no notifications, no error codes). Indistinguishable from auth failures or account blocks. Always verify destination webhooks via `list_phone_numbers` before debugging call routing.
 
-**Wrong:**
-```javascript
-response.setBody({ success: true });
-```
+# Session discipline
 
-**What happens:** `Buffer.from(object)` TypeError at runtime.
+- Do not convert lazy/conditional `require()` calls to static `import` statements without verifying the conditional logic still works. Node.js conditional requires exist for a reason (optional dependencies, environment-specific loading).
+- Run the full relevant test suite before presenting work as complete. A passing subset is not sufficient — regressions in unrelated tests still need to be caught.
+- After modifying TypeScript files, run `tsc --noEmit` in the relevant package to verify compilation before committing.
 
-**Right:**
-```javascript
-response.appendHeader('Content-Type', 'application/json');
-response.setBody(JSON.stringify({ success: true }));
-```
+# Testing
 
-Always `JSON.stringify()` + set the Content-Type header when returning JSON from Twilio Functions.
-
----
-
-### 2. `console.error()` Triggers 82005 Debugger Alerts
-
-Any `console.error()` call in a Twilio Function creates an 82005 alert in the Twilio Debugger. This pollutes the debugger with noise and can mask real errors.
-
-**Rule:** Use `console.log()` for operational logging. Reserve `console.error()` for actual catch blocks only. Note: `console.warn()` triggers 82004 alerts.
-
----
-
-### 3. ConversationRelay Uses `last`, NOT `isFinal`
-
-The ConversationRelay WebSocket protocol sends `{ last: true }` to indicate the final message. Checking `message.isFinal` (a common assumption) silently drops all follow-up utterances with no error.
-
-**Wrong:**
-```javascript
-if (message.isFinal) { /* never triggers */ }
-```
-
-**Right:**
-```javascript
-if (message.last) { /* correct field name */ }
-```
-
----
-
-### 4. Environment Variables Can Reset on Deploy
-
-`twilio serverless:deploy` does NOT preserve runtime environment variables that were set via the Console or API. After deployment, always verify your environment variables are still set correctly.
-
-Check after deploy:
-```bash
-twilio api:serverless:v1:services:environments:variables:list \
-  --service-sid $SERVICE_SID --environment-sid $ENV_SID
-```
-
----
-
-### 5. CLI Profile and `.env` Are Independent
-
-The active Twilio CLI profile can point to your main account while `.env` has a subaccount SID (or vice versa). This means:
-- `twilio serverless:deploy` uses the **CLI profile**
-- Your Functions at runtime use the **environment variables**
-
-Always verify both before operations:
-```bash
-twilio profiles:list          # Check active profile
-cat .env | grep ACCOUNT_SID   # Check env file
-```
-
----
-
-### 6. TwiML: One Document Controls a Call at a Time
-
-When you update a participant's TwiML (via REST API), they **exit their current state** — conference, queue, or any other TwiML context.
-
-**Exception:** Background processes started with `<Start>` are NOT affected:
-- `<Start><Stream>` — forks a background audio stream
-- `<Start><Recording>` — forks a background recording
-- `<Start><Siprec>` — forks a background SIPREC stream
-
-These continue running even when the main TwiML document changes.
-
-**Dangerous pattern:**
-```javascript
-// This pulls the participant OUT of the conference
-await client.calls(callSid).update({
-  twiml: '<Response><Say>Hello</Say></Response>'
-});
-```
-
----
-
-### 7. Voice Intelligence: `source_sid`, NOT `media_url`
-
-When creating transcripts with Voice Intelligence (Conversational Intelligence), use the Recording SID as `source_sid`, not `media_url`.
-
-**Why:** The `media_url` for recordings requires authentication that the Intelligence API cannot provide. Using `media_url` will silently fail or produce empty transcripts.
-
-**Right:**
-```javascript
-const transcript = await client.intelligence.v2.transcripts.create({
-  serviceSid: intelligenceServiceSid,
-  channel: { participants: [...] },
-  source_sid: recordingSid  // Use Recording SID, not media_url
-});
-```
-
----
-
-### 8. Google Neural Voices for ConversationRelay
-
-Polly voices (e.g., `Polly.Amy`) may be blocked by ConversationRelay with error 64101. Use Google Neural voices as the default.
-
-**Default recommendation:** `Google.en-US-Neural2-F`
-
-**Voice name format note:** ConversationRelay voice names use the format `Google.en-US-Neural2-F` (with `Google.` prefix). This differs from some newer voice formats.
-
-```javascript
-// ConversationRelay TwiML
-twiml.connect().conversationRelay({
-  url: 'wss://your-server.com/ws',
-  voice: 'Google.en-US-Neural2-F',  // Safe default
-  // NOT: voice: 'Polly.Amy'        // May trigger error 64101
-});
-```
-
----
-
-### 9. `<Start><Recording>` Syntax Is `.recording()`, NOT `.record()`
-
-When using the Twilio Node.js helper library to create background recordings:
-
-**Wrong:**
-```javascript
-twiml.start().record({ recordingStatusCallback: '/callback' });
-```
-
-**Right:**
-```javascript
-twiml.start().recording({ recordingStatusCallback: '/callback' });
-```
-
-The method name is `.recording()` (noun form), not `.record()` (verb form). This applies specifically to `<Start><Recording>` — the standalone `<Record>` verb does use `.record()`.
-
----
-
-### 10. SDK Auto-Reads `TWILIO_REGION`/`TWILIO_EDGE` from Environment
-
-Setting `TWILIO_REGION` or `TWILIO_EDGE` in your `.env` file silently routes ALL Twilio SDK API calls to regional endpoints — even when these values are not passed to the `Twilio()` constructor.
-
-**What happens:** US1 auth tokens fail with 401 on regional endpoints. Your code appears to have valid credentials but every API call fails.
-
-**Fix:** Comment out `TWILIO_REGION` and `TWILIO_EDGE` in `.env` when not actively testing regional endpoints.
-
-```bash
-# Comment out when not testing regions
-# TWILIO_REGION=au1
-# TWILIO_EDGE=sydney
-```
+- Tests MUST cover the functionality being implemented.
+- NEVER ignore the output of the system or the tests - Logs and messages often contain CRITICAL information.
+- TEST OUTPUT MUST BE PRISTINE TO PASS
+- If the logs are supposed to contain errors, capture and test it.
+- NO EXCEPTIONS POLICY: Under no circumstances should you mark any test type as "not applicable". Every project, regardless of size or complexity, MUST have unit tests, integration tests, AND end-to-end tests. If you believe a test type doesn't apply, you need the human to say exactly "I AUTHORIZE YOU TO SKIP WRITING TESTS THIS TIME"
+- We practice TDD: write tests first, make them pass, refactor.
 
 ---
 
@@ -171,7 +47,7 @@ Setting `TWILIO_REGION` or `TWILIO_EDGE` in your `.env` file silently routes ALL
 - **Session start**: Skim the full list as a refresh
 - **Debugging silent failures**: Check if your issue matches an invariant
 - **Code review**: Verify none of these patterns appear in new code
-- **ConversationRelay work**: Invariants 3, 8 are critical
-- **Deployment**: Invariants 4, 5 are critical
-- **Voice Intelligence**: Invariant 7 is critical
-- **TwiML generation**: Invariants 1, 6, 9 are critical
+- **ConversationRelay work**: `last` vs `isFinal` and Google voices are critical
+- **Deployment**: Env var reset and CLI/env independence are critical
+- **Voice Intelligence**: `source_sid` vs `media_url` is critical
+- **TwiML generation**: `setBody()` strings, one-doc-at-a-time, `.recording()` syntax are critical

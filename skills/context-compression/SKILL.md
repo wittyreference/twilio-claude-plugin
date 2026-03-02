@@ -11,6 +11,17 @@ This skill provides techniques for compressing Twilio-specific content to preser
 
 This skill is adapted from [Agent Skills for Context Engineering](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering) by Murat Can Koylan. The compression patterns and techniques have been tailored for Twilio TwiML, webhooks, and API payloads.
 
+## Quick Reference: Compression Ratios
+
+| Content Type | Ratio | Preserve | Drop |
+|-------------|-------|----------|------|
+| TwiML | 5:1 | Verb sequence, actions, key attrs | XML boilerplate, default attrs |
+| Webhook payload | 4:1 | From/To, SID, status, body/digits | AccountSid, ApiVersion, geo fields |
+| Test output (pass) | 10:1 | Count by category | Individual test names |
+| Test output (fail) | 3:1 | Test name, expected vs received | Stack traces |
+| Error logs | 5:1 | Error code, URL, count, timeframe | Duplicate entries |
+| Conversation history | 8:1 | Decisions, files changed, current state | Implementation details |
+
 ## When to Compress
 
 Compress when you encounter:

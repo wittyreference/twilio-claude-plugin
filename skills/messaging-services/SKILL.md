@@ -7,6 +7,17 @@ description: Twilio Messaging Services for sender pools, A2P 10DLC compliance, a
 
 Knowledge for building Twilio Messaging Services functions for advanced SMS/MMS capabilities with sender pools, intelligent routing, and compliance features.
 
+
+These functions use `messagingServiceSid` instead of `from`, letting Twilio select the optimal sender from the pool:
+
+```javascript
+// Basic SMS - specify sender number
+await client.messages.create({ to, from: context.TWILIO_PHONE_NUMBER, body });
+
+// Messaging Services (this directory)
+await client.messages.create({ to, messagingServiceSid: context.TWILIO_MESSAGING_SERVICE_SID, body });
+```
+
 ## What are Messaging Services?
 
 Messaging Services provide enterprise-grade messaging features beyond basic SMS:
@@ -58,6 +69,14 @@ const message = await client.messages.create({
   mediaUrl: ['https://example.com/image.jpg']
 });
 
+// With status callback
+const message = await client.messages.create({
+  to: '+1234567890',
+  messagingServiceSid: context.TWILIO_MESSAGING_SERVICE_SID,
+  body: 'Tracking delivery...',
+  statusCallback: 'https://your-app.com/status'
+});
+
 // Schedule message (up to 7 days in advance)
 const message = await client.messages.create({
   to: '+1234567890',
@@ -87,6 +106,25 @@ await client.messaging.v1
 await client.messaging.v1
   .services(context.TWILIO_MESSAGING_SERVICE_SID)
   .phoneNumbers(phoneNumberSid).remove();
+```
+
+### Service Configuration
+
+```javascript
+// Get service details
+const service = await client.messaging.v1
+  .services(context.TWILIO_MESSAGING_SERVICE_SID).fetch();
+
+// Update service settings
+await client.messaging.v1
+  .services(context.TWILIO_MESSAGING_SERVICE_SID).update({
+    stickySender: true,
+    mmsConverter: true,
+    smartEncoding: true,
+    fallbackUrl: 'https://fallback.example.com/sms',
+    inboundRequestUrl: 'https://your-app.com/incoming',
+    statusCallback: 'https://your-app.com/status'
+  });
 ```
 
 ## Service Features
@@ -131,6 +169,94 @@ Auto-converts MMS to SMS with link for unsupported carriers:
 
 // MMS to carrier without MMS support becomes:
 // "Check out this image! https://twil.io/abc123"
+```
+
+### Smart Encoding
+
+Automatically uses optimal character encoding:
+
+```javascript
+// Service config
+{
+  "smartEncoding": true
+}
+
+// Converts special characters to GSM-compatible equivalents
+// Reduces message segments and cost
+```
+
+### Link Shortening
+
+Track link clicks with branded short links:
+
+```javascript
+// Enable on service
+{
+  "useInboundWebhookOnNumber": false,
+  "validityPeriod": 14400
+}
+
+// Send with link shortening
+const message = await client.messages.create({
+  to: '+1234567890',
+  messagingServiceSid: context.TWILIO_MESSAGING_SERVICE_SID,
+  body: 'Check out our sale: https://example.com/big-sale-promo-2024',
+  shortenUrls: true
+});
+
+// Results in: "Check out our sale: https://twil.io/abc123"
+```
+
+## Webhook Parameters
+
+### Inbound Message Webhook
+
+Same as standard messaging, plus:
+
+| Parameter | Description |
+|-----------|-------------|
+| `MessagingServiceSid` | The Messaging Service that received the message |
+| All standard SMS params | `From`, `To`, `Body`, `MessageSid`, etc. |
+
+### Status Callback
+
+| Parameter | Description |
+|-----------|-------------|
+| `MessageSid` | Message identifier |
+| `MessageStatus` | `queued`, `sent`, `delivered`, `undelivered`, `failed` |
+| `ErrorCode` | Error code if failed |
+| `ErrorMessage` | Error description if failed |
+| `MessagingServiceSid` | Associated Messaging Service |
+
+## A2P 10DLC Compliance (US)
+
+For US messaging, register your brand and campaigns:
+
+### Registration Flow
+
+1. **Brand Registration**: Register your business
+2. **Campaign Registration**: Register use case (marketing, notifications, etc.)
+3. **Number Assignment**: Assign 10DLC numbers to campaigns
+
+### Campaign Use Cases
+
+| Use Case | Description | Throughput |
+|----------|-------------|------------|
+| `marketing` | Promotional messages | Standard |
+| `notifications` | Transactional alerts | Higher |
+| `customer_care` | Support conversations | Higher |
+| `delivery_notifications` | Shipping updates | Higher |
+| `account_notification` | Account alerts | Higher |
+| `2fa` | Two-factor authentication | Highest |
+
+```javascript
+// Check registration status
+const brandRegistration = await client.messaging.v1
+  .brandRegistrations(brandSid).fetch();
+
+const campaignRegistration = await client.messaging.v1
+  .services(serviceSid)
+  .usAppToPersonUsecases.list();
 ```
 
 ## Common Patterns
@@ -182,20 +308,64 @@ exports.handler = async (context, event, callback) => {
 };
 ```
 
-## A2P 10DLC Compliance (US)
+### Status Tracking
 
-For US messaging, register your brand and campaigns:
+```javascript
+exports.handler = async (context, event, callback) => {
+  const { MessageSid, MessageStatus, ErrorCode, ErrorMessage } = event;
 
-### Campaign Use Cases
+  // Log status update
+  console.log(`Message ${MessageSid}: ${MessageStatus}`);
 
-| Use Case | Description | Throughput |
-|----------|-------------|------------|
-| `marketing` | Promotional messages | Standard |
-| `notifications` | Transactional alerts | Higher |
-| `customer_care` | Support conversations | Higher |
-| `delivery_notifications` | Shipping updates | Higher |
-| `account_notification` | Account alerts | Higher |
-| `2fa` | Two-factor authentication | Highest |
+  if (MessageStatus === 'failed' || MessageStatus === 'undelivered') {
+    console.log(`Delivery failed: ${ErrorCode} - ${ErrorMessage}`);
+    // Handle failure (retry, alert, etc.)
+  }
+
+  if (MessageStatus === 'delivered') {
+    // Update delivery tracking in your system
+  }
+
+  return callback(null, { success: true });
+};
+```
+
+### Scheduled Campaigns
+
+```javascript
+exports.handler = async (context, event, callback) => {
+  const client = context.getTwilioClient();
+  const { recipients, message, sendAt } = event;
+
+  // Validate sendAt is within 7 days
+  const scheduledTime = new Date(sendAt);
+  const maxTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  if (scheduledTime > maxTime) {
+    return callback(null, {
+      success: false,
+      error: 'Messages can only be scheduled up to 7 days in advance'
+    });
+  }
+
+  const results = await Promise.allSettled(
+    recipients.map(recipient =>
+      client.messages.create({
+        to: recipient,
+        messagingServiceSid: context.TWILIO_MESSAGING_SERVICE_SID,
+        body: message,
+        scheduleType: 'fixed',
+        sendAt: scheduledTime.toISOString()
+      })
+    )
+  );
+
+  return callback(null, {
+    scheduled: results.filter(r => r.status === 'fulfilled').length,
+    failed: results.filter(r => r.status === 'rejected').length
+  });
+};
+```
 
 ## Error Handling
 
@@ -214,6 +384,7 @@ For US messaging, register your brand and campaigns:
 | `30005` | Unknown destination number |
 | `30006` | Landline or unreachable carrier |
 | `30007` | Carrier violation |
+| `30008` | Unknown error |
 
 ### Error Handling Pattern
 
@@ -251,6 +422,45 @@ exports.handler = async (context, event, callback) => {
     throw error;
   }
 };
+```
+
+## Testing Messaging Services
+
+### Test Numbers
+
+- Use Twilio test credentials for development
+- Magic numbers: `+15005550006` (success), `+15005550001` (invalid)
+
+### Integration Test
+
+```javascript
+describe('Messaging Service', () => {
+  it('should send message via messaging service', async () => {
+    const context = createTestContext();
+    const event = {
+      to: '+15005550006',
+      body: 'Test message'
+    };
+
+    await sendHandler(context, event, callback);
+
+    const [, response] = callback.mock.calls[0];
+    expect(response.success).toBe(true);
+    expect(response.sid).toMatch(/^SM/);
+  });
+
+  it('should handle opt-out error', async () => {
+    // Mock opted-out number scenario
+    const context = createTestContext();
+    const event = { to: '+1234567890', body: 'Test' };
+
+    await sendHandler(context, event, callback);
+
+    const [, response] = callback.mock.calls[0];
+    expect(response.success).toBe(false);
+    expect(response.error).toContain('opted out');
+  });
+});
 ```
 
 ## Environment Variables

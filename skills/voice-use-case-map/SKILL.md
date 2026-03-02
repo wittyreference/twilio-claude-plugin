@@ -1,12 +1,34 @@
+---
+name: voice-use-case-map
+description: Definitive per-use-case product mapping for Twilio Voice. Use when recommending Twilio products for a voice use case.
+---
+
 # Voice Use Case Product Map
 
-Definitive per-use-case product mapping for Twilio Voice. Load this skill when a user describes what they want to build and you need to recommend which Twilio products, services, and features to include.
+Definitive per-use-case product mapping for Twilio Voice. Load this skill when recommending Twilio products for a voice use case.
 
-**Provenance:** Derived from the Twilio Voice Use Case Domain Expert reference (10 use case slides + summary ladder), enriched with Twilio documentation research for prerequisites, operational gotchas, and cross-cutting constraints.
+## Quick Reference (scan this first)
 
-**Complements:** The `voice` skill covers decision frameworks and architectural patterns. This file covers *which products to recommend* for each use case. For ConversationRelay protocol details, streaming patterns, and LLM integration, see the `conversation-relay` skill.
+| UC | Name | Core Products | Key Feature |
+|----|------|--------------|-------------|
+| 1 | Voice Notifications | Voice API, Say, Gather, AMD, Recording | Outbound reminder + speech confirm |
+| 2 | Self-Service (IVR) | Voice API, Say, Gather, Recording | Multi-level menu, DTMF + speech |
+| 3 | Inbound Contact Center | TaskRouter, Conference, Recording, Sync | Skills-based routing to agents |
+| 4 | Outbound Contact Center | Conference, Participants API, AMD, Recording | Agent-first then connect customer |
+| 5 | AI Agents (ConversationRelay) | ConversationRelay, Recording, Sync, SMS | WebSocket LLM integration |
+| 6 | AI Agents (Media Streams) | `<Connect><Stream>`, Recording | Raw audio WebSocket, bring-your-own STT/TTS |
+| 7 | Sales Dialer | Conference, AMD, Recording, Participants API | Parallel/power dialing |
+| 8 | Call Tracking | Voice API, Say (whisper), Dial, Recording, Sync | Campaign attribution + forwarding |
+| 9 | PSTN Connectivity | SIP Trunking, BYOC | Carrier interconnect (not prototyped) |
+| 10 | AI/ML Transcription | Voice Intelligence, Language Operators | Post-call analysis of recordings |
+
+**Complements:** the `voice` skill (decision frameworks), the `conversation-relay` skill (ConversationRelay protocol details).
 
 ---
+
+## Detailed Product Entries
+
+The sections below provide per-product Why/When/Prereqs/Gotchas for each use case.
 
 ## How to Read This Document
 
@@ -130,7 +152,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 - **Conversational Intelligence**: Post-call analysis of notification campaigns at scale. Use to detect opt-out intent in recorded responses, monitor sentiment across thousands of calls, and identify failed delivery patterns. Don't use for real-time decisions during the notification call itself.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
-- **Studio**: Visual flow builder for notification sequences. Relevant for teams without developer resources who need to build simple outbound flows. For programmatic control, **prefer Functions over Studio**.
+- **Studio**: Visual flow builder for notification sequences. Relevant for teams without developer resources who need to build simple outbound flows. Per project convention, **always prefer Functions over Studio** — Claude Code handles the complexity better.
 
 - **Event Streams**: Stream call events (initiated, ringing, answered, completed) to your analytics pipeline in real time. Essential for monitoring delivery rates across large campaigns. Set up a Webhook or Kinesis sink to track which notifications reached humans vs machines vs failures.
   - Prereqs: Sink configured (Webhook URL, Kinesis ARN + IAM role, or Segment write key).
@@ -199,7 +221,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 - **Conversational Intelligence**: Analyze self-service interactions to find where callers abandon or escalate. Detect recurring intents that the IVR doesn't handle well. Use entity detection to identify products, account types, or issues mentioned during AI-powered self-service sessions.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
-- **Studio**: Visual IVR builder. For programmatic control, **prefer Functions** — complex IVR flows in Studio become unmaintainable.
+- **Studio**: Visual IVR builder. Per project convention, **always prefer Functions** — complex IVR flows in Studio become unmaintainable spider webs.
 
 - **Event Streams**: Stream IVR interaction events for real-time monitoring of containment rates. Track which menu options callers select, where they drop off, and how long they spend in self-service before escalating.
   - Prereqs: Sink configured (Webhook URL, Kinesis ARN + IAM role, or Segment write key).
@@ -222,7 +244,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 
 - **Conversation Relay**: LLM-powered dynamic conversations replacing rigid menu trees. The caller speaks naturally and the AI agent handles intent detection, slot filling, and response generation. Use when static `<Gather>` menus can't handle the interaction complexity. Requires a WebSocket server with LLM integration.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `Google.en-US-Neural2-F` as default. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **VirtualAgent**: Google Dialogflow integration for AI-powered IVR. Only use if the customer has an existing Dialogflow virtual agent. Otherwise, recommend Conversation Relay for direct LLM integration.
   - Prereqs: Existing Google Dialogflow CX agent with telephony integration configured.
@@ -293,7 +315,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 - **Conversational Intelligence**: Real-time and post-call analysis of agent-customer interactions. Detect sentiment shifts, identify coaching opportunities, flag compliance violations. At scale, reveals which agents handle which topics best.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
-- **Studio**: Visual flow builder for routing logic. For programmatic control, **prefer Functions**.
+- **Studio**: Visual flow builder for routing logic. Per project convention, **always use Functions instead**.
 
 - **Event Streams**: Stream contact center events (call queued, agent assigned, call completed) to your workforce management and analytics platforms. Essential for real-time dashboards showing queue depth, wait times, and agent utilization.
   - Prereqs: Sink configured (Webhook URL, Kinesis ARN + IAM role, or Segment write key).
@@ -325,7 +347,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 
 - **Conversation Relay**: AI-powered front-end before human agents. Handle simple queries via AI, escalate complex ones to humans. The AI agent can also assist the human agent in real-time with suggested responses.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `Google.en-US-Neural2-F` as default. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **VirtualAgent**: Dialogflow-based front-end. Only if the customer has existing Dialogflow infrastructure.
   - Prereqs: Existing Google Dialogflow CX agent with telephony integration configured.
@@ -439,7 +461,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 - **Conversational Intelligence**: Analyze outbound campaign effectiveness. Detect customer sentiment, identify successful pitch patterns, and flag compliance issues across thousands of outbound calls.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
-- **Studio**: For programmatic control, **prefer Functions**.
+- **Studio**: Per project convention, **always use Functions**.
 
 - **Event Streams**: Stream campaign events to analytics. Track dial attempts, connect rates, agent utilization, and disposition codes in real-time.
   - Prereqs: Sink configured (Webhook URL, Kinesis ARN + IAM role, or Segment write key).
@@ -471,7 +493,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 
 - **Conversation Relay**: AI-powered outbound conversations. The AI agent handles the initial outbound call and escalates to a human agent when needed. Useful for high-volume campaigns where AI handles routine interactions.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `Google.en-US-Neural2-F` as default. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **VirtualAgent**: Dialogflow-based outbound automation. Only if existing Dialogflow infrastructure exists.
   - Prereqs: Existing Google Dialogflow CX agent with telephony integration configured.
@@ -554,7 +576,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 
 - **Conversation Relay**: The primary integration path. Establishes a WebSocket connection between the active call and your server. Twilio handles speech-to-text and text-to-speech; your server handles LLM logic, tool execution, and conversation management. Supports interruption handling, turn detection, and DTMF.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `Google.en-US-Neural2-F` as default. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`. WebSocket disconnection = call ends (no auto-reconnect) unless an `action` URL fallback is implemented on the `<Connect>` verb.
+  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`. WebSocket disconnection = call ends (no auto-reconnect) unless an `action` URL fallback is implemented on the `<Connect>` verb.
 
 - **VirtualAgent**: Google Dialogflow CX integration. Twilio routes the call to a Dialogflow agent that handles conversation management. Only use if the customer has invested in Dialogflow infrastructure.
   - Prereqs: Existing Google Dialogflow CX agent with telephony integration configured.
@@ -668,7 +690,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 - **Conversational Intelligence**: Analyze sales conversations at scale. Detect buying signals, objection patterns, competitor mentions, and successful closing techniques. Train new sales reps by surfacing top-performer conversation patterns.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
-- **Studio**: For programmatic control, **prefer Functions**.
+- **Studio**: Per project convention, **always use Functions**.
 
 - **Event Streams**: Stream dialer events for real-time campaign dashboards — dial rate, connect rate, average talk time, dispositions.
   - Prereqs: Sink configured (Webhook URL, Kinesis ARN + IAM role, or Segment write key).
@@ -688,7 +710,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 
 - **Conversation Relay**: AI-assisted sales — the AI agent handles initial qualification before connecting to a human salesperson. Or the AI provides real-time coaching suggestions to the salesperson via whisper.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `Google.en-US-Neural2-F` as default. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **Recording**: Record every sales call. Required for sales compliance, dispute resolution, and performance coaching. Use conference recording to capture the full interaction.
 
@@ -749,7 +771,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 - **Conversational Intelligence**: Analyze call tracking recordings to extract marketing intelligence — what products are callers asking about, what campaigns drive the highest-quality leads (not just volume).
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
-- **Studio**: Simple call tracking flows can use Studio, but **Functions are preferred** for programmatic control.
+- **Studio**: Simple call tracking flows can use Studio, but **Functions are preferred** per project convention.
 
 - **Functions**: Host the tracking logic — log the inbound number (campaign identifier), capture caller metadata, then `<Dial>` to the destination.
 
@@ -776,7 +798,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 
 ### Features
 
-- **CNAM**: Look up caller name for lead enrichment. Combine with the tracking number to create "Campaign X -> John Smith" attribution records.
+- **CNAM**: Look up caller name for lead enrichment. Combine with the tracking number to create "Campaign X → John Smith" attribution records.
 
 - **Segment Integration**: Send call tracking events to Segment for unified marketing attribution. Connect call data with web analytics, email campaigns, and CRM data.
 
@@ -863,7 +885,7 @@ Products as rows, use cases as columns. `X` = highlighted in source, `(†)` = b
 
 - **Conversation Relay**: When real-time transcription is needed during live calls, ConversationRelay provides streaming STT as part of the AI agent flow. The transcription is a byproduct of the AI conversation that can be captured and analyzed.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `Google.en-US-Neural2-F` as default. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **Recording**: The input for batch transcription. Calls must be recorded before they can be transcribed at scale. Configure recording on calls, conferences, or trunks, then process the recordings through Conversational Intelligence.
   - Gotcha: Use `source_sid` (Recording SID) for Voice Intelligence transcript creation, NOT `media_url`. The Intelligence API cannot authenticate against protected URLs.
@@ -944,11 +966,15 @@ Foundation: PSTN Connectivity (Elastic SIP Trunking)
 
 ### Common Progression Paths
 
-1. **Notifications -> IVR -> Contact Center**: Start with outbound alerts, add inbound self-service, then add human agents for escalation.
-2. **IVR -> AI Agents -> Contact Center**: Replace static IVR menus with AI, then add human escalation for complex cases.
-3. **Contact Center -> AI Transcription**: Existing contact center adds transcription for QA and intelligence.
-4. **PSTN Connectivity -> Programmable Voice**: Customer starts with SIP Trunking, then adds Programmable Voice features for specific call flows.
-5. **Call Tracking -> Contact Center**: Marketing-driven calls need routing to specialized sales/support teams.
+1. **Notifications → IVR → Contact Center**: Start with outbound alerts, add inbound self-service, then add human agents for escalation.
+2. **IVR → AI Agents → Contact Center**: Replace static IVR menus with AI, then add human escalation for complex cases.
+3. **Contact Center → AI Transcription**: Existing contact center adds transcription for QA and intelligence.
+4. **PSTN Connectivity → Programmable Voice**: Customer starts with SIP Trunking, then adds Programmable Voice features for specific call flows.
+5. **Call Tracking → Contact Center**: Marketing-driven calls need routing to specialized sales/support teams.
+
+### Cross-Reference
+
+For decision frameworks, architectural patterns, and implementation guidance, see the `voice` skill.
 
 ---
 

@@ -7,6 +7,27 @@ description: Real-time state synchronization with Twilio Sync Documents, Lists, 
 
 Knowledge for building Twilio Sync API functions for real-time state synchronization across devices and services.
 
+### Action-Routed Pattern
+
+All three functions use an `action` parameter to determine the operation:
+
+```javascript
+// POST with action=create, documentName=app-config, data={"theme":"dark"}
+// POST with action=read, documentName=app-config
+// POST with action=update, documentName=app-config, data={"theme":"light"}
+// POST with action=delete, documentName=app-config
+```
+
+The `data` parameter must be a JSON string (form-encoded bodies arrive as strings). Each handler parses it with `JSON.parse()` and returns clear errors for invalid JSON.
+
+### Available Actions
+
+| Function | Actions |
+|----------|---------|
+| `document-crud` | `create`, `read`, `update`, `delete` |
+| `list-crud` | `create`, `addItem`, `listItems`, `updateItem`, `removeItem` |
+| `map-crud` | `create`, `setItem`, `getItem`, `updateItem`, `removeItem`, `listItems` |
+
 ## What is Twilio Sync?
 
 Twilio Sync provides real-time state synchronization primitives for building collaborative and stateful applications:
@@ -156,6 +177,35 @@ await syncService.syncLists('my-list')
   });
 ```
 
+## Webhook Events
+
+Configure webhooks on your Sync Service to receive notifications:
+
+| Event Type | Description |
+|------------|-------------|
+| `document_created` | New document created |
+| `document_updated` | Document data changed |
+| `document_removed` | Document deleted |
+| `list_item_created` | Item added to list |
+| `list_item_updated` | List item changed |
+| `list_item_removed` | Item removed from list |
+| `map_item_created` | Map item created |
+| `map_item_updated` | Map item changed |
+| `map_item_removed` | Map item removed |
+| `stream_message_published` | Message published to stream |
+
+### Webhook Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `AccountSid` | Your Twilio Account SID |
+| `ServiceSid` | Sync Service SID |
+| `EventType` | Event type (see above) |
+| `ResourceSid` | SID of affected resource |
+| `UniqueName` | Unique name if set |
+| `DateCreated` | ISO timestamp |
+| `Data` | JSON data (for create/update events) |
+
 ## Common Patterns
 
 ### Call State Management
@@ -228,6 +278,73 @@ exports.handler = async (context, event, callback) => {
 };
 ```
 
+### Activity Feed
+
+Maintain an ordered list of events:
+
+```javascript
+// Add activity
+exports.addActivity = async (context, event, callback) => {
+  const client = context.getTwilioClient();
+  const syncService = client.sync.v1.services(context.TWILIO_SYNC_SERVICE_SID);
+
+  const { userId, action, details } = event;
+
+  await syncService.syncLists('activity-feed')
+    .syncListItems.create({
+      data: {
+        userId,
+        action,
+        details,
+        timestamp: new Date().toISOString()
+      },
+      ttl: 604800  // Keep for 7 days
+    });
+
+  return callback(null, { success: true });
+};
+
+// Get recent activity
+exports.getActivity = async (context, event, callback) => {
+  const client = context.getTwilioClient();
+  const syncService = client.sync.v1.services(context.TWILIO_SYNC_SERVICE_SID);
+
+  const items = await syncService.syncLists('activity-feed')
+    .syncListItems.list({
+      limit: event.limit || 20,
+      order: 'desc'
+    });
+
+  return callback(null, {
+    activities: items.map(item => item.data)
+  });
+};
+```
+
+### Real-time Notifications
+
+Use Streams for ephemeral events:
+
+```javascript
+// Publish typing indicator
+exports.publishTyping = async (context, event, callback) => {
+  const client = context.getTwilioClient();
+  const syncService = client.sync.v1.services(context.TWILIO_SYNC_SERVICE_SID);
+
+  await syncService.syncStreams('room-events')
+    .streamMessages.create({
+      data: {
+        type: 'typing',
+        userId: event.userId,
+        roomId: event.roomId,
+        isTyping: event.isTyping
+      }
+    });
+
+  return callback(null, { success: true });
+};
+```
+
 ## Error Handling
 
 ### Common Error Codes
@@ -270,6 +387,37 @@ exports.handler = async (context, event, callback) => {
     throw error;
   }
 };
+```
+
+## Testing Sync Functions
+
+### Integration Test Pattern
+
+```javascript
+describe('Sync Operations', () => {
+  const testDocName = `test-doc-${Date.now()}`;
+
+  afterAll(async () => {
+    // Cleanup
+    try {
+      await syncService.documents(testDocName).remove();
+    } catch (e) { /* ignore */ }
+  });
+
+  it('should create and fetch document', async () => {
+    const context = createTestContext();
+    const event = {
+      docName: testDocName,
+      data: { test: true }
+    };
+
+    await createDocHandler(context, event, callback);
+
+    const [, response] = callback.mock.calls[0];
+    expect(response.success).toBe(true);
+    expect(response.data.test).toBe(true);
+  });
+});
 ```
 
 ## Environment Variables

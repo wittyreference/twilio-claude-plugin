@@ -12,6 +12,7 @@ git diff --name-only HEAD  # unstaged + staged changes vs last commit
 git diff --cached --name-only  # staged changes only
 ```
 
+
 ### 2. Capture Learnings
 
 Review the session's changes and identify anything worth recording:
@@ -20,7 +21,7 @@ Review the session's changes and identify anything worth recording:
 - Patterns that worked (or didn't)
 - Configuration pitfalls
 
-Add entries to the project's learnings or documentation using a structured format:
+Add entries to the learnings file using the standard format:
 ```markdown
 ## [YYYY-MM-DD] Topic
 
@@ -30,7 +31,7 @@ Add entries to the project's learnings or documentation using a structured forma
    - Context and details
 ```
 
-If a learning is stable and broadly applicable, promote it directly to the target doc (CLAUDE.md, README, design docs, etc.) and note "Promoted to: [target]" in the learnings entry.
+If a learning is stable and broadly applicable, promote it directly to the target doc (CLAUDE.md, design docs, etc.) and note "Promoted to: [target]" in the learnings entry.
 
 ### 3. Update Documentation
 
@@ -38,35 +39,43 @@ For each changed file, determine if documentation needs updating:
 
 | Changed Area | Check These Docs |
 |--------------|------------------|
-| Voice handlers | Voice-related CLAUDE.md or README |
-| Messaging handlers | Messaging docs |
-| ConversationRelay | ConversationRelay docs |
-| Configuration | README or setup guides |
-| Architecture changes | Design docs |
-| New commands or skills | README command/skill tables |
-| New invariants | Project CLAUDE.md or invariants doc |
+| hooks | relevant documentation |
+| voice handlers | voice documentation |
+| messaging handlers | messaging documentation |
+| ConversationRelay handlers | ConversationRelay documentation |
+| MCP server | MCP documentation |
+| scripts | scripts documentation |
+| Architecture changes | design documentation |
+| New slash commands or skills | Root CLAUDE.md slash command table |
+| New invariants | project invariants documentation section |
 
 Only update docs where the session's changes actually warrant it. Don't touch docs for unrelated areas.
 
-### 4. Sync Auto-Memory and Shipped Docs
+### 4. Sync Auto-Memory ↔ Shipped Docs
 
 **Promote outward**: Check auto-memory for entries that should be in shipped docs:
 
 | Entry Type | Promote To |
 |------------|------------|
 | API/SDK gotcha (clear domain) | Domain CLAUDE.md Gotchas section |
-| Cross-cutting gotcha | A shared gotchas or references doc |
-| CLI quirk | CLI reference doc |
-| High-impact rule | Project CLAUDE.md invariants |
+| Cross-cutting gotcha | operational gotchas documentation |
+| CLI quirk | CLI reference documentation |
+| High-impact rule | project invariants documentation |
+| Architectural decision (why X over Y) | design documentation |
 | Per-developer convention | Keep in auto-memory |
 
-After promoting, replace the detailed item with a pointer (e.g., "See voice/CLAUDE.md#gotchas"). Don't delete — pointers prevent re-discovery of the same gotcha.
+After promoting, replace the detailed item with a pointer (e.g., "See voice docs Gotchas section"). Don't delete — pointers prevent re-discovery of the same gotcha.
 
-**Capture inward**: Add session learnings that should persist across sessions to auto-memory.
+**Cross-check learnings ↔ auto-memory**: Ensure nothing fell through the cracks:
+- Read the session learnings file — are there entries that should also be in auto-memory (for cross-session persistence)?
+- Read auto-memory — are there entries from this session that should also be in the learnings file (for the promote/clear flywheel)?
+- Are there auto-memory entries that represent an architectural choice worth recording in design documentation? Signs: "we chose X over Y", "US1 is default because...", "regional requires explicit opt-in".
+
+**Capture inward**: Add session learnings that should persist across sessions to auto-memory at the auto-memory file.
 
 ### 5. Update Todo
 
-If the session completed or progressed a tracked task, update the project's todo or task tracker.
+If the session completed or progressed a tracked task, update the todo file.
 
 ### 6. Summary
 
