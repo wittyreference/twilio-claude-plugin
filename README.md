@@ -250,6 +250,29 @@ TWILIO_MESSAGING_SERVICE_SID=MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # Messaging Ser
 TEST_PHONE_NUMBER=+1234567890                                    # Recipient for test messages/calls
 ```
 
+> **If you already have `TWILIO_*` env vars in your shell** (from `.zshrc`, another project, or Twilio CLI), they will silently override your `.env` values and cause auth failures. The Twilio SDK also auto-reads `TWILIO_REGION` and `TWILIO_EDGE`, which can silently route API calls to the wrong region.
+
+**Diagnose conflicts:**
+
+```bash
+# Run the environment doctor (included with this plugin)
+./scripts/env-doctor.sh
+```
+
+**Prevent conflicts with direnv:**
+
+The plugin ships an `.envrc` template that unsets all inherited Twilio vars before loading your `.env`:
+
+```bash
+# Copy the template to your project root
+cp scripts/envrc.template .envrc
+
+# Install direnv and allow
+brew install direnv
+echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
+direnv allow
+```
+
 ## Usage Examples
 
 **Build a voice IVR:**
