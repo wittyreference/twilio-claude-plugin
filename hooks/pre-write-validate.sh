@@ -21,48 +21,63 @@ if [ -z "$CONTENT" ]; then
 fi
 
 # ============================================
+# RESOLVE PATHS FOR DOWNSTREAM CHECKS
+# ============================================
+# Resolve symlinks once for all downstream sections.
+# macOS: /tmp → /private/tmp causes ${FILE_PATH#$PROJECT_ROOT/} to fail
+# when git rev-parse returns /private/tmp but Claude passes /tmp.
+PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+RESOLVED_FILE_PATH="$(realpath "$FILE_PATH" 2>/dev/null || echo "$FILE_PATH")"
+RESOLVED_PROJECT_ROOT="$(realpath "$PROJECT_ROOT" 2>/dev/null || echo "$PROJECT_ROOT")"
+
+# ============================================
 # CREDENTIAL SAFETY CHECK
 # ============================================
 
 # Skip credential checks for test files, docs, and env examples
+# Uses a flag instead of exit 0 so downstream checks (assertion warnings,
+# naming patterns) still run — those are specifically designed for .md files.
+SKIP_CREDENTIALS=false
 if [[ "$FILE_PATH" =~ \.test\.(js|ts)$ ]] || [[ "$FILE_PATH" =~ \.spec\.(js|ts)$ ]] || \
+   [[ "$FILE_PATH" =~ _test\.go$ ]] || \
    [[ "$FILE_PATH" =~ __tests__/ ]] || [[ "$FILE_PATH" =~ \.md$ ]] || \
    [[ "$FILE_PATH" =~ \.env\.example$ ]] || [[ "$FILE_PATH" =~ \.env\.sample$ ]]; then
-    # Test files, docs, and env examples may contain example credentials
-    exit 0
+    SKIP_CREDENTIALS=true
 fi
 
-# Pattern for Twilio Account SID (not in env var reference)
-if echo "$CONTENT" | grep -E "AC[a-f0-9]{32}" | grep -vqE "(process\.env|context\.|TWILIO_ACCOUNT_SID|ACCOUNT_SID)"; then
-    echo "BLOCKED: Hardcoded Twilio Account SID detected!" >&2
-    echo "" >&2
-    echo "Found pattern matching 'ACxxxxxxxx...' which appears to be a hardcoded Account SID." >&2
-    echo "Use environment variables instead:" >&2
-    echo "  - In serverless functions: context.TWILIO_ACCOUNT_SID" >&2
-    echo "  - In Node.js: process.env.TWILIO_ACCOUNT_SID" >&2
-    echo "" >&2
-    exit 2
-fi
+if [ "$SKIP_CREDENTIALS" = "false" ]; then
+    # Pattern for Twilio Account SID (not in env var reference)
+    if echo "$CONTENT" | grep -E "AC[a-f0-9]{32}" | grep -vqE "(process\.env|context\.|TWILIO_ACCOUNT_SID|ACCOUNT_SID)"; then
+        echo "BLOCKED: Hardcoded Twilio Account SID detected!" >&2
+        echo "" >&2
+        echo "Found pattern matching 'ACxxxxxxxx...' which appears to be a hardcoded Account SID." >&2
+        echo "Use environment variables instead:" >&2
+        echo "  - In serverless functions: context.TWILIO_ACCOUNT_SID" >&2
+        echo "  - In Node.js: process.env.TWILIO_ACCOUNT_SID" >&2
+        echo "" >&2
+        exit 2
+    fi
 
-# Pattern for Twilio API Key SID
-if echo "$CONTENT" | grep -E "SK[a-f0-9]{32}" | grep -vqE "(process\.env|context\.|TWILIO_API_KEY|API_KEY)"; then
-    echo "BLOCKED: Hardcoded Twilio API Key SID detected!" >&2
-    echo "" >&2
-    echo "API Keys must not be hardcoded. Use environment variables:" >&2
-    echo "  - context.TWILIO_API_KEY or process.env.TWILIO_API_KEY" >&2
-    echo "" >&2
-    exit 2
-fi
+    # Pattern for Twilio API Key SID
+    if echo "$CONTENT" | grep -E "SK[a-f0-9]{32}" | grep -vqE "(process\.env|context\.|TWILIO_API_KEY|API_KEY)"; then
+        echo "BLOCKED: Hardcoded Twilio API Key SID detected!" >&2
+        echo "" >&2
+        echo "API Keys must not be hardcoded. Use environment variables:" >&2
+        echo "  - context.TWILIO_API_KEY or process.env.TWILIO_API_KEY" >&2
+        echo "" >&2
+        exit 2
+    fi
 
-# Pattern for hardcoded auth token assignment
-if echo "$CONTENT" | grep -qE "(authToken|AUTH_TOKEN)['\"]?\s*[:=]\s*['\"][a-f0-9]{32}['\"]"; then
-    echo "BLOCKED: Hardcoded Twilio Auth Token detected!" >&2
-    echo "" >&2
-    echo "Auth tokens must never be hardcoded. Use environment variables:" >&2
-    echo "  - In serverless functions: context.TWILIO_AUTH_TOKEN" >&2
-    echo "  - In Node.js: process.env.TWILIO_AUTH_TOKEN" >&2
-    echo "" >&2
-    exit 2
+    # Pattern for hardcoded auth token assignment
+    if echo "$CONTENT" | grep -qE "(authToken|AUTH_TOKEN)['\"]?\s*[:=]\s*['\"][a-f0-9]{32}['\"]"; then
+        echo "BLOCKED: Hardcoded Twilio Auth Token detected!" >&2
+        echo "" >&2
+        echo "Auth tokens must never be hardcoded. Use environment variables:" >&2
+        echo "  - In serverless functions: context.TWILIO_AUTH_TOKEN" >&2
+        echo "  - In Node.js: process.env.TWILIO_AUTH_TOKEN" >&2
+        echo "" >&2
+        exit 2
+    fi
 fi
 
 # ============================================
@@ -70,9 +85,11 @@ fi
 # ============================================
 
 # Check if this is a new JavaScript function file (not a test)
-if [[ "$FILE_PATH" =~ functions/.*\.js$ ]] && [[ ! "$FILE_PATH" =~ \.test\.js$ ]]; then
-    # Check if file doesn't exist yet (new file)
-    if [ ! -f "$FILE_PATH" ]; then
+# Use both raw and resolved paths to handle macOS /tmp → /private/tmp symlinks
+if { [[ "$FILE_PATH" =~ functions/.*\.js$ ]] || [[ "$RESOLVED_FILE_PATH" =~ functions/.*\.js$ ]]; } && \
+   [[ ! "$FILE_PATH" =~ \.test\.js$ ]]; then
+    # Check if file doesn't exist yet (new file) — check both path forms
+    if [ ! -f "$FILE_PATH" ] && [ ! -f "$RESOLVED_FILE_PATH" ]; then
         # Validate ABOUTME is present in content being written
         if ! echo "$CONTENT" | head -5 | grep -q "// ABOUTME:"; then
             echo "BLOCKED: New function file missing ABOUTME comment!" >&2
@@ -96,11 +113,12 @@ fi
 # ============================================
 
 # Only check new function files (not tests, not helpers/private utilities)
-if [[ "$FILE_PATH" =~ functions/.*\.js$ ]] && \
+if { [[ "$FILE_PATH" =~ functions/.*\.js$ ]] || [[ "$RESOLVED_FILE_PATH" =~ functions/.*\.js$ ]]; } && \
    [[ ! "$FILE_PATH" =~ \.test\.js$ ]] && \
+   [[ ! "$FILE_PATH" =~ _test\.go$ ]] && \
    [[ ! "$FILE_PATH" =~ /helpers/ ]]; then
 
-    if [ ! -f "$FILE_PATH" ]; then
+    if [ ! -f "$FILE_PATH" ] && [ ! -f "$RESOLVED_FILE_PATH" ]; then
         # Skip if override is set
         if [ "${SKIP_PIPELINE_GATE:-}" = "true" ]; then
             echo "Pipeline gate bypassed (SKIP_PIPELINE_GATE=true)" >&2
@@ -115,7 +133,7 @@ if [[ "$FILE_PATH" =~ functions/.*\.js$ ]] && \
             BASENAME="${BASENAME%.private}"
             TEST_PATH="__tests__/unit/${DOMAIN}/${BASENAME}.test.js"
 
-            if [ ! -f "$PROJECT_ROOT/$TEST_PATH" ]; then
+            if [ ! -f "$PROJECT_ROOT/$TEST_PATH" ] && [ ! -f "$RESOLVED_PROJECT_ROOT/$TEST_PATH" ]; then
                 echo "" >&2
                 echo "BLOCKED: New function file has no corresponding tests!" >&2
                 echo "" >&2

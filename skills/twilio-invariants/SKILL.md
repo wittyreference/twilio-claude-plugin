@@ -24,6 +24,7 @@ Rules that have each caused real debugging time loss. These exist in domain-spec
 - **`source .env` doesn't undo commented-out vars** — Shell retains values after commenting out lines. Must explicitly `unset` each variable before re-sourcing.
 - **SDK auto-reads `TWILIO_REGION`/`TWILIO_EDGE` from env** — Setting these in `.env` silently routes all API calls to regional endpoints even when not passed to the constructor. US1 auth tokens fail with 401 on regional endpoints. Comment out when not actively testing regions.
 - **Empty `voiceUrl` on a Twilio number = silent instant call failure** — Calling a number with `voiceUrl: ""` produces `status: failed, duration: 0` with ZERO diagnostics (no debugger alerts, no notifications, no error codes). Indistinguishable from auth failures or account blocks. Always verify destination webhooks via `list_phone_numbers` before debugging call routing.
+- **dotenv default mode doesn't override shell vars** — `require('dotenv').config()` skips vars already in `process.env`. Use `{ override: true }` so `.env` always wins over inherited shell vars. Without this, users with pre-existing Twilio env vars from other projects hit silent auth failures.
 
 # Session discipline
 

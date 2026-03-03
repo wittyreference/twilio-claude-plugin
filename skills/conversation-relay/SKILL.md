@@ -456,6 +456,17 @@ const transcript = await client.intelligence.v2.transcripts.create({
 
 **Language Operators run automatically**: When operators (e.g., Conversation Summary, Sentiment Analysis) are configured on the Intelligence service in the Twilio Console, they automatically run on every transcript created via that service. No per-transcript operator invocation is needed.
 
+#### Dual Service Pattern
+
+Voice Intelligence operators are per-service and run on all transcripts under that service. There is no per-transcript bypass. To support both "analyze everything" and "analyze selectively" workflows, use separate services:
+
+| Service | Operators | Use Case |
+|---------|-----------|----------|
+| Auto-analyze | Summary + Sentiment (auto-run) | Validation, demo calls — operators analyze every transcript |
+| Manual | None configured | Production — you control which recordings get transcribed |
+
+**PII Redaction**: Similarly, PII redaction operators are per-service. For both redacted (standard) and unredacted (fraud/compliance) transcript access, create separate Intelligence Services and route transcripts based on the use case.
+
 ## Testing Conversation Relay
 
 1. Set up a WebSocket server (locally or deployed)
