@@ -103,6 +103,7 @@ These commands can be run directly in your Claude Code session:
 | `/context [action]` | Context optimization — summarize, load, or analyze | — |
 | `/validate [type] [SID]` | Deep validation of Twilio resources beyond HTTP 200 | — |
 | `/wrap-up [scope]` | End-of-session review — capture learnings, update docs | — |
+| `/learn [action]` | Interactive learning exercises on autonomous work (generation effect) | — |
 
 ### Subagents (Claude-Invoked)
 
@@ -130,17 +131,26 @@ The plugin loads domain knowledge automatically when relevant:
 - `taskrouter` - Skills-based routing to workers
 - `conversation-relay` - ConversationRelay for real-time voice AI with WebSocket
 - `messaging-services` - Sender pools, A2P 10DLC compliance
+- `pay` - PCI-compliant payments with `<Pay>` verb
+- `proxy` - Number masking and anonymous communication
+- `phone-numbers` - Phone number management and configuration
+- `sip-byoc` - SIP trunking and Bring Your Own Carrier
+- `payments` - Payment processing patterns and flows
+- `compliance-regulatory` - Regulatory bundles and compliance
 
 **Reference:**
 - `twilio-cli` - Comprehensive CLI command reference
-- `twilio-invariants` - 9 proven gotchas that cause silent failures (credential formats, protocol fields, deployment traps)
+- `twilio-invariants` - Proven gotchas that cause silent failures (credential formats, protocol fields, deployment traps)
 - `voice-use-case-map` - Definitive product mapping for 10 voice use cases (notifications through AI transcription)
 - `deep-validation` - Validation patterns beyond HTTP 200 (status polling, debugger checks, Voice Insights)
 - `tdd-workflow` - TDD Red/Green/Refactor patterns for Twilio projects
+- `brainstorm` - Ideation template for Twilio app concepts with validation mapping
+- `tool-boundaries` - Golden Rules and Risk Tiers for MCP vs CLI vs Functions decisions
+- `operational-gotchas` - Hard-won debugging insights across testing, deployment, voice routing, auth, and MCP
+- `workflows` - Development pipeline patterns (new-feature, bug-fix, refactor, security-audit)
 
 **Context Engineering:**
-- `context-fundamentals` - Context management principles
-- `context-compression` - TwiML and payload compression
+- `context-engineering` - Unified context management: compression ratios, budgets, loading strategies
 - `memory-systems` - State tracking across sessions
 - `multi-agent-patterns` - Orchestration patterns
 
