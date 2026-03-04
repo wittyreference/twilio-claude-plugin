@@ -61,6 +61,20 @@ grep '^TWILIO_CALLBACK_BASE_URL' .env
 - **WARN**: TWILIO_CALLBACK_BASE_URL contains `.au1.` or `.ie1.` — callbacks point to regional deployment
 - **WARN**: Uncommented `TWILIO_AU1_API_KEY` or `TWILIO_IE1_API_KEY` in .env — SDK may pick up regional credentials
 
+### Check 2.8: Environment Doctor
+
+If `scripts/env-doctor.sh` exists in the project, run it:
+
+```bash
+./scripts/env-doctor.sh
+```
+
+- **PASS**: Exit code 0, no failures detected
+- **WARN**: Exit code 0 with warnings (e.g., direnv not installed, shell-only vars)
+- **FAIL**: Exit code 1 — credential mismatches, regional contamination, or missing `.env`
+
+This catches the most common new-user failure mode: inherited shell vars from another Twilio project overriding `.env` values.
+
 ### Check 3: Auth Validity
 
 ```bash

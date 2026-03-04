@@ -77,7 +77,20 @@ After promoting, replace the detailed item with a pointer (e.g., "See voice docs
 
 If the session completed or progressed a tracked task, update the todo file.
 
-### 6. Summary
+### 6. Infrastructure Health Checks
+
+Quick checks that hooks and automation are still working:
+
+**Plan archiving:**
+```bash
+# Check for recent archived plans
+ls -lt .claude/archive/plans/ 2>/dev/null | head -3
+```
+If plans are not being archived after plan mode exits, verify the `archive-plan.sh` hook is registered under `Stop` in `.claude/settings.json`.
+
+Report any issues in the summary. Skip if healthy.
+
+### 7. Summary
 
 Output what was updated:
 
