@@ -33,10 +33,12 @@ Claude should invoke this subagent when:
 Full development pipeline for new functionality.
 
 ```
-architect → spec → test-gen → dev → review → test → docs
+architect → prototype (if unknowns) → spec → test-gen → dev → review → test → docs
 ```
 
 **Use when**: Building new Twilio functionality from scratch
+
+**Prototype step**: If `/architect` identifies unknowns (unfamiliar APIs, ambiguous behavior, multi-service interactions), run `/prototype` to spike the unknowns before writing a spec. Skip if the team has prior experience with all involved APIs.
 
 ### 2. Bug Fix (`bug-fix`)
 Quick fix pipeline for resolving issues.

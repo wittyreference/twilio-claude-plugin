@@ -151,7 +151,20 @@ When recommending advanced APIs, explicitly note:
 - [Integration concerns]
 ```
 
-### Step 3: Recommend Approach
+### Step 3: Identify Unknowns and Recommend Prototyping
+
+Before recommending an approach, assess whether a prototype spike is needed:
+
+- **Unfamiliar APIs**: Is this the first time the project uses this Twilio service?
+- **Ambiguous behavior**: Does the documentation leave edge cases unclear?
+- **Multi-service interaction**: Are services being combined in ways not previously tested?
+- **Real-time protocols**: WebSocket, DTMF, conference events, or streaming — all have undocumented quirks
+
+If unknowns exist, recommend `/prototype` before `/spec`. State what questions the spike should answer.
+
+If no unknowns exist (team has prior experience with all APIs involved), skip to `/spec`.
+
+### Step 4: Recommend Approach
 
 Provide clear recommendations:
 
@@ -159,6 +172,16 @@ Provide clear recommendations:
 - What access level is appropriate?
 - What existing code should be referenced?
 - Are there patterns to follow or avoid?
+
+### Vertical Slice Planning
+
+When the feature touches multiple layers (webhook → API → state → callback), recommend starting with a **vertical slice** — the thinnest possible implementation that exercises all layers end-to-end.
+
+Per Gall's Law: *"A complex system that works is invariably found to have evolved from a simple system that worked."*
+
+- Identify the minimal vertical slice that proves the integration
+- Recommend building that slice first, then expanding horizontally
+- Use it in your output: "Start with a vertical slice of [X] to prove [Y] before adding [Z]"
 
 ---
 
@@ -258,11 +281,20 @@ module.exports = { helperFunction };
 ### Documentation Updates Needed
 - [ ] `functions/[domain]/` skill needs update
 
+### Unknowns Assessment
+- [ ] All APIs previously used in this project — no prototype needed
+- [ ] Unknowns identified — prototype recommended before spec:
+  - [Unknown 1: question to answer]
+  - [Unknown 2: question to answer]
+
+### Vertical Slice
+- [Thinnest end-to-end implementation to prove the integration]
+
 ### Concerns/Risks
 - [Any architectural concerns]
 
 ### Next Step
-Ready for specification subagent to create detailed specification.
+Ready for `/prototype` (if unknowns exist) or `/spec` (if no unknowns).
 ```
 
 ### For Architecture Audits
@@ -299,13 +331,15 @@ After design review:
 Architecture review complete.
 
 Recommendation: PROCEED
+Unknowns: [NONE — skip to /spec | LIST — prototype first]
 
-Next step: Invoke the specification subagent to create detailed specification.
+Next step: Run `/prototype [unknowns]` or `/spec [feature]`.
 
-Key context for spec writer:
+Key context for next phase:
 - Directory: functions/[domain]/
 - Pattern: [pattern to follow]
 - Services: [Twilio services needed]
+- Vertical slice: [thinnest end-to-end path to prove the integration]
 ```
 
 ---

@@ -62,3 +62,56 @@ The `action` URL receives these parameters:
 | `PaymentCardNumber` | Last 4 digits |
 | `PaymentCardType` | `visa`, `mastercard`, `amex`, etc. |
 | `PaymentConfirmationCode` | Confirmation code from connector |
+
+## Agent-Assisted Payment Flow (REST API)
+
+```
+Customer on active call (e.g., in conference with voice AI agent)
+    ↓
+create_payment(callSid) → starts payment session
+    ↓
+update_payment(Capture=payment-card-number) → <Pay> listens for DTMF
+    ↓
+Customer enters card digits on phone keypad
+    ↓
+Status callback fires with Required field (tracks remaining fields)
+    ↓
+Repeat: update_payment(Capture=expiration-date), security-code, postal-code
+    ↓
+update_payment(Status=complete) → connector processes payment
+    ↓
+Status callback with Result=success or payment-connector-error
+```
+
+## Generic Pay Connector Setup
+
+1. Console → Voice → Pay Connectors → Create Generic Pay Connector
+2. Endpoint URL: your deployed pay simulator endpoint
+3. Username/Password: credentials for your connector
+4. Mode: TEST for development, LIVE for production
+
+The connector sends POST with lowercase fields: `method`, `cardnumber`, `expiry_month`, `expiry_year`, `cvv`, `postal_code`, `amount`.
+
+**No REST API exists for Pay Connectors** — Console-only configuration.
+
+## Gotchas
+
+1. **`<Pay>` only runs on inbound/webhook call legs** — Using `<Pay>` in inline TwiML on outbound API calls (`make_call` with `twiml` parameter) silently fails. Zero errors, zero callbacks, zero notifications. `<Pay>` must execute from a phone number's voice URL webhook. The `create_payment` REST API works on ANY in-progress call.
+
+2. **Conference audio does NOT preserve DTMF signaling** — `<Play digits>` on one conference participant generates in-band audio tones. `<Pay>` on another participant only detects out-of-band RFC 2833 DTMF from its own call's phone keypad. Cannot inject DTMF across conference participants via `<Play digits>`, `announceUrl`, or muting.
+
+3. **`<Play digits>` on a parent leg DOES reach `<Pay>` on its child** — Within a single `<Dial>`-created call pair, DTMF signaling crosses the parent/child bridge. This is the only cross-leg DTMF pattern that works.
+
+4. **ZIP code needs `#` to terminate** — Card number auto-terminates at 16 digits, expiry at 4, CVV at 3. But ZIP codes have variable length (5 or 9), so `<Pay>` waits indefinitely. Customer must press `#` after entering ZIP.
+
+5. **Status callback `Required` field tracks capture completion** — Comma-separated list of uncaptured fields (e.g., `"expiration-date,security-code,postal-code"`). Drops field names as captured. Becomes null/empty when ALL fields captured. Use this to know when to advance to the next field.
+
+6. **Status callbacks fire per-digit during card entry** — `PaymentCardNumber` grows from `x` to `xxxxxxxxxxxx4242` one digit at a time. Don't use card number length to detect completion — use the `Required` field instead.
+
+7. **Sync polling for payment state requires timestamp guards** — Status callbacks overwrite the Sync doc. Without checking that `lastUpdated > captureRequestedAt`, stale data from previous payments causes false positives.
+
+8. **`<Pause>` as first TwiML verb doesn't answer a call** — When calling a Twilio number, the child leg's webhook must produce audio (e.g., `<Say>`) before `<Pause>`. A `<Pause>`-only response results in `no-answer`.
+
+9. **Generic Pay Connector uses lowercase field names** — `method`, `cardnumber`, `expiry_month`, `expiry_year`, `cvv`. NOT `Method`, `CardNumber`, `ExpirationDate`.
+
+10. **`create_payment` rejects `ChargeAmount` and `TokenType` params** — Despite being documented, passing these on the REST API returns error 64020. Use minimal params: `IdempotencyKey`, `StatusCallback`, `PaymentConnector` only.
