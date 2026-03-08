@@ -9,8 +9,9 @@ Rules that have each caused real debugging time loss. These are proven gotchas t
 
 ---
 
-Rules that have each caused real debugging time loss. These exist in domain-specific CLAUDE.md files — this index ensures they're loaded every session.
+Rules that have each caused real debugging time loss. These cover serverless functions, environment/auth, and voice protocols.
 
+<architectural_invariants>
 - **`Twilio.Response.setBody()` requires strings** — Passing objects causes `Buffer.from(object)` TypeError. Always `JSON.stringify()` + Content-Type header. (~29 latent instances across voice/ and conversation-relay/)
 - **`console.error()` → 82005 alerts** — Use `console.log()` for operational logging. Only `console.error()` in catch blocks. `console.warn()` → 82004.
 - **ConversationRelay uses `last`, not `isFinal`** — Protocol sends `{ last: true }`. Checking `isFinal` silently drops all follow-up utterances.
@@ -29,6 +30,7 @@ Rules that have each caused real debugging time loss. These exist in domain-spec
 - **Conference DTMF is per-call, not cross-participant** — `<Play digits>` on one conference participant generates in-band audio. `<Pay>` on another participant only detects out-of-band RFC 2833 DTMF from its own call's keypad. Cannot inject DTMF across conference participants.
 - **Conference has no parent/child relationships** — Each participant is an independent call. One disconnecting doesn't affect others (unless `endConferenceOnExit=true`). Contrast with `<Dial>`-created calls where parent/child are coupled.
 - **`<Pause>` as first TwiML verb = no-answer** — Webhook must produce audio (`<Say>`) before `<Pause>` to properly answer the call. `<Pause>`-only responses cause the call to ring until timeout.
+</architectural_invariants>
 
 # Session discipline
 
