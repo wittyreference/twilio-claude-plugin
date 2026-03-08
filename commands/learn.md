@@ -21,7 +21,9 @@ When autonomous sessions (`/orchestrate`, subagents) produce code, you see clean
 
 ## Arguments
 
+<user_request>
 $ARGUMENTS
+</user_request>
 
 ## Behavior Based on Arguments
 

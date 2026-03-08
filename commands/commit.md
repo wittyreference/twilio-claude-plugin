@@ -103,4 +103,6 @@ Post-commit:
 
 ## What to Commit
 
+<user_request>
 $ARGUMENTS
+</user_request>
