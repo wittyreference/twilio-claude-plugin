@@ -73,4 +73,6 @@ List any untested functionality:
 
 ## Test Scope
 
+<user_request>
 $ARGUMENTS
+</user_request>

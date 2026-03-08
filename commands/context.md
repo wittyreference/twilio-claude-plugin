@@ -21,4 +21,6 @@ Optimize context for the current session. Use context compression and optimizati
 
 For full techniques, load the `context-compression` or `context-fundamentals` skill.
 
+<user_request>
 $ARGUMENTS
+</user_request>
