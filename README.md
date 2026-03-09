@@ -1,4 +1,4 @@
-# Twilio Claude Plugin
+# Twilio Claude Plugin (v1.2.0)
 
 A Claude Code plugin that brings Twilio CPaaS expertise to any project. Provides specialized agents, commands, and skills for building voice, messaging, and real-time communication applications with Twilio.
 
@@ -104,6 +104,7 @@ These commands can be run directly in your Claude Code session:
 | `/validate [type] [SID]` | Deep validation of Twilio resources beyond HTTP 200 | — |
 | `/wrap-up [scope]` | End-of-session review — capture learnings, update docs | — |
 | `/learn [action]` | Interactive learning exercises on autonomous work (generation effect) | — |
+| `/check-updates` | Check for newer plugin versions on GitHub | — |
 
 ### Subagents (Claude-Invoked)
 
@@ -117,7 +118,7 @@ Claude automatically selects these specialized agents based on your task:
 | **Dev** | TDD Green Phase - implements code to pass tests |
 | **Review** | Code review with approval authority |
 | **Docs** | Technical documentation updates |
-| **Orchestrate** | Coordinates multi-agent workflows |
+| **Orchestrate** | Coordinates multi-agent development workflows |
 
 ### Skills (Knowledge Files)
 
@@ -154,6 +155,14 @@ The plugin loads domain knowledge automatically when relevant:
 - `memory-systems` - State tracking across sessions
 - `multi-agent-patterns` - Orchestration patterns
 
+**Additional:**
+- `agent-testing` - Agent-to-agent testing patterns for ConversationRelay
+- `getting-started` - Quick-start guide for new Twilio projects
+- `context-hub` - External API reference loader
+- `env-doctor` - Environment conflict detection and resolution
+- `video` - Video rooms, recordings, and compositions
+- `video-patterns` - Video application patterns and best practices
+
 ### Hooks
 
 Automated guardrails that run during development:
@@ -166,6 +175,8 @@ Automated guardrails that run during development:
 | `post-bash.sh` | After Bash | Deployment notifications |
 | `subagent-log.sh` | After Subagent | Logs workflow activity |
 | `session-checklist.sh` | On Stop | Warns about uncommitted changes and unpushed commits |
+| `session-start.sh` | On session start | Environment checks, stale session detection |
+| `subagent-log.sh` | After Subagent | Logs subagent workflow activity |
 | `notify-ready.sh` | On Stop | Desktop notification when done |
 
 > **⚠️ Known Limitation**: Due to a [Claude Code bug](https://github.com/anthropics/claude-code/issues/10225), plugin hooks may not execute automatically. To enable hooks, copy the configuration to your user settings:
