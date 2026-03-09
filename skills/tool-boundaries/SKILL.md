@@ -26,6 +26,7 @@ This document defines the architectural boundaries between MCP Server, Twilio CL
 2. **CLI = Infrastructure Operations**: Deploy, configure environments, purchase numbers.
 3. **Functions = Real-Time Webhooks**: Handle calls/messages, return TwiML.
 4. **Never Cross Layers**: MCP does not invoke CLI. Functions do not use MCP.
+5. **SID-First Principle**: When you have a specific resource SID (call, message, recording, transcript, task, room, trunk, Sync resource), always use the SID-targeted `validate_*` or `get_*` tool instead of listing and filtering. SID-targeted tools provide deep validation (status, notifications, insights, sub-resources) in a single call. Reserve `list_*` tools for discovery when you don't have a SID.
 
 ---
 
@@ -44,8 +45,35 @@ Read-only operations agents can perform freely via MCP tools.
 | List phone numbers | `list_phone_numbers` | Inventory check |
 | Search available numbers | `search_available_numbers` | Research only, no purchase |
 | Get Sync document | `get_document` | State retrieval |
+| List Sync documents | `list_documents` | State enumeration |
 | List TaskRouter workers | `list_workers` | Availability check |
+| List TaskRouter workflows | `list_workflows` | Routing config review |
+| List TaskRouter task queues | `list_task_queues` | Queue topology discovery |
 | Get TaskRouter queue stats | `get_queue_statistics` | Real-time operational metrics |
+| List TaskRouter activities | `list_activities` | Worker state discovery |
+| Get verification status | `get_verification_status` | Status check |
+| Get payment status | `get_payment` | Payment status check |
+| Validate call (deep) | `validate_call` | Status + notifications + Voice Insights |
+| Validate message (deep) | `validate_message` | Delivery + debugger alerts |
+| Validate recording | `validate_recording` | Completion polling + duration |
+| Validate transcript | `validate_transcript` | Completion + sentences |
+| Validate debugger | `validate_debugger` | Alerts, optionally filtered by resourceSid |
+| Validate voice AI flow | `validate_voice_ai_flow` | Full flow: call → recording → transcript |
+| Validate Sync document | `validate_sync_document` | Data structure + content |
+| Validate Sync list | `validate_sync_list` | Item count + structure |
+| Validate Sync map | `validate_sync_map` | Key/value validation |
+| Validate TaskRouter task | `validate_task` | Task deep validation |
+| Validate SIP | `validate_sip` | Infrastructure validation |
+| Validate video room | `validate_video_room` | Room + participants + tracks |
+| List serverless services | `list_services` | Deployment state |
+| List serverless functions | `list_functions` | Function inventory |
+| List Studio flows | `list_studio_flows` | Flow inventory |
+| Get account | `get_account` | Account info + status |
+| Get account balance | `get_account_balance` | Balance check |
+| Lookup phone number | `lookup_phone_number` | Carrier info, validation |
+| Check fraud risk | `check_fraud_risk` | Fraud assessment |
+| List video rooms | `list_video_rooms` | Room inventory |
+| List messaging services | `list_messaging_services` | Service inventory |
 
 ### Tier 2: Controlled (Agent with Guardrails)
 
@@ -60,6 +88,14 @@ Write operations agents can perform with rate limits or validation.
 | Create Sync document | `create_document` | Namespace isolation for agent state |
 | Update Sync document | `update_document` | Agent-owned documents only |
 | Create TaskRouter task | `create_task` | Priority caps, timeout limits |
+| Update TaskRouter task | `update_task` | Changes task state |
+| Update TaskRouter worker | `update_worker` | Changes worker availability |
+| Create payment | `create_payment` | PCI Mode required (irreversible) |
+| Update payment | `update_payment` | Completes/cancels payment |
+| Create video room | `create_video_room` | Room creation |
+| Trigger Studio flow | `trigger_flow` | Flow execution |
+| Create messaging service | `create_messaging_service` | Service setup |
+| Send notification | `send_notification` | Push notification |
 
 ### Tier 3: Supervised (Human Confirmation Required)
 
@@ -129,6 +165,77 @@ Write operations agents can perform with rate limits or validation.
 | CLI `phone-numbers:update` | Interactive setup, one-time manual configuration |
 
 **Rule**: Both require Tier 3 approval for production. MCP for automation, CLI for manual.
+
+### Debugger Logs
+
+| Tool | Use When |
+|------|----------|
+| MCP `validate_debugger(resourceSid)` | SID-targeted: alerts for a specific call/message/resource |
+| MCP `validate_call(callSid)` / `validate_message(messageSid)` | Deep validation including debugger alerts for that resource |
+| MCP `get_debugger_logs` | Time-window browsing when no specific SID available |
+| MCP `analyze_errors` | Pattern detection and error grouping |
+| CLI `debugger:logs:list` | Interactive human debugging session |
+
+**Rule**: SID-first — use `validate_*` tools when you have a resource SID. Use `get_debugger_logs` for discovery. CLI for human debugging only.
+
+### Sync State
+
+| Tool | Use When |
+|------|----------|
+| MCP `validate_sync_document(serviceSid, name)` | SID-targeted: deep validation of a specific document |
+| MCP `validate_sync_list(serviceSid, name)` / `validate_sync_map(serviceSid, name)` | SID-targeted: validate list/map structure and contents |
+| MCP `create_document`, `update_document`, List/Map CRUD tools | Agent state management workflows |
+| Function (via `context.getTwilioClient()`) | Event-triggered state updates from webhooks |
+
+**Rule**: SID-first for validation. MCP for agent workflows. Functions for event-triggered updates.
+
+### TaskRouter
+
+| Tool | Use When |
+|------|----------|
+| MCP `validate_task(taskSid)` | SID-targeted: deep validation of a specific task |
+| MCP `list_workers`, `get_queue_statistics`, `list_task_queues` | Agent monitoring and management |
+| MCP `create_task`, `update_task`, `update_worker` | Agent-driven task orchestration |
+| Function (via `context.getTwilioClient()`) | Worker updates from call events, assignment callbacks |
+
+**Rule**: SID-first for task validation. MCP for monitoring. Functions for event-triggered routing.
+
+### Recordings & Transcripts
+
+| Tool | Use When |
+|------|----------|
+| MCP `validate_recording(recordingSid)` | SID-targeted: completion polling + status |
+| MCP `validate_transcript(transcriptSid)` | SID-targeted: completion + sentence extraction |
+| MCP `list_recordings`, `list_transcripts` | Discovery when no specific SID |
+
+**Rule**: SID-first for validation. List tools for discovery only.
+
+### Studio Flows
+
+| Tool | Use When |
+|------|----------|
+| MCP `trigger_flow`, `get_execution_status` | Always MCP for agent interaction |
+| MCP `list_studio_flows`, `get_flow` | Flow discovery and inspection |
+
+**Rule**: Always MCP. No dedicated CLI equivalent.
+
+### Video
+
+| Tool | Use When |
+|------|----------|
+| MCP `validate_video_room(roomSid)` | SID-targeted: room + participants + tracks + recordings |
+| MCP `create_video_room`, `list_video_rooms` | Room management |
+
+**Rule**: SID-first for room validation. Always MCP — no dedicated CLI equivalent.
+
+### Lookups
+
+| Tool | Use When |
+|------|----------|
+| MCP `lookup_phone_number` | Phone number validation and carrier info |
+| MCP `check_fraud_risk` | Fraud risk assessment |
+
+**Rule**: Always MCP. No dedicated CLI equivalent.
 
 ---
 
