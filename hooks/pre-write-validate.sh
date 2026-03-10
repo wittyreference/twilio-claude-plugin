@@ -26,8 +26,13 @@ fi
 # Resolve symlinks once for all downstream sections.
 # macOS: /tmp → /private/tmp causes ${FILE_PATH#$PROJECT_ROOT/} to fail
 # when git rev-parse returns /private/tmp but Claude passes /tmp.
+# For new files (pre-write), realpath fails on the file itself because it
+# doesn't exist yet. Resolve the directory portion instead, then reattach
+# the filename. This handles the /tmp → /private/tmp symlink on macOS.
 PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
-RESOLVED_FILE_PATH="$(realpath "$FILE_PATH" 2>/dev/null || echo "$FILE_PATH")"
+_FILE_DIR="$(dirname "$FILE_PATH")"
+_RESOLVED_DIR="$(realpath "$_FILE_DIR" 2>/dev/null || echo "$_FILE_DIR")"
+RESOLVED_FILE_PATH="$_RESOLVED_DIR/$(basename "$FILE_PATH")"
 RESOLVED_PROJECT_ROOT="$(realpath "$PROJECT_ROOT" 2>/dev/null || echo "$PROJECT_ROOT")"
 
 # ============================================

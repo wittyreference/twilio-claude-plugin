@@ -39,4 +39,20 @@ if [ -d ".git" ]; then
     fi
 fi
 
+# ============================================
+# MEMORY.md SIZE CHECK
+# ============================================
+
+# Find auto-memory file (Claude Code convention: ~/.claude/projects/<encoded-path>/memory/MEMORY.md)
+PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+ENCODED_PATH=$(echo "$PROJECT_ROOT" | sed 's|/|-|g')
+MEMORY_FILE="$HOME/.claude/projects/$ENCODED_PATH/memory/MEMORY.md"
+if [[ -f "$MEMORY_FILE" ]]; then
+    MEMORY_LINES=$(wc -l < "$MEMORY_FILE" | tr -d ' ')
+    if [[ "$MEMORY_LINES" -gt 100 ]]; then
+        echo "MEMORY: ${MEMORY_LINES}/200 lines — consider pruning stale entries" >&2
+        echo "" >&2
+    fi
+fi
+
 exit 0
