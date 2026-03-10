@@ -20,12 +20,13 @@ Rules that have each caused real debugging time loss.
 - **TwiML: one document controls a call at a time** — Updating a participant's TwiML exits their current state (conference, queue). Exception: `<Start><Stream>`, `<Start><Recording>`, `<Start><Siprec>` fork background processes.
 - **`<Start><Recording>` syntax is `.recording()`, not `.record()`** — `twiml.start().recording({...})` is correct.
 - **Empty `voiceUrl` on a Twilio number = silent instant call failure** — Calling a number with `voiceUrl: ""` produces `status: failed, duration: 0` with ZERO diagnostics. Always verify destination webhooks before debugging call routing.
-- **dotenv default mode doesn't override shell vars** — All project dotenv calls use `{ override: true }` so `.env` always wins. New dotenv usage must include `override: true`.
+- **dotenv default mode doesn't override shell vars** — All dotenv calls should use `{ override: true }` so `.env` always wins. New dotenv usage must include `override: true`.
 - **`<Pay>` silently ignored on outbound API call legs** — `<Pay>` in inline TwiML on `make_call` produces zero errors, zero callbacks. Must run from a phone number's voice URL webhook.
 - **Conference DTMF is per-call, not cross-participant** — `<Play digits>` on one conference participant generates in-band audio. Cannot inject DTMF across conference participants.
 - **Conference has no parent/child relationships** — Each participant is an independent call. One disconnecting doesn't affect others (unless `endConferenceOnExit=true`). Contrast with `<Dial>`-created calls where parent/child are coupled.
 - **`<Pause>` as first TwiML verb = no-answer** — Webhook must produce audio (`<Say>`) before `<Pause>` to properly answer the call.
 - **Video rooms require API Key auth** — AccessToken for Video uses API Key + Secret, not Auth Token. Functions must have TWILIO_API_KEY and TWILIO_API_SECRET env vars.
+- **Never expose `accountSid` or `authToken` in function responses** — REST API credentials in browser JS or TwiML responses enable full account takeover. Use API Keys (`SK...`) for client-side auth. Server-side only: `context.ACCOUNT_SID`, `context.AUTH_TOKEN`.
 </architectural_invariants>
 
 ## Environment & Auth Invariants
@@ -50,7 +51,7 @@ Rules that have each caused real debugging time loss.
 - **Voice Intelligence: `source_sid`, not `media_url`** — Use Recording SID for transcript creation. `media_url` requires auth the Intelligence API can't provide.
 </architectural_invariants>
 
-# Session discipline
+# Session Discipline
 
 - Do not convert lazy/conditional `require()` calls to static `import` statements without verifying the conditional logic still works. Node.js conditional requires exist for a reason (optional dependencies, environment-specific loading).
 - Run the full relevant test suite before presenting work as complete. A passing subset is not sufficient — regressions in unrelated tests still need to be caught.
@@ -77,3 +78,4 @@ Rules that have each caused real debugging time loss.
 - **Voice Intelligence**: `source_sid` vs `media_url` is critical
 - **TwiML generation**: `setBody()` strings, one-doc-at-a-time, `.recording()` syntax are critical
 - **Video rooms**: API Key auth requirement is critical
+- **Security**: Never expose credentials in responses

@@ -7,7 +7,9 @@ description: Build Twilio Voice apps with TwiML verbs, IVRs, call routing, recor
 
 Comprehensive knowledge for building Twilio Voice applications - from simple IVRs to complex call center solutions.
 
-## TwiML Voice Verbs Reference
+## TwiML Voice Verbs
+
+Common verbs: `<Say>`, `<Play>`, `<Gather>`, `<Dial>`, `<Record>`, `<Conference>`, `<Hangup>`, `<Redirect>`, `<Pause>`.
 
 ### Primary Verbs
 
@@ -1099,6 +1101,10 @@ Note: `<Gather action>` and `<Dial action>` resolve relative URLs correctly agai
 ### Dial action URL Should Not Be the Inbound Handler
 
 When Dial action is set to the same handler, it fires again after the Dial completes. If the handler creates one-time resources, the second invocation produces errors. Use a dedicated Dial-complete handler.
+
+### Deployment Resets Phone Number Webhooks
+
+`twilio serverless:deploy` can reset phone number voice URLs to previous values. Always verify and re-set after deployment.
 
 ### Conference Recording Captures Hold Music
 

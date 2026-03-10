@@ -9,32 +9,59 @@ Knowledge for building Twilio ConversationRelay functions for real-time voice AI
 
 ## What is Conversation Relay?
 
-Conversation Relay enables real-time, bidirectional communication between phone calls and AI/LLM backends via WebSockets. It handles:
-- Real-time speech transcription
-- Text-to-speech synthesis
-- Audio streaming
-- DTMF detection
-- Interruption handling
+Real-time, bidirectional communication between phone calls and AI/LLM backends via WebSockets. Handles speech transcription, TTS, audio streaming, DTMF detection, and interruption handling.
 
-**Not to be confused with Media Streams** (`<Connect><Stream>`): Media Streams sends raw audio (mulaw 8kHz base64 frames) and requires a completely different WebSocket protocol. A ConversationRelay WebSocket handler cannot be used with `<Stream>` — they will disconnect immediately. ConversationRelay sends structured JSON messages (`type: "prompt"`, `type: "text"`), while Media Streams sends binary audio frames.
+**Not Media Streams** (`<Connect><Stream>`): Media Streams sends raw audio (mulaw 8kHz base64). ConversationRelay sends structured JSON (`type: "prompt"`, `type: "text"`). They are **incompatible** — a CR handler cannot be used with `<Stream>` and vice versa.
 
-## TwiML Setup
+## Quickstart (5 Minutes)
 
-### Basic Connection
+Minimum viable ConversationRelay setup:
+
+1. **TwiML function** — Returns `<Connect><ConversationRelay>` pointing to your WebSocket URL
+2. **WebSocket server** — Handles `setup`, `prompt`, and `interrupt` events; sends `text` responses
+3. **Phone number** — Configure voice webhook to your TwiML function
+4. **Call it** — Dial the number, speak, hear AI response
+
+```javascript
+// Minimal TwiML
+const twiml = new Twilio.twiml.VoiceResponse();
+const connect = twiml.connect();
+connect.conversationRelay({
+  url: 'wss://your-server.ngrok.dev/ws',
+  voice: 'Google.en-US-Neural2-F',
+  transcriptionProvider: 'google',
+  ttsProvider: 'google'
+});
+return callback(null, twiml);
+```
+
+```javascript
+// Minimal WebSocket handler (3 events)
+ws.on('message', (data) => {
+  const msg = JSON.parse(data);
+  if (msg.type === 'setup') { /* session started, msg.callSid available */ }
+  if (msg.type === 'prompt') {
+    ws.send(JSON.stringify({ type: 'text', token: 'Hello! How can I help?' }));
+  }
+  if (msg.type === 'interrupt') { /* user interrupted, stop current response */ }
+});
+```
+
+## Basic TwiML Setup
+
 ```javascript
 const twiml = new Twilio.twiml.VoiceResponse();
 const connect = twiml.connect();
-
 connect.conversationRelay({
   url: 'wss://your-server.com/relay',
   voice: 'Google.en-US-Neural2-F',
   language: 'en-US'
 });
-
 return callback(null, twiml);
 ```
 
 ### Full Configuration
+
 ```javascript
 connect.conversationRelay({
   url: 'wss://your-server.com/relay',        // WebSocket endpoint
@@ -52,61 +79,44 @@ connect.conversationRelay({
 
 **Note**: `interruptByDtmf` is NOT a valid ConversationRelay attribute. DTMF detection is controlled by `dtmfDetection`, and interruption behavior is controlled by `interruptible`.
 
-## WebSocket Message Protocol
+## WebSocket Protocol
 
-### Incoming Messages (from Twilio)
+### Incoming (from Twilio)
 
-#### Setup Message
+| Type | Key Fields | Description |
+|------|-----------|-------------|
+| `setup` | `callSid`, `streamSid`, `from`, `to` | Connection established |
+| `prompt` | `voicePrompt`, `confidence`, `last` | User speech (process when `last: true`) |
+| `dtmf` | `digit` | DTMF tone detected |
+| `interrupt` | — | User interrupted AI response |
+
+### Outgoing (to Twilio)
+
+| Type | Key Fields | Description |
+|------|-----------|-------------|
+| `text` | `token` | TTS response (stream individual tokens for natural speech) |
+| `end` | — | End the conversation |
+
+### Message Examples
+
 ```json
-{
-  "type": "setup",
-  "callSid": "CA...",
-  "streamSid": "MZ...",
-  "from": "+1234567890",
-  "to": "+0987654321"
-}
-```
+// Setup
+{ "type": "setup", "callSid": "CA...", "streamSid": "MZ...", "from": "+1234567890", "to": "+0987654321" }
 
-#### Prompt Message (User Speech)
-```json
-{
-  "type": "prompt",
-  "voicePrompt": "Hello, I need help with my account",
-  "confidence": 0.95,
-  "last": true
-}
-```
+// Prompt (user speech)
+{ "type": "prompt", "voicePrompt": "Hello, I need help with my account", "confidence": 0.95, "last": true }
 
-#### DTMF Message
-```json
-{
-  "type": "dtmf",
-  "digit": "1"
-}
-```
+// DTMF
+{ "type": "dtmf", "digit": "1" }
 
-#### Interrupt Message
-```json
-{
-  "type": "interrupt"
-}
-```
+// Interrupt
+{ "type": "interrupt" }
 
-### Outgoing Messages (to Twilio)
+// Text response (TTS)
+{ "type": "text", "token": "Hello! I'd be happy to help you with your account." }
 
-#### Text Response (TTS)
-```json
-{
-  "type": "text",
-  "token": "Hello! I'd be happy to help you with your account."
-}
-```
-
-#### End Session
-```json
-{
-  "type": "end"
-}
+// End session
+{ "type": "end" }
 ```
 
 ## WebSocket Server Implementation Pattern
@@ -240,17 +250,19 @@ async function processWithLLM(userMessage) {
 | OpenAI | `gpt-4o` | Best quality |
 | OpenAI | `gpt-4o-mini` | Faster, lower cost |
 
-## Voice Options
+## Voice & Transcription Options
 
-**Important**: Some voice/provider combinations may cause error 64101 "Invalid TTS settings". Google Neural voices are recommended for reliability. Polly voices may be blocked.
+**Important**: Some voice/provider combos cause error 64101. Google Neural voices are recommended. Polly voices may be blocked.
 
 ### Google Voices (Recommended)
+
 - `Google.en-US-Neural2-F` - US English, Female (default for Voice AI Builder)
 - `Google.en-US-Neural2-J` - US English, Male
 - `Google.en-US-Neural2-A` - US English Neural
 - `Google.en-GB-Neural2-B` - British English Neural
 
 ### Amazon Polly Voices (May Be Blocked)
+
 - `Polly.Amy` - British English, Female
 - `Polly.Brian` - British English, Male
 - `Polly.Joanna` - US English, Female
@@ -308,17 +320,97 @@ async function manageContext(messages) {
 
 Keep all messages. Risk of context overflow on long calls — only use for short interactions.
 
-## Best Practices
+## Prerequisites
 
-1. **Handle Interruptions**: Users may interrupt the AI mid-sentence. Handle the `interrupt` message to stop current output.
+### Voice Intelligence Service
 
-2. **Use Streaming**: For long responses, stream text tokens individually for natural conversation flow.
+You must create a CI Service in the Twilio Console (no API for this). Go to Console > Voice > Voice Intelligence > Create new Service > copy the `GA...` SID > add to `.env` as `TWILIO_INTELLIGENCE_SERVICE_SID`.
 
-3. **Manage Latency**: Keep LLM response times low for natural conversation. Consider using faster models for time-sensitive responses.
+Without this, transcript creation fails with 404.
 
-4. **Handle Silence**: Implement timeout handling for long silences.
+### Dual Service Pattern
 
-5. **Graceful Endings**: Send the `end` message when the conversation should conclude.
+| Service | Env Var | Operators | Use Case |
+|---------|---------|-----------|----------|
+| Auto-analyze | `TWILIO_INTELLIGENCE_SERVICE_SID` | Summary + Sentiment (auto) | Validation, demo calls |
+| Manual | `TWILIO_INTELLIGENCE_SERVICE_MANUAL_SID` | None | Manual transcript creation |
+
+**Why two?** Operators are per-service and auto-run on all transcripts. No per-transcript bypass. PII redaction is also per-service — separate services for redacted vs unredacted access.
+
+### Transcript Creation
+
+Use `source_sid` (not `media_url`) for Twilio recordings — Intelligence API can't authenticate to api.twilio.com. Language Operators run automatically when configured on the service.
+
+```javascript
+// WRONG - Intelligence API can't authenticate to api.twilio.com
+const channel = {
+  media_properties: {
+    media_url: `https://api.twilio.com/.../Recordings/${recordingSid}.mp3`,
+  },
+  participants: [...]
+};
+
+// CORRECT - Use source_sid for Twilio recordings
+const channel = {
+  media_properties: {
+    source_sid: recordingSid,  // e.g., "RE1234567890abcdef"
+  },
+  participants: [
+    { channel_participant: 1, user_id: 'caller' },
+    { channel_participant: 2, user_id: 'agent' },
+  ],
+};
+
+const transcript = await client.intelligence.v2.transcripts.create({
+  serviceSid: intelligenceServiceSid,
+  channel,
+  customerKey: callSid,  // For correlation
+});
+```
+
+## ConversationRelay in Conferences
+
+Each agent's CR runs on their individual call leg (child), while conference membership is on the parent leg. Audio bridges through. Use the Participants API to add agents — `make_call(url=conference-TwiML)` won't work because the `url` parameter only controls the parent leg.
+
+### Pattern: Participants API + ConversationRelay Webhooks
+
+```javascript
+// 1. Configure each agent's phone with ConversationRelay webhook
+//    Agent A: agent-a-inbound -> ConversationRelay to wss://agent-a-server
+//    Agent B: agent-b-inbound -> ConversationRelay to wss://agent-b-server
+
+// 2. Create conference and add customer
+const customerCall = await client.calls.create({
+  to: customerPhone,        // Phone with ConversationRelay webhook
+  from: servicePhone,
+  url: customerLegUrl,       // TwiML: <Dial><Conference>name</Conference></Dial>
+});
+
+// 3. Add agent via Participants API
+await client.conferences(conferenceSid)
+  .participants.create({
+    from: servicePhone,
+    to: agentPhone,          // Phone with ConversationRelay webhook
+  });
+// Agent's phone webhook fires -> ConversationRelay on child leg
+// Parent leg auto-joins conference -> audio bridges through
+```
+
+### Why `make_call(url=conference-TwiML)` Fails for ConversationRelay
+
+When `make_call(to=TwilioNumber, url=conference-joining-TwiML)`:
+- Parent leg: runs the `url` TwiML -> joins conference
+- Child leg: runs the phone's webhook
+
+If the phone's webhook is NOT ConversationRelay, the agent's WebSocket never connects. The `url` parameter only controls the parent leg — it cannot set up ConversationRelay.
+
+### Not Compatible: Media Streams (`<Connect><Stream>`)
+
+ConversationRelay and Media Streams use incompatible WebSocket protocols:
+- **ConversationRelay**: JSON messages with transcribed text. Twilio handles STT/TTS.
+- **Media Streams**: Raw base64 mulaw 8kHz audio frames. Handler must implement its own STT/TTS.
+
+A ConversationRelay WebSocket handler cannot be used with `<Stream>` and vice versa.
 
 ## Local Development with ngrok
 
@@ -409,116 +501,17 @@ twilio serverless:env:set --key AGENT_B_RELAY_URL \
 
 ngrok provides a web interface at `http://localhost:4040` to inspect WebSocket traffic in real-time.
 
-## Prerequisites
+## Best Practices
 
-### Voice Intelligence (Voice Intelligence)
+1. **Handle Interruptions**: Users may interrupt the AI mid-sentence. Handle the `interrupt` message to stop current output.
 
-To use transcript storage and analysis features, you must create a Voice Intelligence (CI) Service in the Twilio Console. **There is no API for creating CI Services** (as of February 2026).
+2. **Use Streaming**: For long responses, stream text tokens individually for natural conversation flow.
 
-1. Go to [Twilio Console → Voice → Voice Intelligence](https://console.twilio.com/us1/develop/voice-intelligence/services)
-2. Click "Create new Service"
-3. Name your service (e.g., "twilio-agent-factory")
-4. Copy the Service SID (starts with `GA...`)
-5. Add to `.env`: `TWILIO_INTELLIGENCE_SERVICE_SID=GA...`
+3. **Manage Latency**: Keep LLM response times low for natural conversation. Consider using faster models for time-sensitive responses.
 
-Without this, transcript creation via the Intelligence API will fail with 404 errors.
+4. **Handle Silence**: Implement timeout handling for long silences.
 
-### Creating Transcripts from Recordings
-
-When creating transcripts from Twilio recordings, use `source_sid` instead of `media_url`:
-
-```javascript
-// WRONG - Intelligence API can't authenticate to api.twilio.com
-const channel = {
-  media_properties: {
-    media_url: `https://api.twilio.com/.../Recordings/${recordingSid}.mp3`,
-  },
-  participants: [...]
-};
-
-// CORRECT - Use source_sid for Twilio recordings
-const channel = {
-  media_properties: {
-    source_sid: recordingSid,  // e.g., "RE1234567890abcdef"
-  },
-  participants: [
-    { channel_participant: 1, user_id: 'caller' },
-    { channel_participant: 2, user_id: 'agent' },
-  ],
-};
-
-const transcript = await client.intelligence.v2.transcripts.create({
-  serviceSid: intelligenceServiceSid,
-  channel,
-  customerKey: callSid,  // For correlation
-});
-```
-
-**Language Operators run automatically**: When operators (e.g., Conversation Summary, Sentiment Analysis) are configured on the Intelligence service in the Twilio Console, they automatically run on every transcript created via that service. No per-transcript operator invocation is needed.
-
-#### Dual Service Pattern
-
-Voice Intelligence operators are per-service and run on all transcripts under that service. There is no per-transcript bypass. To support both "analyze everything" and "analyze selectively" workflows, use separate services:
-
-| Service | Operators | Use Case |
-|---------|-----------|----------|
-| Auto-analyze | Summary + Sentiment (auto-run) | Validation, demo calls — operators analyze every transcript |
-| Manual | None configured | Production — you control which recordings get transcribed |
-
-**PII Redaction**: Similarly, PII redaction operators are per-service. For both redacted (standard) and unredacted (fraud/compliance) transcript access, create separate Intelligence Services and route transcripts based on the use case.
-
-## Testing Conversation Relay
-
-1. Set up a WebSocket server (locally or deployed)
-2. Use ngrok to expose local WebSocket server
-3. Configure the relay URL in your function
-4. Make test calls to verify the flow
-5. Test interruption scenarios
-6. Test DTMF handling if enabled
-
-## ConversationRelay in Conference Calls
-
-ConversationRelay agents can participate in conferences. The key: each agent's ConversationRelay runs on their individual call leg (child), while the conference membership is on the parent leg. The bridge between legs routes conference audio through the WebSocket.
-
-### Pattern: Participants API + ConversationRelay Webhooks
-
-```javascript
-// 1. Configure each agent's phone with ConversationRelay webhook
-//    Agent A: agent-a-inbound → ConversationRelay to wss://agent-a-server
-//    Agent B: agent-b-inbound → ConversationRelay to wss://agent-b-server
-
-// 2. Create conference and add customer
-const customerCall = await client.calls.create({
-  to: customerPhone,        // Phone with ConversationRelay webhook
-  from: servicePhone,
-  url: customerLegUrl,       // TwiML: <Dial><Conference>name</Conference></Dial>
-});
-
-// 3. Add agent via Participants API
-await client.conferences(conferenceSid)
-  .participants.create({
-    from: servicePhone,
-    to: agentPhone,          // Phone with ConversationRelay webhook
-  });
-// Agent's phone webhook fires → ConversationRelay on child leg
-// Parent leg auto-joins conference → audio bridges through
-```
-
-### Why `make_call(url=conference-TwiML)` Fails for ConversationRelay
-
-When `make_call(to=TwilioNumber, url=conference-joining-TwiML)`:
-- Parent leg: runs the `url` TwiML → joins conference
-- Child leg: runs the phone's webhook
-
-If the phone's webhook is NOT ConversationRelay, the agent's WebSocket never connects. The `url` parameter only controls the parent leg — it cannot set up ConversationRelay.
-
-### Not Compatible: Media Streams (`<Connect><Stream>`)
-
-ConversationRelay and Media Streams use incompatible WebSocket protocols:
-- **ConversationRelay**: JSON messages with transcribed text. Twilio handles STT/TTS.
-- **Media Streams**: Raw base64 mulaw 8kHz audio frames. Handler must implement its own STT/TTS.
-
-A ConversationRelay WebSocket handler cannot be used with `<Stream>` and vice versa.
+5. **Graceful Endings**: Send the `end` message when the conversation should conclude.
 
 ## Troubleshooting
 

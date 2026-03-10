@@ -338,6 +338,10 @@ AFTER_CALL_ACTIVITY_SID=WAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ## Gotchas
 
+### `<Enqueue>` Auto-Creates Tasks
+
+`<Enqueue>` creates a TaskRouter task AND places the caller in hold. Do NOT also call `workspace.tasks.create()` — this creates duplicate tasks. Use `<Enqueue>` for voice, `tasks.create()` for non-voice (chat, email).
+
 ### `HAS` Expression May Silently Fail to Match Workers
 
 Queue `targetWorkers` expressions like `"skills" HAS "english"` can fail to match workers whose attributes include the value. The queue's `realTimeStatistics` will show `totalEligibleWorkers: 0` and `totalAvailableWorkers: 0`, but no error is raised — tasks just sit in the queue until timeout.
@@ -355,3 +359,9 @@ If `totalEligibleWorkers` is 0 but workers exist with matching attributes, the e
 ### Conference Instruction `record` Parameter Takes a String
 
 The assignment callback `conference` instruction requires `conference_record: 'record-from-start'` (string), NOT `conference_record: true` (boolean). Boolean values are silently ignored and no recording is created.
+
+## File Naming
+
+- `*.js` — Public (TwiML responses like enqueue)
+- `*.protected.js` — Protected (assignment callbacks, worker updates)
+- `*.private.js` — Private (shared routing logic)

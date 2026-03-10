@@ -9,7 +9,7 @@ Knowledge for building Twilio Sync API functions for real-time state synchroniza
 
 ### Action-Routed Pattern
 
-All three functions use an `action` parameter to determine the operation:
+All three CRUD functions use an `action` parameter to determine the operation:
 
 ```javascript
 // POST with action=create, documentName=app-config, data={"theme":"dark"}

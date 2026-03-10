@@ -7,45 +7,47 @@ description: Twilio Messaging Services for sender pools, A2P 10DLC compliance, a
 
 Knowledge for building Twilio Messaging Services functions for advanced SMS/MMS capabilities with sender pools, intelligent routing, and compliance features.
 
+## Key Difference from Basic Messaging
 
-These functions use `messagingServiceSid` instead of `from`, letting Twilio select the optimal sender from the pool:
-
-```javascript
-// Basic SMS - specify sender number
-await client.messages.create({ to, from: context.TWILIO_PHONE_NUMBER, body });
-
-// Messaging Services (this directory)
-await client.messages.create({ to, messagingServiceSid: context.TWILIO_MESSAGING_SERVICE_SID, body });
-```
-
-## What are Messaging Services?
-
-Messaging Services provide enterprise-grade messaging features beyond basic SMS:
-- **Sender Pool**: Multiple phone numbers for scale and deliverability
-- **Sticky Sender**: Same number for ongoing conversations with a recipient
-- **Geographic Matching**: Use local numbers when available
-- **MMS Conversion**: Auto-fallback when MMS isn't supported
-- **Link Shortening**: Track click-through rates
-- **Compliance**: Built-in opt-out management
-- **A2P 10DLC**: Application-to-Person messaging compliance (US)
-
-## Key Difference: `from` vs `messagingServiceSid`
+Uses `messagingServiceSid` instead of `from` — Twilio selects the optimal sender from the pool:
 
 ```javascript
-// Basic SMS - specify sender number
-await client.messages.create({
-  to: '+1234567890',
-  from: '+0987654321',  // Specific phone number
-  body: 'Hello!'
-});
-
-// Messaging Service - let Twilio pick optimal sender
-await client.messages.create({
-  to: '+1234567890',
-  messagingServiceSid: context.TWILIO_MESSAGING_SERVICE_SID,  // Service selects number
-  body: 'Hello!'
-});
+// Basic: await client.messages.create({ to, from: phoneNumber, body });
+// Service: await client.messages.create({ to, messagingServiceSid: serviceSid, body });
 ```
+
+## Service Features (Overview)
+
+- **Sender Pool**: Multiple numbers for scale and deliverability
+- **Sticky Sender**: Same number for ongoing conversations
+- **Geographic Matching**: Local numbers when available
+- **MMS Conversion**: Auto-fallback when MMS unsupported
+- **Smart Encoding**: GSM-compatible character conversion
+- **Link Shortening**: Click-through tracking
+- **Compliance**: Built-in opt-out (STOP/HELP) management
+
+## A2P 10DLC (US)
+
+Registration flow: Brand > Campaign > Number Assignment. Required for US messaging at scale.
+
+| Use Case | Throughput |
+|----------|-----------|
+| `2fa` | Highest |
+| `notifications`, `customer_care`, `delivery_notifications`, `account_notification` | Higher |
+| `marketing` | Standard |
+
+### Registration Timeline
+
+**Total: 2-10+ business days.** Do NOT promise same-day high-volume messaging.
+
+| Stage | Duration | Notes |
+|-------|----------|-------|
+| Brand registration | 1-7 business days | Vetting by TCR. Sole proprietors take longer |
+| Campaign registration | 1-3 business days | Per-campaign review |
+| Number assignment | Instant | After campaign approval |
+| Throughput ramp | 1-14 days | Starts at low TPS, ramps to campaign limit |
+
+For 50K+ messages/day, budget 2-4 weeks total including ramp-up. Unregistered traffic on 10DLC numbers gets filtered aggressively.
 
 ## API Overview
 
@@ -228,37 +230,6 @@ Same as standard messaging, plus:
 | `ErrorMessage` | Error description if failed |
 | `MessagingServiceSid` | Associated Messaging Service |
 
-## A2P 10DLC Compliance (US)
-
-For US messaging, register your brand and campaigns:
-
-### Registration Flow
-
-1. **Brand Registration**: Register your business
-2. **Campaign Registration**: Register use case (marketing, notifications, etc.)
-3. **Number Assignment**: Assign 10DLC numbers to campaigns
-
-### Campaign Use Cases
-
-| Use Case | Description | Throughput |
-|----------|-------------|------------|
-| `marketing` | Promotional messages | Standard |
-| `notifications` | Transactional alerts | Higher |
-| `customer_care` | Support conversations | Higher |
-| `delivery_notifications` | Shipping updates | Higher |
-| `account_notification` | Account alerts | Higher |
-| `2fa` | Two-factor authentication | Highest |
-
-```javascript
-// Check registration status
-const brandRegistration = await client.messaging.v1
-  .brandRegistrations(brandSid).fetch();
-
-const campaignRegistration = await client.messaging.v1
-  .services(serviceSid)
-  .usAppToPersonUsecases.list();
-```
-
 ## Common Patterns
 
 ### High-Volume Notifications
@@ -428,8 +399,7 @@ exports.handler = async (context, event, callback) => {
 
 ### Test Numbers
 
-- Use Twilio test credentials for development
-- Magic numbers: `+15005550006` (success), `+15005550001` (invalid)
+Use Twilio test credentials for development. See Twilio docs for current magic test numbers that simulate success and failure scenarios.
 
 ### Integration Test
 
@@ -438,7 +408,7 @@ describe('Messaging Service', () => {
   it('should send message via messaging service', async () => {
     const context = createTestContext();
     const event = {
-      to: '+15005550006',
+      to: testPhoneNumber,
       body: 'Test message'
     };
 
@@ -450,7 +420,6 @@ describe('Messaging Service', () => {
   });
 
   it('should handle opt-out error', async () => {
-    // Mock opted-out number scenario
     const context = createTestContext();
     const event = { to: '+1234567890', body: 'Test' };
 
@@ -486,3 +455,12 @@ Create a Messaging Service in the Twilio Console:
 6. **Register for A2P 10DLC**: Required for US messaging at scale
 7. **Use Appropriate Use Cases**: Match campaign registration to actual use
 8. **Set Up Link Shortening**: Track engagement for marketing messages
+
+## Gotchas
+
+- **Empty Sender Pool**: Error 21611 if no numbers added to service. Add numbers before sending.
+- **Sticky Sender Persistence**: Binding persists even after removing a number. Clear via API if needed.
+- **10DLC Registration Required**: US A2P messaging without registration gets heavily filtered.
+- **Scheduled Message Limits**: Max 7 days in advance. `scheduleType: 'fixed'` required.
+- **MMS Conversion Side Effects**: With `mmsConverter: true`, MMS becomes SMS+link on some carriers — changes UX.
+- **Opt-Out Auto-Handling**: STOP/STOPALL/etc. never reach your webhook. Don't try to intercept them.

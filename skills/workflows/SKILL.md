@@ -5,7 +5,7 @@ description: Development workflow patterns for Twilio projects. Pipeline definit
 
 # Development Workflows
 
-This document describes the available workflow patterns for developing Twilio features using Claude Code subagents.
+This skill covers the available workflow patterns for developing Twilio features using Claude Code subagents and agent teams.
 
 ## Available Subagents
 
@@ -31,7 +31,7 @@ This document describes the available workflow patterns for developing Twilio fe
 Full development pipeline for building new Twilio functionality:
 
 ```text
-/architect ──► /prototype (if unknowns) ──► /spec ──► /test-gen ──► /dev ──► /review ──► /test ──► /docs
+/architect --> /prototype (if unknowns) --> /spec --> /test-gen --> /dev --> /review --> /test --> /docs
 ```
 
 **Orchestrated**: `/orchestrate new-feature [description]`
@@ -52,7 +52,7 @@ Full development pipeline for building new Twilio functionality:
 Quick fix pipeline for resolving issues:
 
 ```text
-/twilio-logs ──► /architect ──► /test-gen ──► /dev ──► /review ──► /test
+/twilio-logs --> /architect --> /test-gen --> /dev --> /review --> /test
 ```
 
 **Orchestrated**: `/orchestrate bug-fix [issue]`
@@ -71,7 +71,7 @@ Quick fix pipeline for resolving issues:
 Improve code structure without changing behavior:
 
 ```text
-/test ──► /architect ──► /dev ──► /review ──► /test
+/test --> /architect --> /dev --> /review --> /test
 ```
 
 **Orchestrated**: `/orchestrate refactor [target]`
@@ -86,21 +86,109 @@ Improve code structure without changing behavior:
 
 ### Documentation Only
 
+Update documentation without code changes:
+
 ```text
 /docs
 ```
 
 **Orchestrated**: `/orchestrate docs-only [scope]`
 
+**Manual execution**:
+
+1. `/docs [scope]` - Update specified documentation
+
 ### Security Audit
 
+Review code for security issues:
+
 ```text
-/review ──► /dev ──► /test
+/review --> /dev --> /test
 ```
 
 **Orchestrated**: `/orchestrate security-audit [scope]`
 
-## Standalone vs Orchestrated
+**Manual execution**:
+
+1. `/review security [scope]` - Security-focused code review
+2. `/dev [fixes]` - Implement security fixes (if needed)
+3. `/test` - Validate fixes
+
+## Agent Team Workflows
+
+For tasks that benefit from parallel work or inter-agent discussion, use `/team` instead of `/orchestrate`. Agent teams spawn multiple Claude Code instances that communicate via messaging and a shared task list.
+
+### When to Use Teams vs Subagents
+
+| Criteria | Use Subagents (`/orchestrate`) | Use Teams (`/team`) |
+|----------|-------------------------------|---------------------|
+| Task structure | Sequential, clear phases | Parallel or adversarial |
+| Communication | Results flow one direction | Agents discuss findings |
+| Context needs | Shared context is fine | Each agent needs fresh context |
+| Token budget | Tight | Flexible (2-3x more) |
+| Best for | Routine features | Bug debugging, code review, complex features |
+
+### Team: New Feature (Parallel Review)
+
+```text
+Phase 1 (Sequential): architect --> spec --> test-gen --> dev
+Phase 2 (Parallel):   qa --+-- review
+Phase 3 (Sequential): docs
+```
+
+Run with: `/team new-feature [description]`
+
+QA and review teammates work in parallel after implementation, each with a fresh context window. Both must pass quality gates before docs teammate starts.
+
+### Team: Bug Fix (Competing Hypotheses)
+
+```text
+Phase 1 (Parallel): investigator-1 --+-- investigator-2 --+-- investigator-3
+                    (code path)       |   (logs/debugger)  |   (config/env)
+Phase 2: Lead synthesizes strongest hypothesis
+Phase 3 (Sequential): test-gen --> dev --> review
+```
+
+Run with: `/team bug-fix [issue]`
+
+Three investigators work in parallel, messaging each other to challenge hypotheses. Lead picks the strongest root cause analysis.
+
+### Team: Code Review (Multi-Lens)
+
+```text
+Phase 1 (Parallel): security --+-- performance --+-- testing
+Phase 2: Cross-challenge (each reads others' findings)
+Phase 3: Lead compiles unified review
+```
+
+Run with: `/team code-review [scope]`
+
+Three reviewers with different focus areas. After initial review, each reads others' findings and adds counter-points or agreement.
+
+### Team: Refactor (Parallel Analysis)
+
+```text
+Phase 1 (Parallel): baseline-qa --+-- architect
+Phase 2 (Sequential): dev (tests must stay green)
+Phase 3 (Parallel): verify-qa --+-- reviewer
+```
+
+Run with: `/team refactor [target]`
+
+Baseline QA and architect work in parallel to establish metrics and plan. After implementation, verification and review run in parallel.
+
+### Team: Validation (Parallel Domain Coverage)
+
+```text
+Phase 1 (Parallel): call-validator --+-- recording-validator --+-- taskrouter-validator --+-- debugger-validator
+Phase 2 (Sequential): Lead aggregates results into unified validation report
+```
+
+Run with: `/team validation [scope]`
+
+Four validators run simultaneously, each focused on one domain (voice/calls, recordings, TaskRouter tasks, debugger sweep). Lead synthesizes findings into a unified pass/fail report. Use after deployments or workflow completions to verify multiple products in parallel.
+
+## Standalone vs Orchestrated vs Team-Based
 
 All subagents work independently. Choose the approach that fits your workflow:
 
@@ -113,6 +201,28 @@ Use `/orchestrate` when:
 - Want automated sequencing and handoffs
 - Working on a well-defined task
 
+Example:
+
+```text
+/orchestrate new-feature voice IVR menu with speech recognition
+```
+
+### Team-Based Mode
+
+Use `/team` when:
+
+- Agents need to discuss or challenge each other's findings
+- Parallel work would save time (e.g., qa + review simultaneously)
+- Task benefits from competing hypotheses (bug debugging)
+- Each agent needs a fresh context window (prevents bloat)
+
+Example:
+
+```text
+/team bug-fix "webhook returning 500 for empty body"
+/team code-review functions/voice/
+```
+
 ### Standalone Mode
 
 Run individual subagents when:
@@ -122,9 +232,19 @@ Run individual subagents when:
 - Task doesn't fit standard patterns
 - Iterating on a particular aspect
 
+Example:
+
+```text
+/spec voice IVR menu
+# Review output, make adjustments
+/test-gen voice IVR menu
+# Review tests, refine
+/dev voice IVR menu
+```
+
 ## TDD Enforcement
 
-This workflow strictly follows Test-Driven Development:
+This project strictly follows Test-Driven Development:
 
 1. **Red Phase** (`/test-gen`): Write failing tests first
 2. **Green Phase** (`/dev`): Write minimal code to pass tests
@@ -146,6 +266,64 @@ Each subagent suggests the next logical step:
 | `/review` (APPROVED) | `/test` for final validation |
 | `/review` (NEEDS_CHANGES) | `/dev` for fixes |
 | `/test` | `/docs` for documentation |
+| `/deploy` | `/team validation` for post-deploy verification |
+
+## Examples
+
+### Example 1: Add Voice IVR
+
+```text
+# Full orchestrated pipeline
+/orchestrate new-feature Add a voice IVR menu that routes callers to sales or support
+
+# Or manually
+/architect voice IVR with department routing
+/spec voice IVR with Gather verb for digit input
+/test-gen voice IVR handler
+/dev voice IVR handler
+/review
+/test
+/docs
+```
+
+### Example 2: Fix SMS Webhook Bug
+
+```text
+# Orchestrated
+/orchestrate bug-fix SMS webhook returning 500 error for empty body
+
+# Or manually
+/twilio-logs
+/test-gen regression test for empty SMS body
+/dev fix empty body handling in messaging webhook
+/review
+/test
+```
+
+### Example 3: Add Verification Feature
+
+```text
+# Start with architecture review
+/architect phone verification using Twilio Verify
+
+# Get detailed spec
+/spec phone verification with SMS channel
+
+# Generate tests for the feature
+/test-gen verify send-code function
+
+# Implement to pass tests
+/dev verify send-code function
+
+# Code review
+/review
+
+# Run all tests
+/test
+
+# Update docs
+/docs
+```
 
 ## Best Practices
 
@@ -156,3 +334,6 @@ Each subagent suggests the next logical step:
 4. **Run `/review`** before merging any significant changes
 5. **Keep `/docs`** updated as features evolve
 6. **Use `/twilio-logs`** when debugging production issues
+7. **Use `/team`** for bug debugging (competing hypotheses find root causes faster)
+8. **Use `/team`** for code review (multi-lens parallel review catches more issues)
+9. **Avoid teams for simple sequential tasks** (overhead exceeds benefit)
