@@ -1,3 +1,8 @@
+---
+name: tdd-workflow
+description: Test-driven development enforcement patterns. Use when working on the TDD pipeline, debugging red/green/refactor cycle issues, or understanding how test-gen and dev phases interact.
+---
+
 # TDD Workflow Patterns
 
 Test-Driven Development patterns for Twilio projects. Load this skill when working on feature development to ensure quality through disciplined test-first practices.

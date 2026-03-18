@@ -1,6 +1,6 @@
 ---
 name: memory-systems
-description: State tracking patterns across sessions and webhook invocations. Use when managing call state, session memory, or workflow tracking.
+description: State tracking and session memory management. Use when implementing cross-session persistence, managing Sync documents for state, or designing memory patterns for Twilio prototypes.
 ---
 
 # Memory Systems for Twilio Prototypes
@@ -72,7 +72,38 @@ Maintain a mental summary after each major action:
 
 ## Project Memory (Persistent)
 
-Information that persists across sessions via files.
+Information that persists across sessions via files and Twilio Sync.
+
+### Twilio Sync for Agent State
+
+Use Twilio Sync Documents for state that needs to persist across webhook invocations or sessions:
+
+```javascript
+// Store agent state
+const syncService = client.sync.v1.services(context.SYNC_SERVICE_SID);
+await syncService.documents.create({
+  uniqueName: `agent-state-${sessionId}`,
+  data: {
+    workflowPhase: 'dev',
+    testsWritten: ['unit/voice.test.js'],
+    decisions: ['Use Conference for warm transfer'],
+    lastUpdated: new Date().toISOString()
+  },
+  ttl: 86400  // 24hr TTL for ephemeral state
+});
+
+// Retrieve state
+const doc = await syncService.documents(`agent-state-${sessionId}`).fetch();
+const state = doc.data;
+```
+
+**When to use Sync vs files:**
+
+| Storage | Use When |
+|---------|----------|
+| Sync Documents | Webhook state, cross-function sharing, real-time updates |
+| Git/files | Code, configuration, permanent documentation |
+| In-context | Current session only, will be lost on restart |
 
 ### Git History as Memory
 
@@ -200,6 +231,24 @@ logStateTransition(event.CallSid, 'menu', 'transfer', { digit: event.Digits });
 ## Workflow Memory
 
 Track progress through development workflows.
+
+### Git as Source of Truth
+
+Git history is the primary activity log:
+- Commits capture what changed and why
+- `todo.md` captures session progress
+- `learnings.md` captures discoveries (capture → promote → clear)
+
+```bash
+# What was done recently
+git log --oneline -10
+
+# What files changed for a feature
+git log --name-only --oneline --grep="voice IVR"
+
+# Diff since last tag/checkpoint
+git diff HEAD~5 --name-only
+```
 
 ### Workflow State Tracking
 

@@ -1,58 +1,92 @@
 #!/bin/bash
-# ABOUTME: Session-end checklist hook that warns about uncommitted or unpushed work.
-# ABOUTME: Runs on Stop event to prevent losing work at the end of a session.
+# ABOUTME: Stop hook that checks for open session hygiene items.
+# ABOUTME: Reminds about learnings, docs, uncommitted work, unpushed commits, and test runs.
+
+set -u
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
 # ============================================
-# UNCOMMITTED CHANGES CHECK
+# Collect checklist items
 # ============================================
+ITEMS=()
 
-if [ -d ".git" ]; then
-    UNCOMMITTED=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-    if [ "$UNCOMMITTED" -gt 0 ]; then
-        echo "" >&2
-        echo "Session ending with $UNCOMMITTED uncommitted change(s)." >&2
-        echo "Consider committing your work before ending the session." >&2
-        echo "" >&2
+# --- 1. Uncommitted changes ---
+UNCOMMITTED=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+if [[ "$UNCOMMITTED" -gt 0 ]]; then
+    ITEMS+=("UNCOMMITTED: $UNCOMMITTED file(s) with uncommitted changes")
+fi
+
+# --- 2. Unpushed commits ---
+UNPUSHED=$(git -C "$PROJECT_ROOT" log --oneline '@{upstream}..HEAD' 2>/dev/null | wc -l | tr -d ' ')
+if [[ "$UNPUSHED" -gt 0 ]]; then
+    ITEMS+=("UNPUSHED: $UNPUSHED commit(s) not pushed to remote")
+fi
+
+# --- 3. Learnings freshness ---
+# Check if the learnings file was modified during this session (within last 4 hours)
+LEARNINGS_FILE="$PROJECT_ROOT/.claude/learnings.md"
+if [[ -f "$LEARNINGS_FILE" ]]; then
+    LEARN_MTIME=$(stat -f %m "$LEARNINGS_FILE" 2>/dev/null || stat -c %Y "$LEARNINGS_FILE" 2>/dev/null || echo 0)
+    NOW=$(date +%s)
+    LEARN_AGE=$(( NOW - LEARN_MTIME ))
+    if [[ $LEARN_AGE -gt 14400 ]]; then
+        ITEMS+=("LEARNINGS: Learnings file not updated this session — capture any discoveries to $LEARNINGS_FILE")
     fi
+else
+    ITEMS+=("LEARNINGS: No learnings file found — consider creating $LEARNINGS_FILE")
+fi
 
-    # ============================================
-    # UNPUSHED COMMITS CHECK
-    # ============================================
+# --- 4. Test recency ---
+# Check if tests were run in this session by looking for recent jest cache or test output
+# Use git log to see if any code changed since last test-related commit
+LAST_TEST_COMMIT=$(git -C "$PROJECT_ROOT" log --oneline --all --grep="test" -1 --format="%H" 2>/dev/null || echo "")
+if [[ -n "$LAST_TEST_COMMIT" ]]; then
+    # Check if source files changed since that commit
+    CHANGED_SINCE_TEST=$(git -C "$PROJECT_ROOT" diff --name-only "$LAST_TEST_COMMIT" -- '*.ts' '*.js' '*.json' 2>/dev/null | grep -v node_modules | grep -v dist | wc -l | tr -d ' ')
+    if [[ "$CHANGED_SINCE_TEST" -gt 5 ]]; then
+        ITEMS+=("TESTS: $CHANGED_SINCE_TEST source files changed since last test commit — consider running npm test")
+    fi
+fi
 
-    UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)
-    if [ -n "$UPSTREAM" ]; then
-        UNPUSHED=$(git log --oneline "$UPSTREAM"..HEAD 2>/dev/null | wc -l | tr -d ' ')
-        if [ "$UNPUSHED" -gt 0 ]; then
-            echo "You have $UNPUSHED unpushed commit(s)." >&2
-            echo "" >&2
-        fi
-    else
-        # No upstream - check if there are any commits on this branch
-        COMMITS=$(git log --oneline -1 2>/dev/null | wc -l | tr -d ' ')
-        if [ "$COMMITS" -gt 0 ]; then
-            BRANCH=$(git branch --show-current 2>/dev/null)
-            if [ "$BRANCH" != "main" ] && [ "$BRANCH" != "master" ]; then
-                echo "Branch '$BRANCH' has no remote tracking. Consider pushing." >&2
-                echo "" >&2
-            fi
-        fi
+# --- 5. E2E test reminder (if functional code was modified) ---
+FUNCTIONS_CHANGED=$(git -C "$PROJECT_ROOT" diff --name-only HEAD 2>/dev/null | grep -c '^functions/') || FUNCTIONS_CHANGED=0
+if [[ "$FUNCTIONS_CHANGED" -gt 0 ]]; then
+    ITEMS+=("E2E: $FUNCTIONS_CHANGED function file(s) modified — consider running npm run test:e2e")
+fi
+
+# --- 6. MEMORY.md size check ---
+MEMORY_FILE="$HOME/.claude/projects/$(echo "$PROJECT_ROOT" | sed 's|/|-|g')/memory/MEMORY.md"
+if [[ -f "$MEMORY_FILE" ]]; then
+    MEMORY_LINES=$(wc -l < "$MEMORY_FILE" | tr -d ' ')
+    if [[ "$MEMORY_LINES" -gt 100 ]]; then
+        ITEMS+=("MEMORY: ${MEMORY_LINES}/200 lines — consider pruning stale entries")
+    fi
+fi
+
+# --- 7. README drift check ---
+README_DRIFT_SCRIPT="$PROJECT_ROOT/scripts/check-readme-drift.sh"
+if [[ -x "$README_DRIFT_SCRIPT" ]]; then
+    DRIFT_OUTPUT=$("$README_DRIFT_SCRIPT" --quiet 2>/dev/null) || true
+    if [[ -n "$DRIFT_OUTPUT" ]]; then
+        ITEMS+=("README: $DRIFT_OUTPUT")
     fi
 fi
 
 # ============================================
-# MEMORY.md SIZE CHECK
+# Output checklist (only if there are items)
 # ============================================
-
-# Find auto-memory file (Claude Code convention: ~/.claude/projects/<encoded-path>/memory/MEMORY.md)
-PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
-ENCODED_PATH=$(echo "$PROJECT_ROOT" | sed 's|/|-|g')
-MEMORY_FILE="$HOME/.claude/projects/$ENCODED_PATH/memory/MEMORY.md"
-if [[ -f "$MEMORY_FILE" ]]; then
-    MEMORY_LINES=$(wc -l < "$MEMORY_FILE" | tr -d ' ')
-    if [[ "$MEMORY_LINES" -gt 100 ]]; then
-        echo "MEMORY: ${MEMORY_LINES}/200 lines — consider pruning stale entries" >&2
-        echo "" >&2
-    fi
+if [[ ${#ITEMS[@]} -gt 0 ]]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "SESSION CHECKLIST"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    for item in "${ITEMS[@]}"; do
+        echo "  - $item"
+    done
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
 fi
 
 exit 0

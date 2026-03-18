@@ -1,6 +1,6 @@
 ---
 name: "Video Patterns"
-description: "Twilio Video serverless function patterns — token generation, room/recording/composition/transcription callbacks, and Sync logging."
+description: Twilio Video serverless function patterns — token generation, room/recording/composition/transcription callbacks, and Sync logging.
 ---
 
 # Video Functions Context
@@ -123,12 +123,18 @@ await client.video.v1.compositionHooks.create({
 
 ## Deep Validation
 
+Use MCP tool `validate_video_room` after room creation to verify:
+- Room status and type
+- Participant connections
+- Published tracks
+- Recording/composition status
+
 Callbacks log to Sync for deep validation:
 - `callbacks-video-room-{RoomSid}` - Room/participant events
 - `callbacks-video-recording-{RecordingSid}` - Recording events
 - `callbacks-video-composition-{CompositionSid}` - Composition events
 
-After room creation, verify:
+After room creation, also verify:
 - Room status and type
 - Participant connections
 - Published tracks

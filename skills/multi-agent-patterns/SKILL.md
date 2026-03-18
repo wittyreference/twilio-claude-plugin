@@ -1,6 +1,6 @@
 ---
 name: multi-agent-patterns
-description: Orchestration patterns for multi-agent Twilio workflows. Use when coordinating multiple agents or complex development pipelines.
+description: Agent orchestration and coordination patterns. Use when designing multi-agent workflows, choosing between parallel/sequential/hierarchical patterns, or coordinating subagents.
 ---
 
 # Multi-Agent Patterns for Twilio
@@ -16,9 +16,11 @@ This skill is adapted from [Agent Skills for Context Engineering](https://github
 | Pattern | Best For | Twilio Use Case |
 |---------|----------|-----------------|
 | Orchestrator | Sequential flows | Feature development pipeline |
+| Agent Teams | Parallel + adversarial | Bug debugging, code review, parallel QA |
 | Peer-to-Peer | Parallel work | Debugging + fixing simultaneously |
 | Hierarchical | Complex features | Multi-channel solutions |
 | Evaluator | Quality gates | Code review with standards |
+| TDD Pipeline | Code quality | Red → Green → Refactor |
 
 ## Orchestrator Pattern (Default)
 
@@ -259,6 +261,72 @@ Verdict: NEEDS_CHANGES
 Reason: Add try/catch for Twilio API call
 ```
 
+## Agent Teams Pattern
+
+Real parallel coordination with inter-agent messaging. Unlike subagents (which share the parent's context and can only report back), teammates have their own context windows and communicate directly with each other.
+
+### Structure
+
+```
+              ┌──────────────┐
+              │   Lead Agent │
+              │  (delegate   │
+              │    mode)     │
+              └───────┬──────┘
+                      │ shared task list
+        ┌─────────────┼─────────────┐
+        ▼             ▼             ▼
+   ┌─────────┐  ┌─────────┐  ┌─────────┐
+   │Teammate │◄►│Teammate │◄►│Teammate │
+   │    A    │  │    B    │  │    C    │
+   └─────────┘  └─────────┘  └─────────┘
+        ◄── direct messaging ──►
+```
+
+### When to Use
+
+- Bug debugging with competing hypotheses (3 investigators challenge each other)
+- Multi-lens code review (security + performance + tests in parallel)
+- Parallel QA + review after implementation
+- Cross-layer changes (functions + agents + config)
+
+### Comparison: Subagents vs Agent Teams
+
+| Aspect | Subagents | Agent Teams |
+|--------|-----------|-------------|
+| **Context** | Shared with parent | Own window per teammate |
+| **Communication** | Return results to caller | Message each other + shared tasks |
+| **Parallelism** | Sequential | Parallel |
+| **Token cost** | Lowest | ~2-3x |
+| **Resumable** | Yes | No |
+| **Best for** | Sequential workflows | Adversarial/parallel work |
+
+### Twilio Example: Bug Fix with Competing Hypotheses
+
+```
+Parallel investigators:
+
+Teammate "code-tracer":
+  → Reading send-sms.protected.js
+  → Found: No body validation, crashes on undefined
+  → Confidence: HIGH
+
+Teammate "log-analyst":
+  → Checking debugger for error 11200
+  → Found: 500 errors from /messaging/send-sms endpoint
+  → Confirms code-tracer's finding
+
+Teammate "config-checker":
+  → Checking webhook config, env vars
+  → All correct — rules out configuration issue
+  → Supports code-level root cause
+
+Lead synthesis:
+  → Root cause: Missing body validation
+  → Fix: Add null check before Twilio API call
+  → Regression test: Empty body should return 400, not 500
+```
+
 ## Pattern Selection Guide
 
 ```
@@ -266,16 +334,20 @@ Is work sequential with clear phases?
 ├── Yes → Orchestrator Pattern
 │         Use orchestrate subagent
 │
-└── No → Can tasks run independently?
-         ├── Yes → Peer-to-Peer Pattern
-         │         Run multiple tasks in parallel
+└── No → Do agents need to discuss findings?
+         ├── Yes → Agent Teams Pattern
+         │         Use team coordination
          │
-         └── No → Is there natural hierarchy?
-                  ├── Yes → Hierarchical Pattern
-                  │         Lead agent delegates to teams
+         └── No → Can tasks run independently?
+                  ├── Yes → Peer-to-Peer Pattern
+                  │         Run multiple tasks in parallel
                   │
-                  └── No → Evaluator Pattern
-                            Quality gate with feedback loop
+                  └── No → Is there natural hierarchy?
+                           ├── Yes → Hierarchical Pattern
+                           │         Lead agent delegates to teams
+                           │
+                           └── No → Evaluator Pattern
+                                     Quality gate with feedback loop
 ```
 
 ## Twilio-Specific Considerations

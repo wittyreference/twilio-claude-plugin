@@ -1,6 +1,6 @@
 ---
 name: context-hub
-description: External API documentation lookup via context-hub (chub). Use when writing code that calls non-Twilio external APIs to prevent hallucinated API shapes.
+description: External API documentation fetcher. Use when writing code that calls external APIs (OpenAI, Stripe, etc.) to get curated docs and prevent hallucinated API shapes.
 ---
 
 # Context Hub — External API Documentation

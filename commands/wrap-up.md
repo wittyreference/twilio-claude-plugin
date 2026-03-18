@@ -1,3 +1,7 @@
+---
+description: End-of-session cleanup and documentation. Use when wrapping up, ending a session, or capturing learnings and pending actions before stopping.
+---
+
 # Session Wrap-Up
 
 Review the current session's work and update all relevant documentation before committing.
@@ -96,8 +100,6 @@ After promoting, replace the detailed item with a pointer (e.g., "See voice docs
 - **Session implementation history**: Sections with "(Session N)" that document WHAT was built, not operational patterns needed going forward. The scripts/code they describe are self-documenting.
 - **Duplicate of shipped docs**: Content that exists word-for-word in CLAUDE.md or a references file. Replace with a one-line pointer before tagging.
 - **Obsolete pointers**: References to plans, roadmaps, or state files that no longer exist.
-
-Tagged entries are auto-removed at next session start by `session-start-log.sh`.
 
 Example:
 ```markdown

@@ -1,11 +1,11 @@
 ---
 name: Deep Validation
-description: Validation patterns that go beyond simple API response checking for Twilio integrations
+description: Validation patterns beyond HTTP 200. Use when building validation logic, testing Twilio integrations, or understanding status progression, Voice Insights, and debugger alert patterns.
 ---
 
 # Deep Validation Patterns for Twilio
 
-Validation patterns that go beyond simple API response checking. Load this skill when testing Twilio integrations or building validation into workflows.
+This skill covers validation patterns that go beyond simple API response checking. Load this skill when testing Twilio integrations or building validation into workflows.
 
 ## Why Deep Validation Matters
 
@@ -46,7 +46,7 @@ interface MessageValidation {
 }
 ```
 
-**Status progression**: `queued` -> `sending` -> `sent` -> `delivered`
+**Status progression**: `queued` → `sending` → `sent` → `delivered`
 
 **Common failure codes**:
 | Code | Meaning |
@@ -92,7 +92,7 @@ interface CallValidation {
 }
 ```
 
-**Status progression**: `queued` -> `ringing` -> `in-progress` -> `completed`
+**Status progression**: `queued` → `ringing` → `in-progress` → `completed`
 
 ### Conference Validation
 

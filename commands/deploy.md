@@ -1,6 +1,6 @@
 ---
-name: deploy
-description: Deploy Twilio serverless project with pre/post validation checks.
+description: Deploy Twilio serverless functions. Use when user says deploy, ship, push to production, or go live with changes.
+argument-hint: [environment]
 ---
 
 # Deployment Helper

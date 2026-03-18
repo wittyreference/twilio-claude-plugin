@@ -1,6 +1,6 @@
 ---
 name: sip-byoc
-description: SIP Connectivity guide covering SIP Interface (Programmable SIP), Elastic SIP Trunking, and BYOC. Use when working with enterprise telephony, SIP infrastructure, or carrier connectivity.
+description: Twilio SIP connectivity guide (SIP Interface, Elastic Trunking, BYOC). Use when working with enterprise telephony, SIP trunks, carrier connectivity, or PSTN integration.
 ---
 
 # SIP Connectivity Development Skill

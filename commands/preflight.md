@@ -1,3 +1,7 @@
+---
+description: Verify environment is ready for Twilio development. Use before starting work, after switching accounts, or when hitting auth errors or missing env vars.
+---
+
 # Preflight Environment Verification
 
 Verify that the local environment is ready for Twilio development before starting real work. Catches expired tokens, wrong CLI profiles, and missing env vars early.
@@ -61,6 +65,38 @@ grep '^TWILIO_CALLBACK_BASE_URL' .env
 - **WARN**: TWILIO_CALLBACK_BASE_URL contains `.au1.` or `.ie1.` — callbacks point to regional deployment
 - **WARN**: Uncommented `TWILIO_AU1_API_KEY` or `TWILIO_IE1_API_KEY` in .env — SDK may pick up regional credentials
 
+### Check 2.6: MCP Server Health
+
+Verify the MCP server is running and routing to the correct region:
+
+```bash
+# Test MCP connectivity — use validate_debugger as a lightweight health check
+# If it returns "Endpoint is not supported in realm 'au1'" or similar,
+# the MCP server is routing to the wrong region and needs a restart.
+```
+
+Use MCP tool `validate_debugger` with `lookbackSeconds: 10`. Interpret:
+
+- **PASS**: Returns successfully with `success: true` — MCP server is live and routing correctly
+- **FAIL**: Returns regional endpoint error — MCP server inherited stale TWILIO_REGION/TWILIO_EDGE from a previous env state. Fix: restart Claude Code to relaunch MCP server with clean environment.
+- **FAIL**: Connection refused or timeout — MCP server is not running. Fix: check `.mcp.json` config and restart Claude Code.
+
+**Why this matters**: The MCP server is a separate process that inherits env vars at launch. Changing `.env` or unsetting shell vars does NOT affect the running MCP server. A restart is required after any regional configuration change.
+
+### Check 2.7: Context Budget
+
+Quick check that auto-loaded context files haven't bloated:
+
+```bash
+wc -l CLAUDE.md
+MEMORY_PATH="$HOME/.claude/projects/$(pwd | sed 's|/|-|g')/memory/MEMORY.md"
+wc -l "$MEMORY_PATH"
+```
+
+- **PASS**: MEMORY.md under 150 lines
+- **WARN**: MEMORY.md between 150-200 lines — consider pruning promoted entries
+- **FAIL**: MEMORY.md over 200 lines — content beyond line 200 is truncated by Claude Code and never seen
+
 ### Check 2.8: Environment Doctor
 
 If `scripts/env-doctor.sh` exists in the project, run it:
@@ -73,7 +109,7 @@ If `scripts/env-doctor.sh` exists in the project, run it:
 - **WARN**: Exit code 0 with warnings (e.g., direnv not installed, shell-only vars)
 - **FAIL**: Exit code 1 — credential mismatches, regional contamination, or missing `.env`
 
-This catches the most common new-user failure mode: inherited shell vars from another Twilio project overriding `.env` values.
+This catches the most common new-user failure mode: inherited shell vars from another Twilio project overriding `.env` values. If it fails, follow the remediation steps in its output before proceeding.
 
 ### Check 3: Auth Validity
 

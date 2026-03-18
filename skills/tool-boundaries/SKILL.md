@@ -1,6 +1,6 @@
 ---
 name: tool-boundaries
-description: Architectural boundaries between MCP Server, Twilio CLI, Serverless Toolkit, and Functions. Golden Rules, Risk Tiers, and decision flowchart for when to use each tool.
+description: Architectural boundaries between MCP Server, Twilio CLI, Serverless Toolkit, and Twilio Functions. Use this as a decision guide for when to use each tool, risk tiers, and golden rules.
 ---
 
 # Tool Boundaries Reference
@@ -49,10 +49,18 @@ Read-only operations agents can perform freely via MCP tools.
 | List TaskRouter workers | `list_workers` | Availability check |
 | List TaskRouter workflows | `list_workflows` | Routing config review |
 | List TaskRouter task queues | `list_task_queues` | Queue topology discovery |
+| Get TaskRouter task queue | `get_task_queue` | Queue config inspection |
 | Get TaskRouter queue stats | `get_queue_statistics` | Real-time operational metrics |
 | List TaskRouter activities | `list_activities` | Worker state discovery |
-| Get verification status | `get_verification_status` | Status check |
+| List TaskRouter reservations | `list_reservations` | Task-to-worker match visibility |
+| List Sync Lists | `list_sync_lists` | List enumeration |
+| List Sync List items | `list_sync_list_items` | Collection read |
+| List Sync Maps | `list_sync_maps` | Map enumeration |
+| Get Sync Map item | `get_sync_map_item` | Key-value lookup |
+| List call queues | `list_queues` | Queue inventory |
+| Get call queue | `get_queue` | Queue details |
 | Get payment status | `get_payment` | Payment status check |
+| Get verification status | `get_verification_status` | Status check |
 | Validate call (deep) | `validate_call` | Status + notifications + Voice Insights |
 | Validate message (deep) | `validate_message` | Delivery + debugger alerts |
 | Validate recording | `validate_recording` | Completion polling + duration |
@@ -65,15 +73,27 @@ Read-only operations agents can perform freely via MCP tools.
 | Validate TaskRouter task | `validate_task` | Task deep validation |
 | Validate SIP | `validate_sip` | Infrastructure validation |
 | Validate video room | `validate_video_room` | Room + participants + tracks |
+| Validate environment | `validate_environment` | Account identity + credentials + services |
 | List serverless services | `list_services` | Deployment state |
 | List serverless functions | `list_functions` | Function inventory |
+| List serverless logs | `list_logs` | Runtime logs |
+| List environments | `list_environments` | Deployment environments |
+| List builds | `list_builds` | Build history |
+| Get build status | `get_build_status` | Build completion |
 | List Studio flows | `list_studio_flows` | Flow inventory |
+| Get Studio flow | `get_flow` | Flow definition |
+| Get execution status | `get_execution_status` | Flow execution state |
+| List messaging services | `list_messaging_services` | Service inventory |
 | Get account | `get_account` | Account info + status |
 | Get account balance | `get_account_balance` | Balance check |
 | Lookup phone number | `lookup_phone_number` | Carrier info, validation |
 | Check fraud risk | `check_fraud_risk` | Fraud assessment |
 | List video rooms | `list_video_rooms` | Room inventory |
-| List messaging services | `list_messaging_services` | Service inventory |
+| Get video room | `get_room` | Room details |
+| List room participants | `list_room_participants` | Participant inventory |
+| List SIP domains | `list_sip_domains` | Domain inventory |
+| List SIP trunks | `list_sip_trunks` | Trunk inventory |
+| List regulatory bundles | `list_regulatory_bundles` | Compliance status |
 
 ### Tier 2: Controlled (Agent with Guardrails)
 
@@ -90,11 +110,26 @@ Write operations agents can perform with rate limits or validation.
 | Create TaskRouter task | `create_task` | Priority caps, timeout limits |
 | Update TaskRouter task | `update_task` | Changes task state |
 | Update TaskRouter worker | `update_worker` | Changes worker availability |
+| Update TaskRouter reservation | `update_reservation` | Completes assignment flow |
+| Create Sync List | `create_sync_list` | Resource creation |
+| Add Sync List item | `add_sync_list_item` | Data write |
+| Update Sync List item | `update_sync_list_item` | Data mutation |
+| Remove Sync List item | `remove_sync_list_item` | Data deletion |
+| Create Sync Map | `create_sync_map` | Resource creation |
+| Add Sync Map item | `add_sync_map_item` | Data write |
+| Update Sync Map item | `update_sync_map_item` | Data mutation |
+| Remove Sync Map item | `remove_sync_map_item` | Data deletion |
 | Create payment | `create_payment` | PCI Mode required (irreversible) |
 | Update payment | `update_payment` | Completes/cancels payment |
+| Dequeue member | `dequeue_member` | Redirects queued caller |
 | Create video room | `create_video_room` | Room creation |
 | Trigger Studio flow | `trigger_flow` | Flow execution |
 | Create messaging service | `create_messaging_service` | Service setup |
+| Update messaging service | `update_messaging_service` | Config changes |
+| Create SIP domain | `create_sip_domain` | SIP infrastructure |
+| Update SIP domain | `update_sip_domain` | SIP config changes |
+| Create SIP trunk | `create_sip_trunk` | Trunking infrastructure |
+| Update SIP trunk | `update_sip_trunk` | Trunk config changes |
 | Send notification | `send_notification` | Push notification |
 
 ### Tier 3: Supervised (Human Confirmation Required)
@@ -206,9 +241,20 @@ Write operations agents can perform with rate limits or validation.
 |------|----------|
 | MCP `validate_recording(recordingSid)` | SID-targeted: completion polling + status |
 | MCP `validate_transcript(transcriptSid)` | SID-targeted: completion + sentence extraction |
-| MCP `list_recordings`, `list_transcripts` | Discovery when no specific SID |
+| MCP `validate_language_operator(transcriptSid)` | SID-targeted: operator results on a transcript |
+| MCP `list_recordings`, `list_transcripts`, `list_sentences` | Discovery when no specific SID |
 
 **Rule**: SID-first for validation. List tools for discovery only.
+
+### Serverless Inspection
+
+| Tool | Use When |
+|------|----------|
+| MCP `list_services`, `list_functions`, `list_logs` | Agent querying deployment state |
+| MCP `list_environments`, `list_builds`, `get_build_status` | Deployment status checks |
+| CLI `serverless:deploy`, `serverless:activate` | Deployment, promotion, rollback (Tier 3) |
+
+**Rule**: MCP for read-only inspection. CLI for all infrastructure changes.
 
 ### Studio Flows
 
@@ -300,4 +346,35 @@ Agent: "I'll deploy these changes now."
 *runs twilio serverless:deploy*  // WRONG
 ```
 
-**Why**: Deployment is Tier 3 (requires human approval). Pre-bash hooks block this anyway.
+**Why**: Deployment is Tier 3 (requires human approval).
+
+### 4. Storing Secrets in MCP Tools
+
+```typescript
+// DON'T DO THIS
+const client = Twilio('ACxxxx...hardcoded', 'authtoken...hardcoded');  // WRONG
+```
+
+**Why**: Always use environment variables.
+
+---
+
+## MCP Server Boundaries
+
+### MCP Server SHOULD
+
+1. **Remain a pure Twilio SDK wrapper** - Direct API calls only
+2. **Return JSON data** - Never TwiML (that's for Functions)
+3. **Be stateless** - No persistent connections or file storage
+4. **Validate inputs with Zod schemas** - Type-safe, documented
+5. **Implement rate limiting** - Protect Tier 2 operations
+6. **Redact sensitive data** - No auth tokens in responses
+
+### MCP Server SHOULD NOT
+
+1. **Invoke CLI commands** - No `exec()`, `spawn()`, or shell calls
+2. **Perform file operations** - No reading/writing local files
+3. **Make deployment decisions** - That requires human oversight
+4. **Purchase or delete resources** - Financial/irreversible
+5. **Modify account-level settings** - Security sensitive
+6. **Store state internally** - Use Sync documents instead

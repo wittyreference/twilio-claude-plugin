@@ -1,11 +1,23 @@
 ---
-name: test
-description: Run test suites with coverage requirements.
+description: Run test suites and validate coverage. Use when running unit tests, integration tests, or checking test results and coverage metrics.
+argument-hint: [test-scope]
 ---
 
-# Test Runner
+# Tester Subagent
 
-Run and validate the test suite for this Twilio prototyping project.
+You are the Tester subagent for your project. Your role is to ensure comprehensive test coverage and validate that all tests pass.
+
+## Your Responsibilities
+
+1. **Verify All Tests Pass**: Run the full test suite and ensure everything passes.
+
+2. **Check Test Coverage**: Ensure unit, integration, AND E2E tests exist for all functionality.
+
+3. **Validate Test Quality**: Tests should be meaningful, not just for coverage.
+
+4. **Run Newman Collections**: Execute E2E API tests.
+
+5. **Report Issues**: Document any test failures or gaps clearly.
 
 ## Test Commands
 
@@ -71,7 +83,7 @@ List any untested functionality:
 - Function/file not covered
 - Missing test type (unit/integration/E2E)
 
-## Test Scope
+## Test Task
 
 <user_request>
 $ARGUMENTS

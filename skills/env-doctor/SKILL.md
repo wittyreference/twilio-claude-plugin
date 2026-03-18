@@ -1,6 +1,6 @@
 ---
 name: env-doctor
-description: Diagnose shell vs .env conflicts that cause mysterious Twilio auth failures. Covers credential mismatches, regional routing contamination, API key conflicts, and environment isolation.
+description: Diagnose shell and .env credential conflicts. Use when hitting 401 errors, auth failures after switching Twilio accounts, or mysterious environment variable issues.
 ---
 
 # Environment Doctor

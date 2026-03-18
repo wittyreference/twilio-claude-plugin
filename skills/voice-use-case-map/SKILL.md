@@ -1,13 +1,13 @@
 ---
 name: voice-use-case-map
-description: Definitive per-use-case product mapping for Twilio Voice. Use when recommending Twilio products for a voice use case.
+description: Voice use case to Twilio product mapping. Use when recommending which Twilio product fits a voice use case — IVR, contact center, Voice AI, recording, conferencing, or SIP.
 ---
 
 # Voice Use Case Product Map
 
 Definitive per-use-case product mapping for Twilio Voice. Load this skill when recommending Twilio products for a voice use case.
 
-## Quick Reference (scan this first)
+## Quick Reference
 
 | UC | Name | Core Products | Key Feature | Prototype? |
 |----|------|--------------|-------------|------------|
@@ -22,7 +22,38 @@ Definitive per-use-case product mapping for Twilio Voice. Load this skill when r
 | 9 | PSTN Connectivity | Elastic SIP Trunking (primary), BYOC | Carrier interconnect (Elastic SIP Trunking validated in SIP Lab, SIP Interface Phase C TODO) | Yes — SIP registration (SIP Interface only), TLS, E.164 dialplan |
 | 10 | AI/ML Transcription | Voice Intelligence, Language Operators | Post-call analysis of recordings | Yes — `source_sid` vs `media_url`, operator config |
 
-**Complements:** `.claude/skills/voice.md` (decision frameworks), `functions/conversation-relay/CLAUDE.md` (ConversationRelay protocol details).
+**Complements:** Voice skill (decision frameworks), Media Streams skill (raw audio WebSocket), ConversationRelay skill (protocol details).
+
+## Decision Tree
+
+**Start here:** What is the caller experience?
+
+```
+Is this outbound (you initiate) or inbound (caller dials you)?
+├── Outbound
+│   ├── Automated message / reminder? → UC 1 (Voice Notifications)
+│   ├── Sales prospecting at volume? → UC 7 (Sales Dialer)
+│   ├── Agent-to-customer proactive? → UC 4 (Outbound Contact Center)
+│   └── AI-driven outbound? → UC 5 or 6 (AI Agents)
+├── Inbound
+│   ├── Self-service only (no agents)? → UC 2 (IVR)
+│   ├── Route to human agents? → UC 3 (Inbound Contact Center)
+│   ├── AI handles conversation? → UC 5 or 6 (AI Agents)
+│   └── Marketing attribution? → UC 8 (Call Tracking)
+├── SIP infrastructure needs PSTN? → UC 9 (PSTN Connectivity)
+└── Post-call analysis at scale? → UC 10 (AI/ML Transcription)
+```
+
+**AI Agent choice:** Use UC 5 (ConversationRelay) when you want Twilio-managed STT/TTS. Use UC 6 (Media Streams) when you have your own AI platform or need raw audio control.
+
+## Critical Gotchas (Cross-Cutting)
+
+- **AMD**: Does NOT work with SIP Trunking, `<Dial><Client>`, `<Dial><Conference>`, or `<Dial><Queue>`. Always use `AsyncAmd=true`.
+- **PCI Mode**: IRREVERSIBLE and account-wide. Create a separate sub-account.
+- **ConversationRelay voice names**: Use `en-US-Chirp3-HD-Aoede` NOT `Google.en-US-Chirp3-HD-Aoede`. 10 malformed messages kills connection.
+- **Recording → Intelligence**: Use `source_sid` (Recording SID), NOT `media_url`.
+- **`<Connect><Stream>`**: Blocks all subsequent TwiML. Cannot stop without ending call. Audio is mulaw 8kHz base64 only.
+- **Conference warm transfer**: `endConferenceOnExit` must be set per-participant deliberately.
 
 ---
 
@@ -975,7 +1006,7 @@ Foundation: PSTN Connectivity (Elastic SIP Trunking)
 
 ### Cross-Reference
 
-For decision frameworks, architectural patterns, and implementation guidance, see `.claude/skills/voice.md`.
+For decision frameworks, architectural patterns, and implementation guidance, see the Voice skill.
 
 ---
 

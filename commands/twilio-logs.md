@@ -1,6 +1,6 @@
 ---
-name: twilio-logs
-description: Fetch and analyze Twilio debugger logs for errors.
+description: Fetch and analyze Twilio debugger logs. Use when debugging errors, investigating failed calls or messages, or analyzing error patterns by SID.
+argument-hint: [resource-sid]
 ---
 
 # Twilio Logs Analyzer
