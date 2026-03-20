@@ -11,6 +11,8 @@ Comprehensive knowledge for building Twilio Voice applications - from simple IVR
 
 Common verbs: `<Say>`, `<Play>`, `<Gather>`, `<Dial>`, `<Record>`, `<Conference>`, `<Hangup>`, `<Redirect>`, `<Pause>`.
 
+Background nouns (via `<Start>`): `<Stream>`, `<Recording>`, `<Siprec>`, `<Transcription>`.
+
 ### Primary Verbs
 
 | Verb | Purpose | Key Attributes |
@@ -874,6 +876,7 @@ Some TwiML verbs start background processes that continue running even after the
 - **`<Start><Stream>`** - Media streaming continues in the background
 - **`<Start><Recording>`** - Recording continues until explicitly stopped
 - **`<Start><Siprec>`** - SIPREC streaming continues in the background
+- **`<Start><Transcription>`** - Real-time transcription continues, delivers events via webhook
 
 ```javascript
 // Recording starts and continues through subsequent TwiML
@@ -1001,6 +1004,10 @@ response.setBody({ success: true });
 response.appendHeader('Content-Type', 'application/json');
 response.setBody(JSON.stringify({ success: true }));
 ```
+
+### `<Start><Transcription>` Callbacks Are Form-Encoded
+
+Transcription status callbacks (`transcription-started`, `transcription-content`, `transcription-stopped`, `transcription-error`) arrive as `application/x-www-form-urlencoded`, not JSON. Parse with `event.TranscriptionText`, `event.TranscriptionSid`, etc. — not `JSON.parse(event.body)`.
 
 ---
 
