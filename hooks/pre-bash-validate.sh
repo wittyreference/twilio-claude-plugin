@@ -10,7 +10,8 @@ fi
 
 COMMAND=""
 if [ -n "$HOOK_INPUT" ] && ! command -v jq &> /dev/null; then
-    echo "WARNING: jq not installed — safety hooks disabled (--no-verify blocking, deploy gates). Run: brew install jq" >&2
+    echo "BLOCKED: jq not installed — safety hooks cannot run (--no-verify blocking, deploy gates). Install: brew install jq" >&2
+    exit 2
 fi
 if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
     COMMAND="$(echo "$HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)"

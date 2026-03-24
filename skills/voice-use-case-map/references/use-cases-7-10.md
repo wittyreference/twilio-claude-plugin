@@ -17,6 +17,10 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 > TCPA/TSR compliance is non-negotiable: express written consent, DNC registry checks, quiet hours (8 AM-9 PM recipient's time zone), state-level variations may be stricter. Penalties are per-call.
 
+#### TCPA Calling Window Implementation
+
+Enforcing quiet hours requires knowing the recipient's time zone, which Twilio does not provide. Implementation pattern: look up the recipient's area code or ZIP code to determine their time zone, then check whether the current time falls within the 8 AM–9 PM window in that zone. Some states are stricter (e.g., Oklahoma 8 AM–8 PM, some states restrict weekends). Federal TCPA applies to residential lines; the Telemarketing Sales Rule (TSR) applies to all consumers. Store consent timestamps and DNC opt-outs in your own database — Twilio does not manage consent state. Check the National DNC Registry before each campaign batch, not per-call (registry is updated daily).
+
 ### Software Tools
 
 - **Voice Intelligence**: Analyze sales conversations at scale. Detect buying signals, objection patterns, competitor mentions, and successful closing techniques. Train new sales reps by surfacing top-performer conversation patterns.
@@ -42,7 +46,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 - **Conversation Relay**: AI-assisted sales — the AI agent handles initial qualification before connecting to a human salesperson. Or the AI provides real-time coaching suggestions to the salesperson via whisper.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` for Chirp3-HD voices — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede` (Neural2 voices keep the `Google.` prefix: `Google.en-US-Neural2-F`). 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **Recording**: Record every sales call. Required for sales compliance, dispute resolution, and performance coaching. Use conference recording to capture the full interaction.
 
@@ -92,11 +96,40 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 - **Conference Insights**: Monitor call quality for sales conversations. Poor audio quality costs deals.
 
+### Dialer Types Comparison
+
+Twilio does not ship a "dialer product" — it provides the building blocks (Calls API, Conference, AMD, CPS). The dialer _type_ is your application logic on top of those primitives. Choose based on agent experience, efficiency targets, and regulatory tolerance.
+
+| Dialer Type | How It Works | Dial Ratio | Agent Experience | Tradeoffs |
+|-------------|-------------|------------|------------------|-----------|
+| **Preview** | Agent sees lead info first, clicks to dial manually. | 1:1 (agent-initiated) | Full context before conversation. Highest quality per call. | Lowest throughput. Best for complex/high-value sales. |
+| **Progressive** | System auto-dials the next lead when an agent becomes available. | 1:1 (system-initiated) | Agent gets connected only to answered calls. No manual dialing. | Moderate throughput. No abandoned calls. Good default choice. |
+| **Power** | System dials multiple numbers simultaneously per available agent. | N:1 (configurable, typically 2-4:1) | Agent connects to whichever call answers first; excess answered calls are dropped or queued. | Higher throughput, but excess answered calls hear dead air or a recorded message — potential TCPA/regulatory exposure. |
+| **Predictive** | Algorithm predicts when agents will become available and pre-dials accordingly. | Dynamic (algorithm-adjusted) | Highest agent utilization — minimal idle time between conversations. | Highest throughput, but also highest risk of abandoned calls. Requires enough agents and call volume for the algorithm to predict accurately. FTC (Federal Trade Commission) / FCC (Federal Communications Commission) limit abandoned call rate to ≤3%. |
+
+**Implementation with Twilio primitives:**
+- All types use the **Calls API** to initiate outbound calls and **Conference** to bridge agent + prospect.
+- Progressive/Power/Predictive use **AMD** (`AsyncAmd=true`) to filter machine answers before connecting agents.
+- Power/Predictive require application-level queue management to handle excess answered calls and track agent availability.
+- **CPS limits** constrain how fast any dialer type can place calls — plan CPS allocation based on your dial ratio and team size.
+
+### Scope: Your Responsibility vs Twilio
+
+Twilio provides the dialing infrastructure (CPS, AMD, Conference, Branded Calling, Recording). The following are **your responsibility** — Twilio does not provide a built-in compliance engine:
+- **Consent management**: Storing express written consent with timestamps, source, and scope
+- **DNC registry checks**: Querying the National DNC Registry before campaign batches
+- **Calling window enforcement**: Time zone lookup and 8 AM–9 PM window calculation (see above)
+- **State-level compliance**: Tracking stricter state rules beyond federal TCPA
+- **Number rotation**: Monitoring spam flags via Trust & Engagement Insights and rotating proactively
+- **Recording retention**: Storing recordings per your retention policy (Twilio keeps recordings until manually deleted by default)
+
 ---
 
 ## Use Case 8: Call Tracking
 
 **Summary:** Marketing attribution via unique phone numbers per campaign, ad, or channel. The simplest voice use case architecturally — buy numbers, forward calls, log which number received the call. Value comes from the attribution data, not call complexity.
+
+> **Scope boundary:** Twilio provides the number pool, call forwarding, recording, and per-call metadata (which number was called, caller ID, duration). Cross-channel attribution (connecting call data to web sessions, ad clicks, CRM records), lead scoring, and campaign ROI dashboards are **external** — built in your analytics platform (Segment, Mixpanel, Looker, etc.) using Twilio event data as input. Do not expect Twilio Functions to replace an analytics platform.
 
 ### Software Tools
 
@@ -130,15 +163,34 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 ### Features
 
-- **CNAM**: Look up caller name for lead enrichment. Combine with the tracking number to create "Campaign X → John Smith" attribution records.
+- **CNAM**: Caller name for lead enrichment. Combine with the tracking number to create "Campaign X → John Smith" attribution records.
+  - **No separate API call needed**: For inbound calls, Twilio automatically includes the `CallerName` parameter in the voice webhook payload when CNAM data is available. Your Function receives it alongside `From`, `To`, `CallSid`, etc. — just read `event.CallerName`.
+  - **Coverage limitations**: CNAM lookups are ~80% accurate for US/Canadian landline numbers. Most mobile numbers do not have CNAM records and will return empty. International numbers rarely have CNAM data. Do not build workflows that depend on CallerName always being present.
+  - **Outbound CNAM is different**: Registering _your_ business name so it displays on the recipient's phone is a separate feature (CNAM registration on your Twilio number). Inbound lookup vs. outbound registration are independent.
 
 - **Segment Integration**: Send call tracking events to Segment for unified marketing attribution. Connect call data with web analytics, email campaigns, and CRM data.
+
+- **Dynamic Number Insertion (DNI)**: Client-side JavaScript that swaps the displayed phone number on your website based on the visitor's traffic source (URL parameters, referrer, UTM tags, ad click IDs). DNI is the web-side complement to server-side call tracking — the visitor sees a unique number, calls it, and your inbound tracking Function attributes the call to the correct campaign.
+  - **Scope boundary**: Twilio provides the number pool (Phone Numbers API) and inbound call handling. The DNI swap logic is **your front-end JavaScript** — it reads the visitor's URL/referrer, selects a number from your pool, and replaces the displayed number on the page. Twilio does not provide a DNI JavaScript library.
+  - **Number pool sizing**: DNI requires enough numbers to cover concurrent website sessions. When all numbers are in use, new visitors see a fallback number (still tracked, but at the campaign level, not session level). Monitor pool utilization and expand as traffic grows.
 
 - **Trust & Engagement Insights**: Monitor tracking number health. Ensure tracking numbers aren't flagged as spam (which would suppress legitimate marketing calls).
 
 ### Non-Voice Products
 
 - **Phone Numbers**: The core asset for call tracking. Purchase a unique number per campaign/ad/channel. Consider local numbers matching the target market area code for higher answer rates. Phone number management at scale (pools, rotation, release) is the primary operational concern.
+
+### Choosing Sync vs Event Streams for Call Tracking Data
+
+| Criteria | Sync (Lists/Maps) | Event Streams |
+|----------|-------------------|---------------|
+| **Pattern** | Read/write shared state | Pub/sub fire-and-forget |
+| **Latency** | <100ms real-time | Seconds (webhook) to minutes (Kinesis batch) |
+| **Best for** | Live dashboards, campaign toggles, agent status | Analytics pipeline, reporting, CRM integration |
+| **Retention** | Persistent until deleted | Ephemeral (consumer must store) |
+| **Example** | "Campaign X is active, 47 calls today" | "Call CA123 completed, 3m 22s, from tracking number +1555..." |
+
+Use Sync when your dashboard needs to display live campaign state. Use Event Streams when call events feed into a downstream analytics or CRM pipeline. Many implementations use both: Sync for operational state, Event Streams for the analytics firehose.
 
 ---
 
@@ -163,6 +215,16 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 ### Connectivity
 
 - **Elastic SIP Trunking**: The customer's SIP infrastructure (PBX, SBC, UCaaS) connects to Twilio's SIP Trunking endpoints. This is the primary connectivity method for the PSTN Connectivity use case. Calls bypass Programmable Voice — the trunk is a pure PSTN conduit.
+
+#### Capacity & Scaling
+
+Elastic SIP Trunking scales elastically — there is no fixed concurrent call limit or pre-provisioned channel count. Key capacity considerations:
+
+- **CPS (Calls Per Second)**: Default outbound CPS varies by account (typically 1-5 CPS for new accounts). Higher CPS limits are available via Twilio support request. Inbound CPS is generally higher than outbound.
+- **Concurrent calls**: Limited at the account level, not per-trunk. Default concurrent call limits depend on your account's trust and usage history. No hard-coded channel count like legacy PRI/T1 trunks.
+- **Scaling up**: Request CPS and concurrent call limit increases through Twilio support or your account team. Provide expected peak CPS, concurrent call volume, and ramp-up timeline. Twilio provisions additional capacity on the backend — no infrastructure changes on your side.
+- **Burst handling**: The platform accommodates short bursts above sustained CPS, but sustained overages get throttled (HTTP 429 on INVITE).
+- **Scope boundary**: Exact CPS and concurrent call limits are account-specific and subject to change. Check your Twilio Console (Usage → SIP Trunking) or contact support for your current limits rather than hardcoding capacity assumptions. Legacy PBX migration sizing (e.g., "we need 96 concurrent channels to replace 4 PRIs") is valid — just request that capacity explicitly.
 
 - **PSTN**: The outbound/inbound path to the telephone network. Elastic SIP Trunking provides PSTN access for SIP-based systems.
 
@@ -199,6 +261,8 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 **Summary:** Large-scale transcription and intelligence extraction from voice calls. Turn recorded calls into searchable, analyzable text — then apply ML for sentiment, entities, topics, and compliance monitoring. This is a post-call and real-time analytics use case. `<Start><Transcription>` provides Twilio-managed near real-time transcription during live calls, while Voice Intelligence provides batch analysis of recordings post-call.
 
+> **Cross-call analytics:** Voice Intelligence operates per-call — each transcript gets its own sentiment score, entity extraction, and operator results. Cross-call aggregation (trending topics across 1,000 calls, agent performance comparison, campaign-level sentiment drift) requires custom work: pull operator results via the Intelligence API, aggregate in your analytics pipeline, and build dashboards externally. Event Streams can push transcript-completion events to trigger aggregation workflows.
+
 ### Software Tools
 
 - **Voice Intelligence**: The primary product for this use case. Provides transcription, entity detection, sentiment analysis, PII redaction, topic detection, and custom language operators. Process thousands of calls to extract business intelligence at scale.
@@ -217,7 +281,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 - **Conversation Relay**: When real-time transcription is needed during live calls, ConversationRelay provides streaming STT as part of the AI agent flow. The transcription is a byproduct of the AI conversation that can be captured and analyzed.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` for Chirp3-HD voices — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede` (Neural2 voices keep the `Google.` prefix: `Google.en-US-Neural2-F`). 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **Recording**: The input for batch transcription. Calls must be recorded before they can be transcribed at scale. Configure recording on calls, conferences, or trunks, then process the recordings through Voice Intelligence.
   - Gotcha: Use `source_sid` (Recording SID) for Voice Intelligence transcript creation, NOT `media_url`. The Intelligence API cannot authenticate against protected URLs.
@@ -228,6 +292,8 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 - **`<Transcription>`**: Near real-time transcription during live calls via `<Start><Transcription>`. Twilio-managed STT (Google or Deepgram engine) delivers transcript events to your webhook with 1-2 second latency. Supports dual-track transcription (`inbound_track`, `outbound_track`, `both_tracks`) for speaker diarization. When `intelligenceService` SID is specified, the transcript is automatically persisted and Language Operators run post-call — bridging real-time transcription with post-call analytics without additional API calls.
   - Prereqs: StatusCallback URL to receive transcription events. Voice Intelligence Service SID for `intelligenceService` integration.
   - Gotcha: Callback payload is form-encoded (not JSON). `partialResults="true"` generates high webhook traffic — budget for sustained volume. Encrypted recordings cannot be transcribed. Short utterances (<200ms) may not produce output. Engine-specific `speechModel` values are not interchangeable between Google and Deepgram.
+
+- **Action Item Extraction**: Not a built-in feature — requires a custom Language Operator. Configure a `text-generation` type operator with a prompt like "Extract action items from this call transcript as a numbered list." Attach the operator to your Intelligence Service, and it runs automatically on each transcript post-call. Results are available via the Intelligence API alongside other operator outputs. For structured extraction (assignee, due date, description), use a `text-generation` operator that returns JSON.
 
 - **Voice Insights**: Call metadata that enriches transcription analysis — call duration, quality scores, participant information. Combine Voice Insights data with transcription data for complete call intelligence.
 

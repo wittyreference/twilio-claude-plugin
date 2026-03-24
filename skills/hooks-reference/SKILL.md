@@ -11,20 +11,29 @@ This project uses Claude Code hooks (configured in `.claude/settings.json`) to e
 
 | Hook | Event | Purpose |
 |------|-------|---------|
-| `pre-write-validate.sh` | PreToolUse (Write/Edit) | Blocks credentials, magic test numbers; warns on naming |
+| `pre-write-validate.sh` | PreToolUse (Write/Edit) | Blocks credentials, magic test numbers, learnings bulk-clear; warns on naming |
 | `pre-bash-validate.sh` | PreToolUse (Bash) | Blocks --no-verify, pending-actions, validates deploy |
-| `post-write.sh` | PostToolUse (Write/Edit) | Auto-lints JS/TS files, tracks files to .session-files |
-| `post-bash.sh` | PostToolUse (Bash) | Logs deploy/test completions |
-| `subagent-log.sh` | SubagentStop | Logs workflow activity |
-| `session-checklist.sh` | Stop | Warns about uncommitted changes, unpushed commits, stale learnings |
+| `post-write.sh` | PostToolUse (Write/Edit) | Auto-lints JS/TS files, tracks files to .session-files, increments tool-call counter |
+| `flywheel-doc-check.sh` | PostToolUse (Write/Edit) | Suggests doc updates based on 4 sources (git status, commits, session-files, pattern-db) |
+| `post-bash.sh` | PostToolUse (Bash) | Logs deploy/test completions, increments tool-call counter |
+| `subagent-log.sh` | SubagentStop | Logs workflow activity, triggers flywheel |
+| `teammate-idle-check.sh` | TeammateIdle | Quality gate before teammate goes idle |
+| `task-completed-check.sh` | TaskCompleted | TDD/coverage/credential gate on task completion |
+| `session-checklist.sh` | Stop | Warns about uncommitted changes, unpushed commits, stale learnings, MEMORY.md size |
+| `archive-plan.sh` | Stop | Archives plan files with metadata |
 | `notify-ready.sh` | Stop | Desktop notification when done |
-| `session-start.sh` | SessionStart (all) | Logs session starts, bootstrap checks, context loading |
+| `pre-compact.sh` | PreCompact | Creates compaction marker for post-compact-summary |
+| `session-start-log.sh` | SessionStart (all) | Logs session starts, 8 bootstrap checks (env, CLI, stale session, exercises, updates, context hub, codebase smoke test, MEMORY.md auto-prune), context loading, resets session tracking |
+| `post-compact-summary.sh` | SessionStart (compact) | Extracts compaction summary from transcript |
+| `_meta-mode.sh` | *(sourced by other hooks)* | Helper: detects `.meta/` directory, sets environment-aware paths |
+| `flywheel-session-summary.sh` | *(sourced by other hooks)* | Helper: generates session summary for flywheel processing |
 
 ## When a Hook Blocks You
 
 **Fix the hook, don't bypass the system.** If a hook is blocking legitimate work:
 - Open a separate Claude window and fix the hook behavior
 - Use `CLAUDE_ALLOW_PRODUCTION_WRITE=true` for one-off overrides
+- **NEVER rename `.meta/`** to disable meta mode — this breaks all session routing
 
 ## What Gets Blocked (Exit Code 2)
 
@@ -44,12 +53,13 @@ This project uses Claude Code hooks (configured in `.claude/settings.json`) to e
 - Non-evergreen naming patterns (`ImprovedX`, `NewHandler`, `BetterY`, `EnhancedZ`)
 - High-risk assertions in CLAUDE.md files without citations
 - Test files without ABOUTME comments
+- `.meta/` references in staged changes (potential leakage)
 
 ## Commit Checklist
 
 On every `git commit`, the hook displays a reminder checklist:
-- Updated todo.md?
-- Captured learnings?
+- Updated `.meta/todo.md`?
+- Captured learnings in `.claude/learnings.md`?
 - Design decision documented if architectural?
 
 ## Hook Scripts Location
@@ -59,6 +69,13 @@ All hook scripts are in `.claude/hooks/` and can be modified to adjust behavior.
 ## Plan Archival
 
 When a Claude Code session ends, `archive-plan.sh` preserves the current plan file.
+
+**Environment-aware archival:**
+
+| Environment | Writes To | Purpose |
+|-------------|-----------|---------|
+| Meta-development (`.meta/` exists) | `.meta/plans/` | Local plans (gitignored) |
+| Shipped product (no `.meta/`) | `.claude/archive/plans/` | User plans (committed) |
 
 **What gets archived:**
 - Plans modified within the last hour (likely from current session)

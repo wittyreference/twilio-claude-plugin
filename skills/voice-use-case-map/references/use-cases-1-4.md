@@ -65,7 +65,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 - **CPS (Calls Per Second)**: Rate limiting for outbound call volume. Default is 1 CPS — far too low for any meaningful notification campaign. Self-serve up to 5 CPS via Console. Above 5 requires offline approval. Plan CPS needs based on campaign size and delivery window.
 
-- **AMD (Answering Machine Detection)**: Critical for notifications where reaching a human matters. Set `MachineDetection=Enable` on the Calls API create request — returns `AnsweredBy` in the status callback so you can branch logic (play TTS to human, leave voicemail for machine). Use `DetectMessageEnd` mode to wait for the voicemail beep before playing. Don't use for inbound calls or `<Dial>` verb calls.
+- **AMD (Answering Machine Detection)**: Identifies whether a person or voicemail system answered an outbound call. Without AMD, agents waste 30-50% of their time listening to voicemail greetings — AMD routes human-answered calls to live handling and optionally leaves pre-recorded messages on voicemail. Set `MachineDetection=Enable` on the Calls API create request — returns `AnsweredBy` in the status callback so you can branch logic (play TTS to human, leave voicemail for machine). Use `DetectMessageEnd` mode to wait for the voicemail beep before playing. Don't use for inbound calls or `<Dial>` verb calls.
   - Gotcha: Does NOT work with SIP Trunking, `<Dial><Client>`, `<Dial><Conference>`, or `<Dial><Queue>`. Synchronous mode (without `AsyncAmd=true`) creates ~4s dead air — real humans hang up. Use `AsyncAmd=true` on Calls API to avoid dead air.
 
 - **SSML TTS**: Fine-grained control over how notification text is spoken. Use `<say-as interpret-as="telephone">` for phone numbers, `<say-as interpret-as="date">` for dates, `<break>` for pauses between information chunks. Essential for notifications with numbers, codes, or structured data.
@@ -85,6 +85,16 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 ## Use Case 2: Self-Service Automation (IVR)
 
 **Summary:** Handle interactions without human agents — IVR menus, payment capture, appointment scheduling, AI-powered self-service. The goal is containment: resolve the caller's need without routing to an expensive human agent, while always providing an escalation path.
+
+> **Every IVR must include an operator escape hatch.** Even the simplest IVR skeleton should offer "press 0 for an operator" (or equivalent) at every menu level. Use `<Gather>` to capture the digit and route to a human via `<Dial>`, `<Enqueue>`, or TaskRouter. Without an escape hatch, callers with unanticipated needs — questions the menu doesn't cover, accessibility needs, or urgent situations — have no recourse and will abandon the call. This is a design requirement, not a nice-to-have. Building the agent-handling infrastructure is your responsibility; Twilio provides the routing primitives (`<Gather>`, `<Dial>`, `<Enqueue>`, TaskRouter) but the staffing and escalation workflow are outside Twilio's scope.
+
+### Industry IVR Patterns
+
+Different industries have distinct IVR structures, but all share the same Twilio building blocks (`<Gather>`, `<Say>`, `<Pay>`, `<Enqueue>`):
+
+- **Banking / Financial Services**: Account balance lookup (authenticate via `<Gather>` + account number/PIN, then `<Say>` balance from your backend), fraud reporting hotline (priority `<Enqueue>` to fraud team), loan status check, card activation. Payment-related flows require `<Pay>` with a configured payment connector on a separate sub-account.
+- **Healthcare**: Appointment scheduling (collect date preferences via `<Gather>`, confirm via `<Say>`), prescription refill requests (capture Rx number via DTMF), nurse advice hotline (`<Enqueue>` to clinical staff with priority routing). HIPAA (Health Insurance Portability and Accountability Act) compliance is required — see the HIPAA entry below.
+- **SaaS / Tech Support**: Ticket status lookup (capture ticket ID via `<Gather>`, read status via `<Say>`), billing inquiries (`<Pay>` for payment, `<Enqueue>` to billing team), tiered technical support (L1 (first-line) self-service via AI with Conversation Relay, L2/L3 (specialist/escalation) via TaskRouter skill-based routing).
 
 ### Software Tools
 
@@ -114,7 +124,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 - **Conversation Relay**: LLM-powered dynamic conversations replacing rigid menu trees. The caller speaks naturally and the AI agent handles intent detection, slot filling, and response generation. Use when static `<Gather>` menus can't handle the interaction complexity. Requires a WebSocket server with LLM integration.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` for Chirp3-HD voices — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede` (Neural2 voices keep the `Google.` prefix: `Google.en-US-Neural2-F`). 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **VirtualAgent**: Google Dialogflow integration for AI-powered IVR. Only use if the customer has an existing Dialogflow virtual agent. Otherwise, recommend Conversation Relay for direct LLM integration.
   - Prereqs: Existing Google Dialogflow CX agent with telephony integration configured.
@@ -217,7 +227,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 - **Conversation Relay**: AI-powered front-end before human agents. Handle simple queries via AI, escalate complex ones to humans. The AI agent can also assist the human agent in real-time with suggested responses.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` for Chirp3-HD voices — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede` (Neural2 voices keep the `Google.` prefix: `Google.en-US-Neural2-F`). 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **VirtualAgent**: Dialogflow-based front-end. Only if the customer has existing Dialogflow infrastructure.
   - Prereqs: Existing Google Dialogflow CX agent with telephony integration configured.
@@ -363,7 +373,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 - **Conversation Relay**: AI-powered outbound conversations. The AI agent handles the initial outbound call and escalates to a human agent when needed. Useful for high-volume campaigns where AI handles routine interactions.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
+  - Gotcha: Voice name format differs from `<Say>` for Chirp3-HD voices — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede` (Neural2 voices keep the `Google.` prefix: `Google.en-US-Neural2-F`). 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
 - **VirtualAgent**: Dialogflow-based outbound automation. Only if existing Dialogflow infrastructure exists.
   - Prereqs: Existing Google Dialogflow CX agent with telephony integration configured.

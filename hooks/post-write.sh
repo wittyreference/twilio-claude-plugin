@@ -68,6 +68,19 @@ if [ -n "$REL_PATH" ]; then
 fi
 
 # ============================================
+# TOOL-CALL COUNTER (context pressure awareness)
+# ============================================
+if [ -n "$HOOK_SESSION_ID" ]; then
+    COUNTER_FILE="$SESSIONS_DIR/${HOOK_SESSION_ID}.tool-calls"
+    COUNT=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
+    COUNT=$((COUNT + 1))
+    echo "$COUNT" > "$COUNTER_FILE"
+    if [ $((COUNT % 50)) -eq 0 ]; then
+        echo "Context checkpoint: $COUNT tool calls this session." >&2
+    fi
+fi
+
+# ============================================
 # STRUCTURED EVENT EMISSION (observability)
 # ============================================
 

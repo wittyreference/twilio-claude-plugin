@@ -37,7 +37,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 - **Conversation Relay**: The primary integration path. Establishes a WebSocket connection between the active call and your server. Twilio handles speech-to-text and text-to-speech; your server handles LLM logic, tool execution, and conversation management. Supports interruption handling, turn detection, and DTMF.
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
-  - Gotcha: Voice name format differs from `<Say>` — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede`. 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`. WebSocket disconnection = call ends (no auto-reconnect) unless an `action` URL fallback is implemented on the `<Connect>` verb.
+  - Gotcha: Voice name format differs from `<Say>` for Chirp3-HD voices — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede` (Neural2 voices keep the `Google.` prefix: `Google.en-US-Neural2-F`). 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`. WebSocket disconnection = call ends (no auto-reconnect) unless an `action` URL fallback is implemented on the `<Connect>` verb.
 
 - **VirtualAgent**: Google Dialogflow CX integration. Twilio routes the call to a Dialogflow agent that handles conversation management. Only use if the customer has invested in Dialogflow infrastructure.
   - Prereqs: Existing Google Dialogflow CX agent with telephony integration configured.
@@ -115,6 +115,17 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 - **`<Stream>`**: The core integration point. `<Connect><Stream>` establishes a bidirectional WebSocket — Twilio sends caller audio, your platform sends AI-generated audio back. Only inbound audio track is available on bidirectional streams. Only 1 bidirectional stream per call. The WebSocket blocks subsequent TwiML until closed.
   - Prereqs: WebSocket server accepting `wss://` connections.
   - Gotcha: `<Connect><Stream>` (bidirectional) blocks all subsequent TwiML until WebSocket closes. Cannot stop a bidirectional stream without ending the call. Audio is strictly mulaw 8kHz base64 — no format negotiation.
+
+#### Stream Verb Comparison
+
+| Feature | `<Start><Stream>` (unidirectional) | `<Connect><Stream>` (bidirectional) |
+|---------|-------------------------------------|--------------------------------------|
+| Direction | One-way (Twilio → your server) | Two-way (send and receive audio) |
+| Blocks TwiML | No — call flow continues | Yes — blocks until WebSocket closes |
+| Concurrent per call | Up to 4 streams | 1 stream only |
+| Available tracks | `inbound_track`, `outbound_track`, or `both_tracks` | `inbound_track` only |
+| Can stop mid-call | Yes (`<Stop><Stream>`) | No (ends only when call ends) |
+| Use case | Monitoring, analytics, real-time transcription | AI agents, custom STT/TTS platforms |
 
 ### Connectivity
 

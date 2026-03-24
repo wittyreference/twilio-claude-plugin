@@ -65,7 +65,7 @@ Common paths: Notifications → IVR → Contact Center | IVR → AI Agents → C
 
 - **AMD**: Does NOT work with SIP Trunking, `<Dial><Client>`, `<Dial><Conference>`, or `<Dial><Queue>`. Always use `AsyncAmd=true`.
 - **PCI Mode**: IRREVERSIBLE and account-wide. Create a separate sub-account.
-- **ConversationRelay voice names**: Use `en-US-Chirp3-HD-Aoede` NOT `Google.en-US-Chirp3-HD-Aoede`. 10 malformed messages kills connection.
+- **ConversationRelay voice names**: Format depends on voice family — Chirp3-HD voices use unprefixed names (`en-US-Chirp3-HD-Aoede`), Neural2 voices keep the `Google.` prefix (`Google.en-US-Neural2-F`). Using the wrong format produces malformed messages — 10 consecutive failures kills the connection.
 - **Recording → Intelligence**: Use `source_sid` (Recording SID), NOT `media_url`.
 - **`<Connect><Stream>`**: Blocks all subsequent TwiML. Cannot stop without ending call. Audio is mulaw 8kHz base64 only.
 - **Conference warm transfer**: `endConferenceOnExit` must be set per-participant deliberately.

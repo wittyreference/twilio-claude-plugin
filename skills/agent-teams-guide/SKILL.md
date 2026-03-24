@@ -1,6 +1,6 @@
 ---
 name: agent-teams-guide
-description: Reference for agent team configurations and coordination. Use when launching /team, understanding teammate communication, or choosing between parallel workflows (new-feature, bug-fix, code-review, refactor).
+description: Reference for agent team configurations and coordination. Use when launching /team, understanding teammate communication, or choosing between parallel workflows (new-feature, bug-fix, code-review, refactor, docs-update).
 ---
 
 # Agent Teams Guide
@@ -24,6 +24,7 @@ Agent Teams (experimental) coordinate multiple Claude Code instances for paralle
 | `bug-fix` | 3 parallel investigators → fix → verify | Debugging |
 | `code-review` | 3 parallel reviewers → cross-challenge | Thorough review |
 | `refactor` | Parallel analysis → implement → parallel verify | Restructuring |
+| `docs-update` | Parallel blind writers → parallel multi-lens reviewers → final editor | Batch doc fixes, doc-gap remediation |
 | `validation` | Parallel domain validators → lead synthesizes | Post-deploy E2E verification |
 
 ## Key Characteristics

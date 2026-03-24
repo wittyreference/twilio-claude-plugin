@@ -19,6 +19,7 @@ If the user provided a use case or question, match it to the relevant skills bel
 | `/voice-use-case-map` | Choosing between Twilio voice products (Programmable Voice, Elastic SIP, Voice AI) |
 | `/conversation-relay` | Building real-time voice AI with LLM integration, WebSocket audio |
 | `/media-streams` | Real-time audio processing, transcription, bidirectional streaming |
+| `/real-time-transcription` | Live call transcription via `<Start><Transcription>` or REST API, engine selection, callbacks |
 | `/sip-byoc` | SIP trunking, Bring Your Own Carrier, Elastic SIP Trunking |
 
 ### Messaging
@@ -74,6 +75,7 @@ If the user provided a use case or question, match it to the relevant skills bel
 | `/memory-systems` | Session memory, project state, cross-session persistence |
 | `/brainstorm` | Feature ideation, design space exploration |
 | `/workflows` | Pipeline overview (architect → spec → test-gen → dev → review → docs) |
+| `/skill-builder` | Building new domain skills — research, testing, synthesis, adversarial validation |
 
 ## Use Case Quick Reference
 

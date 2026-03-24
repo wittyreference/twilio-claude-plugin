@@ -45,6 +45,8 @@ Cross-cutting gotchas discovered through real debugging sessions. Domain-specifi
 
 - **Inbound leg CallSid differs from outbound API call SID** — When initiating outbound to a tracking number, the function sees a different CallSid (inbound child). Sync docs keyed by inbound SID, recordings on outbound SID.
 
+- **TwiML App voice URL drifts after redeployment** — The Serverless Toolkit can change the deployment domain between deploys. The TwiML App SID stores an absolute voice URL that does NOT auto-update when the domain changes. This causes Voice SDK error 21005 (HTTP connection failure) because the TwiML App points to the old dead domain. After every `twilio serverless:deploy`, verify and update the TwiML App's voice URL to match the new domain.
+
 ## Verify API
 
 - **Verify Service FriendlyName rejects names with 5+ total digits (error 60200)** — `POST /v2/Services` returns "Invalid parameter" if the FriendlyName contains 5 or more digit characters total, even non-consecutive (e.g. `test-20260307-abc` has 8 digits). Convert numeric identifiers to alpha-only hash: `echo "$TS" | md5 | tr '0-9' 'g-p' | head -c 8`.

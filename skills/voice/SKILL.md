@@ -1007,7 +1007,7 @@ response.setBody(JSON.stringify({ success: true }));
 
 ### `<Start><Transcription>` Callbacks Are Form-Encoded
 
-Transcription status callbacks (`transcription-started`, `transcription-content`, `transcription-stopped`, `transcription-error`) arrive as `application/x-www-form-urlencoded`, not JSON. Parse with `event.TranscriptionText`, `event.TranscriptionSid`, etc. — not `JSON.parse(event.body)`.
+Transcription status callbacks (`transcription-started`, `transcription-content`, `transcription-stopped`, `transcription-error`) arrive as `application/x-www-form-urlencoded`, not JSON. The transcript text is in `event.TranscriptionData` (a JSON string with `transcript` and `confidence` keys), NOT `event.TranscriptionText` (which is the Video transcription field). Parse with `JSON.parse(event.TranscriptionData)` — not `JSON.parse(event.body)`.
 
 ---
 

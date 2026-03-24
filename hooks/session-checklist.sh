@@ -74,6 +74,19 @@ if [[ -x "$README_DRIFT_SCRIPT" ]]; then
     fi
 fi
 
+# --- 8. QUICKSTART.md reference validity ---
+if [[ -f "$PROJECT_ROOT/QUICKSTART.md" ]]; then
+    QS_MISSING=0
+    while IFS= read -r script_ref; do
+        if [[ "$script_ref" == scripts/* ]] && [[ ! -f "$PROJECT_ROOT/$script_ref" ]]; then
+            QS_MISSING=$((QS_MISSING + 1))
+        fi
+    done < <(grep -oE 'scripts/[a-zA-Z0-9_.-]+\.sh' "$PROJECT_ROOT/QUICKSTART.md" 2>/dev/null | sort -u)
+    if [[ "$QS_MISSING" -gt 0 ]]; then
+        ITEMS+=("QUICKSTART: $QS_MISSING broken script reference(s)")
+    fi
+fi
+
 # ============================================
 # Output checklist (only if there are items)
 # ============================================
