@@ -1,4 +1,9 @@
 ---
+name: "compliance-regulatory"
+description: "Twilio development skill: compliance-regulatory"
+---
+
+---
 name: compliance-regulatory
 description: Twilio regulatory compliance guide. Use when dealing with A2P 10DLC registration, regulatory bundles, TrustHub identity, number compliance, or carrier requirements.
 ---
@@ -358,3 +363,9 @@ Store audit logs in your own infrastructure — Twilio's call/message logs have 
 | SMS logs | 13 months | No | Twilio-managed retention |
 | Sync data | Until deleted or TTL expires | Yes | Use TTL for auto-expiration |
 | Verify attempts | 60 days | No | Twilio-managed retention |
+
+---
+
+## Related Resources
+
+- [Branded Calling Skill](/.claude/skills/branded-calling/SKILL.md) — SHAKEN/STIR attestation, Voice Integrity, Branded Calling trust products, CNAM

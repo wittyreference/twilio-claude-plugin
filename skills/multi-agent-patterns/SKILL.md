@@ -1,4 +1,9 @@
 ---
+name: "multi-agent-patterns"
+description: "Twilio development skill: multi-agent-patterns"
+---
+
+---
 name: multi-agent-patterns
 description: Agent orchestration and coordination patterns. Use when designing multi-agent workflows, choosing between parallel/sequential/hierarchical patterns, or coordinating subagents.
 ---
@@ -6,10 +11,6 @@ description: Agent orchestration and coordination patterns. Use when designing m
 # Multi-Agent Patterns for Twilio
 
 This skill describes orchestration and coordination patterns for Twilio development workflows.
-
-## Attribution
-
-This skill is adapted from [Agent Skills for Context Engineering](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering) by Murat Can Koylan. The orchestration patterns have been customized for Twilio TDD workflows and webhook chain coordination.
 
 ## Pattern Overview
 
@@ -58,7 +59,7 @@ All development workflows enforce Test-Driven Development via pre-phase hooks:
 }
 ```
 
-See the `tdd-workflow` skill for detailed TDD patterns.
+See `.claude/skills/tdd-workflow.md` for detailed TDD patterns.
 
 ## Orchestrator Pattern (Default)
 
@@ -352,16 +353,16 @@ Real parallel coordination with inter-agent messaging. Unlike subagents (which s
 - Parallel QA + review after implementation
 - Cross-layer changes (functions + agents + config)
 
-### Comparison: Subagents vs Agent Teams
+### Comparison: Subagents vs Agent Teams vs Feature Factory
 
-| Aspect | Subagents | Agent Teams |
-|--------|-----------|-------------|
-| **Context** | Shared with parent | Own window per teammate |
-| **Communication** | Return results to caller | Message each other + shared tasks |
-| **Parallelism** | Sequential | Parallel |
-| **Token cost** | Lowest | ~2-3x |
-| **Resumable** | Yes | No |
-| **Best for** | Sequential workflows | Adversarial/parallel work |
+| Aspect | Subagents | Agent Teams | Feature Factory |
+|--------|-----------|-------------|-----------------|
+| **Context** | Shared with parent | Own window per teammate | Own SDK session |
+| **Communication** | Return results to caller | Message each other + shared tasks | Phase handoffs |
+| **Parallelism** | Sequential | Parallel | Sequential |
+| **Token cost** | Lowest | ~2-3x | Medium |
+| **Resumable** | Yes | No | Yes |
+| **Best for** | Sequential workflows | Adversarial/parallel work | CI/CD automation |
 
 ### Twilio Example: Bug Fix with Competing Hypotheses
 

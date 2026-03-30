@@ -1,4 +1,9 @@
 ---
+name: "taskrouter"
+description: "Twilio development skill: taskrouter"
+---
+
+---
 name: taskrouter
 description: Twilio TaskRouter skills-based routing guide. Use when building contact centers, queue-based work distribution, skills-based agent routing, or managing workers/tasks/reservations.
 ---
@@ -7,40 +12,45 @@ description: Twilio TaskRouter skills-based routing guide. Use when building con
 
 # Twilio TaskRouter
 
-Skills-based routing engine distributing tasks to workers based on skills, availability, priority, and workflow rules. Covers the 6-resource architecture (Workspace -> Activities -> Workers -> Task Queues -> Workflows -> Tasks/Reservations), expression syntax, assignment callbacks, and the 30 MCP tools.
+Skills-based routing engine distributing tasks to workers based on skills, availability, priority, and workflow rules. Covers the 6-resource architecture (Workspace → Activities → Workers → Task Queues → Workflows → Tasks/Reservations), expression syntax, assignment callbacks, and the 30 MCP tools.
+
+Evidence date: 2026-03-25. Account prefix: ACb4de. Workspace: WS04a6cec1 (deleted after testing).
 
 ## Scope
 
 ### CAN
 
-- Route tasks to workers based on attribute expressions (`skills HAS "support" AND level >= 2`)
-- Priority-based assignment: higher priority tasks assigned first regardless of age
-- Workflow filters with cascading targets: first-match filter, sequential target escalation with timeouts
-- Six assignment instructions: accept, reject, conference, dequeue, call, redirect
-- Real-time queue statistics: available/eligible workers, pending tasks, wait times, per-activity breakdown
-- Per-worker task channel capacity for multitasking (e.g., 1 voice + 10 SMS)
-- Workspace templates: `FIFO` pre-creates 3 activities + 1 queue + 1 workflow
-- Worker attributes as JSON with arrays, numbers, strings, booleans (max 4096 chars)
-- Task attributes as JSON (max 4096 chars) with priority and timeout
-- Reservation timeout configurable per workflow (1-86,400 seconds, default 120)
-- Event audit log with 30-day retention (EV-prefixed SIDs)
-- Task completion with reason tracking
-- Deep validation via `mcp__twilio__validate_task` with event timeline and reservation history
+- Route tasks to workers based on attribute expressions (`skills HAS "support" AND level >= 2`) <!-- verified: WQ81a37725, expression matching -->
+- Priority-based assignment: higher priority tasks assigned first regardless of age <!-- verified: WT2b0a7865, priority 5 from workflow target -->
+- Workflow filters with cascading targets: first-match filter, sequential target escalation with timeouts <!-- verified: WWb6f659ff, multi-filter multi-target workflow -->
+- Six assignment instructions: accept, reject, conference, dequeue, call, redirect <!-- verified: WR277f05dc accepted; docs confirm all 6 -->
+- Real-time queue statistics: available/eligible workers, pending tasks, wait times, per-activity breakdown <!-- verified: WQ81a37725 and WQa281c134 stats -->
+- Per-worker task channel capacity for multitasking (e.g., 1 voice + 10 SMS) <!-- verified: twilio.com/docs/taskrouter/multitasking -->
+- Workspace templates: `FIFO` pre-creates 3 activities + 1 queue + 1 workflow <!-- verified: WS04a6cec1 FIFO template -->
+- Worker attributes as JSON with arrays, numbers, strings, booleans (max 4096 chars) <!-- verified: WKc1a5870, skills array + level number -->
+- Task attributes as JSON (max 4096 chars) with priority and timeout <!-- verified: WT2b0a7865 -->
+- Reservation timeout configurable per workflow (1–86,400 seconds, default 120) <!-- verified: WWb6f659ff, 30s timeout -->
+- Event audit log with 30-day retention (EV-prefixed SIDs) <!-- verified: validate_task showed 9 events -->
+- Task completion with reason tracking <!-- verified: WT2b0a7865, reason="resolved" -->
+- Deep validation via `mcp__twilio__validate_task` with event timeline and reservation history <!-- verified: WT2b0a7865, 9 events, 533ms -->
 
 ### CANNOT
 
-- **Hyphens break expressions** — Attribute names with hyphens (e.g., `skill-level`) are valid in JSON but the expression parser treats `-` as subtraction. `skill-level > 3` parses as `skill` minus `level` and returns error 20001: "extraneous input 'evel' expecting OPERATOR." Use underscores (`skill_level`) instead.
-- **`HAS` on non-array silently fails** — `level HAS "support"` is accepted when creating a queue but will never match any worker because `level` is a number, not an array. No error at creation time, no error at match time — tasks just sit in the queue forever. Check `totalEligibleWorkers` in queue stats to catch this.
-- **Activity `available` flag is silently immutable** — Updating an activity's `available` property via API returns 200 OK but does not change the value. No error, no warning. You must delete the activity and recreate it with the correct flag.
-- **`multiTaskEnabled` cannot be reverted to false** — Once enabled on a workspace, it cannot be disabled.
-- **Reservation timeout moves worker to timeout activity** — When a reservation times out, the worker is automatically moved to the workspace's `timeoutActivitySid` (Offline by default). The worker becomes unavailable for all tasks until manually set back to an available activity. This is the #1 surprise in TaskRouter.
-- **Workflow target timeout auto-cancels tasks** — When all targets in a filter exhaust their timeouts with no worker accepting, the task is canceled with reason "Task canceled on Workflow timeout." Use a `default_filter` as a catch-all to prevent this.
-- **Worker `friendlyName` is case-insensitive unique** — Creating a worker named "alice" when "Alice" exists returns error 20001.
-- **`workflowSid` is required for task creation** — At minimum when multiple workflows exist. The API does not auto-select a default workflow.
-- **Cannot update task status and attributes in same request** — Must be two separate API calls.
-- **Assignment callback must respond in 5 seconds** — If your callback URL doesn't respond in time, the fallback URL is tried. If both fail, the reservation is canceled.
-- **Tasks auto-cancel after 1,000 rejections** — If a task cycles through 1,000 reservation rejections, it is automatically canceled.
-- **`page` query param not supported** — Use `PageToken` for pagination. `page` returns error 40153.
+<!-- verified: all CANNOT items live-tested 2026-03-25 unless noted -->
+
+- **Hyphens break expressions** — Attribute names with hyphens (e.g., `skill-level`) are valid in JSON but the expression parser treats `-` as subtraction. `skill-level > 3` parses as `skill` minus `level` and returns error 20001: "extraneous input 'evel' expecting OPERATOR." Use underscores (`skill_level`) instead. <!-- verified: error 20001 on queue create with `skill-level > 3` -->
+- **`HAS` on non-array silently fails** — `level HAS "support"` is accepted when creating a queue but will never match any worker because `level` is a number, not an array. No error at creation time, no error at match time — tasks just sit in the queue forever. Check `totalEligibleWorkers` in queue stats to catch this. <!-- verified: WQeecb6580 created with `level HAS "support"`, no error -->
+- **Expression validation is syntactic only, not semantic.** Queue creation validates that the expression parses correctly (hyphens cause parse errors), but does NOT validate that the expression matches any workers. `level HAS "support"` is syntactically valid but semantically wrong (HAS requires an array). The queue creates successfully, tasks route into it, but zero workers ever match — and there is NO error at routing time. Always check `totalEligibleWorkers` via `get_queue_statistics` after creating a queue.
+- **Activity `available` flag is silently immutable** — Updating an activity's `available` property via API returns 200 OK but does not change the value. No error, no warning. You must delete the activity and recreate it with the correct flag. <!-- verified: WAa56b76ad, set Available=true, stayed false -->
+- **`multiTaskEnabled` cannot be reverted to false** — Once enabled on a workspace, it cannot be disabled. <!-- verified: twilio.com/docs/taskrouter/api/workspace -->
+- **Reservation timeout moves worker to timeout activity** — When a reservation times out, the worker is automatically moved to the workspace's `timeoutActivitySid` (Offline by default). The worker becomes unavailable for all tasks until manually set back to an available activity. This is the #1 surprise in TaskRouter. <!-- verified: WKc1a5870 moved from Available to Offline after 30s timeout -->
+- **Workflow target timeout auto-cancels tasks** — When all targets in a filter exhaust their timeouts with no worker accepting, the task is canceled with reason "Task canceled on Workflow timeout." Use a `default_filter` as a catch-all to prevent this. <!-- verified: WT2c881f50, auto-canceled after 30s target timeout -->
+- **Worker `friendlyName` is case-insensitive unique** — Creating a worker named "alice" when "Alice" exists returns error 20001. <!-- verified: duplicate "Alice" rejected -->
+- **`workflowSid` is required for task creation** — At minimum when multiple workflows exist. The API does not auto-select a default workflow. <!-- verified: error "WorkflowSid field is required" -->
+- **Cannot update task status and attributes in same request** — Must be two separate API calls. <!-- verified: twilio.com/docs/taskrouter/api/task -->
+- **Assignment callback must respond in 5 seconds** — If your callback URL doesn't respond in time, the fallback URL is tried. If both fail, the reservation is canceled. <!-- verified: twilio.com/docs/taskrouter/handle-assignment-callbacks -->
+- **Tasks auto-cancel after 1,000 rejections** — If a task cycles through 1,000 reservation rejections, it is automatically canceled. <!-- verified: twilio.com/docs/taskrouter/api/task -->
+- **`page` query param not supported** — Use `PageToken` for pagination. `page` returns error 40153. <!-- verified: twilio.com/docs/taskrouter/api/task -->
 
 ## Quick Decision
 
@@ -52,29 +62,29 @@ Skills-based routing engine distributing tasks to workers based on skills, avail
 | Contact center with hold music | `<Enqueue>` TwiML + conference assignment instruction | Caller holds, agent bridges via conference |
 | Non-voice work (chat, email) | `tasks.create()` API + accept instruction | No TwiML needed |
 | Agent availability dashboard | `get_queue_statistics` per queue | Real-time worker/task counts |
-| Post-call wrap-up | Task status `wrapping` -> `completed` | Flex-compatible wrap-up state |
+| Post-call wrap-up | Task status `wrapping` → `completed` | Flex-compatible wrap-up state |
 | Fallback for unmatched tasks | `default_filter` in workflow config | Catch-all queue prevents task loss |
 
 ## Architecture
 
 ```
 Workspace (WS)
-+-- Activities (WA) -- Worker states: Available, Offline, Break, ...
-+-- Workers (WK) -- Agents with JSON attributes (skills, languages, level)
-+-- Task Queues (WQ) -- Pools with worker-matching expressions
-+-- Workflows (WW) -- Routing rules: filters -> targets -> queues
-+-- Tasks (WT) -- Work items with attributes, priority, timeout
-|   +-- Reservations (WR) -- Worker<->Task bindings (auto-created)
-+-- Task Channels (TC) -- Work types for multitasking capacity
+├── Activities (WA) — Worker states: Available, Offline, Break, ...
+├── Workers (WK) — Agents with JSON attributes (skills, languages, level)
+├── Task Queues (WQ) — Pools with worker-matching expressions
+├── Workflows (WW) — Routing rules: filters → targets → queues
+├── Tasks (WT) — Work items with attributes, priority, timeout
+│   └── Reservations (WR) — Worker↔Task bindings (auto-created)
+└── Task Channels (TC) — Work types for multitasking capacity
 ```
 
 ### Task Lifecycle
 
 ```
-pending -> reserved -> assigned -> wrapping -> completed
-    |         |                              /
-    |         +-- timeout --> re-route or cancel
-    +-- no match --> sits until timeout or cancel
+pending → reserved → assigned → wrapping → completed
+    │         │                              ↗
+    │         └── timeout ──→ re-route or cancel
+    └── no match ──→ sits until timeout or cancel
 ```
 
 | Status | Trigger | Notes |
@@ -216,59 +226,59 @@ pending -> reserved -> assigned -> wrapping -> completed
 
 ### Expressions
 
-1. **Hyphens in attribute names break expressions**: `skill-level > 3` parses as `skill` minus `level`. Use underscores: `skill_level > 3`. Hyphens are valid in the JSON attribute itself — the problem is only in expression evaluation.
+1. **Hyphens in attribute names break expressions**: `skill-level > 3` parses as `skill` minus `level`. Use underscores: `skill_level > 3`. Hyphens are valid in the JSON attribute itself — the problem is only in expression evaluation. [Evidence: error 20001 "extraneous input 'evel'"]
 
-2. **`HAS` on non-array silently matches nothing**: Creating a queue with `level HAS "support"` succeeds without error, but `level` is a number so `HAS` always returns false. Tasks route to the queue but no worker ever matches. Check `totalEligibleWorkers` in queue stats — if it's 0, your expression is wrong.
+2. **`HAS` on non-array silently matches nothing**: Creating a queue with `level HAS "support"` succeeds without error, but `level` is a number so `HAS` always returns false. Tasks route to the queue but no worker ever matches. Check `totalEligibleWorkers` in queue stats — if it's 0, your expression is wrong. [Evidence: WQeecb6580]
 
 3. **`1==1` is the universal match**: For catch-all queues that should match all workers, use `1==1`. Any truthy constant expression works.
 
 ### Worker & Activity
 
-4. **Reservation timeout moves worker offline**: When a reservation times out, the worker is automatically moved to the workspace's `timeoutActivitySid` (Offline by default). The worker stops receiving ALL tasks. You must explicitly set them back to Available. This is the #1 TaskRouter surprise.
+4. **Reservation timeout moves worker offline**: When a reservation times out, the worker is automatically moved to the workspace's `timeoutActivitySid` (Offline by default). The worker stops receiving ALL tasks. You must explicitly set them back to Available. This is the #1 TaskRouter surprise. [Evidence: WKc1a5870, Available→Offline after 30s timeout]
 
-5. **Activity `available` is silently immutable**: Updating `available` via API returns 200 OK but the value doesn't change. No error, no warning. Delete and recreate the activity with the correct flag.
+5. **Activity `available` is silently immutable**: Updating `available` via API returns 200 OK but the value doesn't change. No error, no warning. Delete and recreate the activity with the correct flag. [Evidence: WAa56b76ad]
 
-6. **Worker `friendlyName` is case-insensitive unique**: "alice" and "Alice" conflict. Error 20001.
+6. **Worker `friendlyName` is case-insensitive unique**: "alice" and "Alice" conflict. Error 20001. [Evidence: duplicate Alice rejected]
 
-7. **New workers get the workspace's `defaultActivitySid`**: This is typically Offline. If you want workers to immediately receive tasks, explicitly pass `activitySid` for an Available activity on creation.
+7. **New workers get the workspace's `defaultActivitySid`**: This is typically Offline. If you want workers to immediately receive tasks, explicitly pass `activitySid` for an Available activity on creation. [Evidence: WK144eae97 created as Offline]
 
 ### Task Routing
 
-8. **Workflow target timeout auto-cancels if no fallback**: When all targets exhaust their timeouts, the task is canceled with "Task canceled on Workflow timeout." Always include a `default_filter` as catch-all.
+8. **Workflow target timeout auto-cancels if no fallback**: When all targets exhaust their timeouts, the task is canceled with "Task canceled on Workflow timeout." Always include a `default_filter` as catch-all. [Evidence: WT2c881f50, auto-canceled]
 
-9. **Workflow target sets task priority**: The `priority` field in a workflow target is applied to the task at routing time. Explicit priority on task creation is overridden by the target.
+9. **Workflow target sets task priority**: The `priority` field in a workflow target is applied to the task at routing time. Explicit priority on task creation is overridden by the target. [Evidence: WT2b0a7865 got priority 5 from target]
 
-10. **Workers with pending reservations block new assignments**: A worker with an unresolved reservation (pending) won't receive new tasks on the same channel, even if their capacity allows it.
+10. **Workers with pending reservations block new assignments**: A worker with an unresolved reservation (pending) won't receive new tasks on the same channel, even if their capacity allows it. The support task sat pending with 0 reservations because Alice already had a sales reservation. [Evidence: WTa3944de, 0 reservations while Alice reserved for WT2c881f50]
 
-11. **`workflowSid` is required for task creation**: The API does not auto-select a default workflow. Always specify it.
+11. **`workflowSid` is required for task creation**: The API does not auto-select a default workflow. Always specify it. [Evidence: error "WorkflowSid field is required"]
 
 ### Assignment Callback
 
-12. **Return instruction directly, NOT via `Twilio.Response`**: In serverless functions, `callback(null, instructionObj)` — do NOT wrap in `Twilio.Response` with `setBody(JSON.stringify())`. This double-encodes JSON and produces error 40001.
+12. **Return instruction directly, NOT via `Twilio.Response`**: In serverless functions, `callback(null, instructionObj)` — do NOT wrap in `Twilio.Response` with `setBody(JSON.stringify())`. This double-encodes JSON and produces error 40001. [Evidence: CLAUDE.md]
 
-13. **`conference_record` must be string `'record-from-start'`**: Boolean `true` is silently ignored. No error, no recording.
+13. **`conference_record` must be string `'record-from-start'`**: Boolean `true` is silently ignored. No error, no recording. [Evidence: CLAUDE.md]
 
-14. **`dequeue` requires task created via `<Enqueue>`**: The dequeue instruction only works for voice tasks that were enqueued via TwiML. API-created tasks cannot use dequeue — use conference or call instead.
+14. **`dequeue` requires task created via `<Enqueue>`**: The dequeue instruction only works for voice tasks that were enqueued via TwiML. API-created tasks cannot use dequeue — use conference or call instead. [Evidence: twilio.com/docs/taskrouter/api/reservations]
 
-15. **5-second callback response deadline**: If your assignment callback doesn't respond in 5 seconds, the fallback URL is tried. If both fail, the reservation is canceled. Keep callback handlers fast.
+15. **5-second callback response deadline**: If your assignment callback doesn't respond in 5 seconds, the fallback URL is tried. If both fail, the reservation is canceled. Keep callback handlers fast. [Evidence: twilio.com/docs/taskrouter/handle-assignment-callbacks]
 
 ### Data Constraints
 
-16. **Worker and task attributes max 4096 characters**: The JSON string representation, not the parsed object. Large attribute sets can hit this silently.
+16. **Worker and task attributes max 4096 characters**: The JSON string representation, not the parsed object. Large attribute sets can hit this silently. [Evidence: twilio.com/docs/taskrouter/api/worker]
 
-17. **`friendlyName` max 64 characters**: Applies to workspaces, workers, activities, queues, workflows.
+17. **`friendlyName` max 64 characters**: Applies to workspaces, workers, activities, queues, workflows. [Evidence: twilio.com/docs/taskrouter]
 
-18. **Task attributes present in list responses**: Contrary to documentation stating attributes are null in list endpoints, the REST API returns full attributes. MCP `list_tasks` also returns attributes.
+18. **Task attributes present in list responses**: Contrary to documentation stating attributes are null in list endpoints, the REST API returns full attributes. MCP `list_tasks` also returns attributes. [Evidence: REST list test on WS04a6cec1]
 
 ### Limits
 
-19. **15,000 workers per workspace**: Default limit, adjustable via Twilio support.
+19. **15,000 workers per workspace**: Default limit, adjustable via Twilio support. [Evidence: twilio.com/docs/taskrouter/limits]
 
-20. **5,000 task queues per workspace**: Hard limit.
+20. **5,000 task queues per workspace**: Hard limit. [Evidence: twilio.com/docs/taskrouter/limits]
 
-21. **100 activities per workspace**: Hard limit. Plan activity states carefully.
+21. **100 activities per workspace**: Hard limit. Plan activity states carefully. [Evidence: twilio.com/docs/taskrouter/limits]
 
-22. **Tasks auto-cancel after 1,000 rejections**: If a task cycles through 1,000 reservation reject cycles, it auto-cancels.
+22. **Tasks auto-cancel after 1,000 rejections**: If a task cycles through 1,000 reservation reject cycles, it auto-cancels. [Evidence: twilio.com/docs/taskrouter/api/task]
 
 ## SID Reference
 
@@ -284,12 +294,20 @@ pending -> reserved -> assigned -> wrapping -> completed
 | `TC` | Task Channel |
 | `EV` | Event |
 
+## Related Resources
+
+- **TaskRouter CLAUDE.md** (`CLAUDE.md`) — File inventory, assignment gotchas, error codes, environment variables
+- **TaskRouter REFERENCE.md** (`REFERENCE.md`) — Full API code samples, workflow configuration examples, testing patterns
+- **Conference skill** (`skills/conference/SKILL.md`) — Conference instruction bridges agent to caller; "Use TaskRouter Instead When" decision
+- **Voice skill** (`skills/voice/SKILL.md`) — Product selection: "Use TaskRouter when skill-based routing needed"
+- **Voice Use Case Map** (`skills/voice-use-case-map/SKILL.md`) — UC 3 (Contact Center): TaskRouter + Conference + Recording + Sync
+- **Codebase functions**: `contact-center-welcome.js` (enqueue), `assignment.protected.js` (conference instruction)
+- **Callback handler**: `task-status.protected.js` — Event logging to Sync
+- **Unit tests**: `__tests__/unit/taskrouter/` — 17 tests (6 welcome + 11 assignment)
+
 ## Reference Files
 
 | Topic | File | When to read |
 |-------|------|-------------|
-| Test results | [references/test-results.md](references/test-results.md) | Live test evidence with SID references |
-| Assertion audit | [references/assertion-audit.md](references/assertion-audit.md) | Adversarial audit of every factual claim |
-
-- **Related skills**: [conference skill](../conference/SKILL.md) (conference instruction bridges agent to caller), [voice skill](../voice/SKILL.md) (product selection: "Use TaskRouter when skill-based routing needed")
-- **Twilio docs**: [TaskRouter](https://www.twilio.com/docs/taskrouter), [Expression Syntax](https://www.twilio.com/docs/taskrouter/expression-syntax), [Workflow Configuration](https://www.twilio.com/docs/taskrouter/workflow-configuration)
+| Test results | `references/test-results.md` | Live test evidence with SID references |
+| Assertion audit | `references/assertion-audit.md` | Adversarial audit of every factual claim |

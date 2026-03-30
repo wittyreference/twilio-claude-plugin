@@ -1,11 +1,11 @@
 ---
-name: callbacks
-description: Twilio status callback patterns for deep validation. Covers message, call, task, verification, and fallback callback handlers with Sync-based logging.
+name: "callbacks"
+description: "Twilio development skill: callbacks"
 ---
 
 # Callbacks Functions
 
-Twilio Functions that handle status callbacks from various Twilio services. All callbacks are logged to Twilio Sync for deep validation during testing.
+This directory contains Twilio Functions that handle status callbacks from various Twilio services. All callbacks are logged to Twilio Sync for deep validation during testing.
 
 ## Purpose
 
@@ -25,7 +25,6 @@ These functions enable **deep validation** of Twilio API operations. Instead of 
 | `verification-status.protected.js` | Verify webhook | Logs verification status |
 | `fallback.protected.js` | Any FallbackUrl | Catches primary webhook failures |
 | `pizza-order-status.protected.js` | RecordingStatusCallback | Triggers transcription, stores pizza order in Sync, sends SMS confirmation |
-| `transcription-status.protected.js` | Transcription StatusCallback | Logs real-time transcription events (started, content, stopped, error) |
 
 ## Sync Schema
 
@@ -80,6 +79,20 @@ These functions require the following environment variables:
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `TWILIO_SYNC_SERVICE_SID` | Yes | Sync Service for storing callback data |
+
+## Deployment
+
+These functions are auto-deployed during setup via:
+
+```bash
+npx twilio-feature-factory setup
+```
+
+Or manually:
+
+```bash
+twilio serverless:deploy --functions-folder functions/callbacks
+```
 
 ## Deep Validation Usage
 
@@ -143,8 +156,8 @@ response.setBody(JSON.stringify({ success: true }));
 **Two-bug masking**: Multiple independent root causes can produce the same debugger alert code. When an error persists after a fix, check whether a second cause is generating the same code. For example, 82005 alerts can come from both a `setBody(object)` crash AND stray `console.error()` calls — fixing one doesn't silence the other.
 
 **Interpreting `responseBody` in debugger alerts**:
-- `responseBody: null` — the function crashed before writing a response. Look for runtime errors (TypeError, missing modules, unhandled rejections).
-- `responseBody` with valid data — the function completed successfully, but something else triggered the alert (e.g., stray `console.error` or `console.warn` calls). Look at log statements, not execution flow.
+- `responseBody: null` → the function crashed before writing a response. Look for runtime errors (TypeError, missing modules, unhandled rejections).
+- `responseBody` with valid data → the function completed successfully, but something else triggered the alert (e.g., stray `console.error` or `console.warn` calls). Look at log statements, not execution flow.
 
 This distinction narrows root cause investigation significantly.
 

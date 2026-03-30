@@ -1,6 +1,6 @@
 ---
-name: product-matrix
-description: Full product × use-case matrix tables for Twilio Voice. Reference for which products apply to which voice use cases across Software Tools, Core Services, Connectivity, Features, and Non-Voice categories.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 # Product × Use Case Matrix

@@ -1,6 +1,6 @@
 ---
-name: brainstorm
-description: Ideation template for building Twilio applications. Guides concept development with structured questions, capability overview, and validation mapping.
+name: "brainstorm"
+description: "Twilio development skill: brainstorm"
 ---
 
 # Brainstorming Your Twilio App

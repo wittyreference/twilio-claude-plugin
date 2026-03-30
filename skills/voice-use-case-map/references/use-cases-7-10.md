@@ -1,6 +1,6 @@
 ---
-name: use-cases-7-10
-description: Detailed product entries for Sales Dialer, Call Tracking, PSTN Connectivity, and AI/ML Transcription use cases. Includes Why/When/Prereqs/Gotchas for each product.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 # Use Cases 7–10: Sales Dialer, Call Tracking, PSTN, Transcription

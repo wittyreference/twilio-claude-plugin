@@ -1,6 +1,6 @@
 ---
-name: compliance-and-enterprise
-description: PII redaction, HIPAA, PCI, Language Operators, scaling limits, and HA/DR guidance for Twilio voice applications.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 # Compliance, Language Operators, and Enterprise Considerations

@@ -89,7 +89,8 @@ Quick check that auto-loaded context files haven't bloated:
 
 ```bash
 wc -l CLAUDE.md
-MEMORY_PATH="$HOME/.claude/projects/$(pwd | sed 's|/|-|g')/memory/MEMORY.md"
+wc -l CLAUDE.md 2>/dev/null
+MEMORY_PATH="$HOME/projects/$(pwd | sed 's|/|-|g')/memory/MEMORY.md"
 wc -l "$MEMORY_PATH"
 ```
 
@@ -99,7 +100,7 @@ wc -l "$MEMORY_PATH"
 
 ### Check 2.8: Environment Doctor
 
-If `scripts/env-doctor.sh` exists in the project, run it:
+Run the env-doctor script to detect shell vs `.env` conflicts:
 
 ```bash
 ./scripts/env-doctor.sh
@@ -110,6 +111,19 @@ If `scripts/env-doctor.sh` exists in the project, run it:
 - **FAIL**: Exit code 1 — credential mismatches, regional contamination, or missing `.env`
 
 This catches the most common new-user failure mode: inherited shell vars from another Twilio project overriding `.env` values. If it fails, follow the remediation steps in its output before proceeding.
+
+### Check 2.9: MCP Server Startup
+
+Run the MCP startup verification script:
+
+```bash
+./scripts/verify-mcp.sh
+```
+
+- **PASS**: Exit code 0 — server can construct itself with current credentials
+- **FAIL**: Exit code 1 — server will fail when Claude Code tries to start it. Follow remediation in output.
+
+This is more thorough than Check 2.6 (which tests a running server). This check catches the case where the MCP server hasn't been built or credentials aren't configured before the server even starts.
 
 ### Check 3: Auth Validity
 

@@ -1,6 +1,6 @@
 ---
-name: operational-reference
-description: Cross-cutting tuning and optimization notes for Twilio Voice products. Covers AMD tuning, Conference tips, Stream/ConversationRelay/Event Streams/Recording/SHAKEN-STIR operational considerations.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 # Operational Reference

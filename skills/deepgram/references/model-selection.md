@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Deepgram model comparison and selection guide for Twilio Voice. -->
 <!-- ABOUTME: Covers Nova-3 vs Nova-2, Deepgram vs Google, and Twilio-supported model subset. -->
 

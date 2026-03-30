@@ -1,6 +1,5 @@
 #!/bin/bash
-# ABOUTME: Post-write hook for auto-linting JavaScript files and session tracking.
-# ABOUTME: Runs ESLint with auto-fix after Write/Edit operations on JS files.
+# ABOUTME: Post-write hook for auto-linting and session file tracking.
 
 # ============================================
 # PARSE TOOL INPUT FROM STDIN
@@ -29,16 +28,18 @@ if [ -z "$FILE_PATH" ]; then
 fi
 
 # ============================================
-# SESSION FILE TRACKING
+# SESSION FILE TRACKING (for doc flywheel)
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Session tracking directory
-SESSION_DIR="$PROJECT_ROOT/.claude"
+# Source environment detection for meta-aware paths
+
+SESSION_DIR="$(dirname "$CLAUDE_PENDING_ACTIONS")"
 
 # Session-scoped state: isolate per-session to support concurrent Claude Code instances.
+# Each session gets its own .start/.files in .sessions/<id>/ instead of shared root files.
 if [ -n "$HOOK_SESSION_ID" ]; then
     SESSIONS_DIR="$SESSION_DIR/.sessions"
     mkdir -p "$SESSIONS_DIR"
@@ -81,14 +82,45 @@ if [ -n "$HOOK_SESSION_ID" ]; then
 fi
 
 # ============================================
+# AUTONOMOUS EVENT LOGGING (for learning exercises)
+# ============================================
+# Log file events during autonomous work for retrospective exercise generation.
+# Only fires when running headless, as a subagent, or in a team workflow.
+
+if [ -n "${CLAUDE_HEADLESS:-}" ] || [ -n "${CLAUDE_SUBAGENT:-}" ] || [ -n "${CLAUDE_TEAM_NAME:-}" ]; then
+    if [ -n "$CLAUDE_LEARNING_DIR" ] && [ -d "$CLAUDE_LEARNING_DIR" ]; then
+        # Only log files in code directories worth exercising on
+        case "$REL_PATH" in
+            functions/*|agents/*|scripts/*|__tests__/*)
+                EVENT_TS=$(date +%s)
+                EVENT_SESSION="${CLAUDE_TEAM_NAME:-${CLAUDE_SUBAGENT:-headless}}"
+                # Determine if file is new or modified
+                if git -C "$PROJECT_ROOT" ls-files --error-unmatch "$REL_PATH" &>/dev/null 2>&1; then
+                    EVENT_TYPE="file_modified"
+                else
+                    EVENT_TYPE="file_created"
+                fi
+                # Extract ABOUTME context if present
+                EVENT_CONTEXT=""
+                if [ -f "$FILE_PATH" ]; then
+                    EVENT_CONTEXT=$(head -5 "$FILE_PATH" | grep "ABOUTME:" | head -1 | sed 's/.*ABOUTME: *//' || true)
+                fi
+                # Append event as JSON line
+                printf '{"ts":%d,"type":"%s","path":"%s","session":"%s","context":"%s"}\n' \
+                    "$EVENT_TS" "$EVENT_TYPE" "$REL_PATH" "$EVENT_SESSION" "$EVENT_CONTEXT" \
+                    >> "$CLAUDE_LEARNING_DIR/session-log.jsonl"
+                ;;
+        esac
+    fi
+fi
+
+# ============================================
 # STRUCTURED EVENT EMISSION (observability)
 # ============================================
 
-if [ -f "$SCRIPT_DIR/_emit-event.sh" ]; then
-    source "$SCRIPT_DIR/_emit-event.sh"
-    EMIT_SESSION_ID="$HOOK_SESSION_ID"
-    emit_event "file_write" "$(jq -nc --arg fp "$REL_PATH" '{file_path: $fp}')"
-fi
+source "$SCRIPT_DIR/_emit-event.sh"
+EMIT_SESSION_ID="$HOOK_SESSION_ID"
+emit_event "file_write" "$(jq -nc --arg fp "$REL_PATH" '{file_path: $fp}')"
 
 # Only process JavaScript files
 if [[ ! "$FILE_PATH" =~ \.(js|mjs|cjs|ts)$ ]]; then

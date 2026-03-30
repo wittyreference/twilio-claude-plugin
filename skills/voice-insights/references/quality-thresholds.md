@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Quality metric thresholds for Voice Insights call and conference diagnostics. -->
 <!-- ABOUTME: Covers per-metric ranges, MOS computation, sampling differences, PDD behavior, and conference-specific thresholds. -->
 

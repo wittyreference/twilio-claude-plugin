@@ -1,4 +1,9 @@
 ---
+name: "memory-systems"
+description: "Twilio development skill: memory-systems"
+---
+
+---
 name: memory-systems
 description: State tracking and session memory management. Use when implementing cross-session persistence, managing Sync documents for state, or designing memory patterns for Twilio prototypes.
 ---
@@ -6,10 +11,6 @@ description: State tracking and session memory management. Use when implementing
 # Memory Systems for Twilio Prototypes
 
 This skill covers state tracking and memory management for Twilio development sessions.
-
-## Attribution
-
-This skill is adapted from [Agent Skills for Context Engineering](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering) by Murat Can Koylan. The memory patterns have been extended for Twilio webhook state management and call/message tracking.
 
 ## Memory Types
 
@@ -59,7 +60,7 @@ Maintain a mental summary after each major action:
 
 ### Next Steps
 - Write integration test
-- Run review for approval
+- Run /review for approval
 ```
 
 ### When to Update Session Memory

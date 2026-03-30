@@ -1,6 +1,12 @@
 ---
+name: "voice-use-case-map"
+description: "Twilio development skill: voice-use-case-map"
+---
+
+---
 name: voice-use-case-map
 description: Voice use case to Twilio product mapping. Use when recommending which Twilio product fits a voice use case — IVR, contact center, Voice AI, recording, conferencing, or SIP.
+allowed-tools: Read, Grep, Glob
 ---
 
 # Voice Use Case Product Map
@@ -22,7 +28,7 @@ Definitive per-use-case product mapping for Twilio Voice. Load this skill when r
 | 9 | PSTN Connectivity | Elastic SIP Trunking (primary), BYOC | Carrier interconnect (Elastic SIP Trunking validated in SIP Lab, SIP Interface Phase C TODO) | Yes — SIP registration (SIP Interface only), TLS, E.164 dialplan |
 | 10 | AI/ML Transcription | Voice Intelligence, Language Operators, `<Start><Transcription>` | Real-time and post-call transcription + analysis | Yes — `source_sid` vs `media_url`, operator config, engine selection |
 
-**Complements:** Voice skill (decision frameworks), ConversationRelay skill (ConversationRelay protocol details).
+**Complements:** `.claude/skills/voice/SKILL.md` (decision frameworks), `functions/conversation-relay/CLAUDE.md` (ConversationRelay protocol details), `.claude/skills/branded-calling/SKILL.md` (Branded Calling, SHAKEN/STIR, Voice Integrity, CNAM — answer rate optimization).
 
 ## Decision Tree
 

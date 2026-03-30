@@ -1,4 +1,9 @@
 ---
+name: "agent-teams-guide"
+description: "Twilio development skill: agent-teams-guide"
+---
+
+---
 name: agent-teams-guide
 description: Reference for agent team configurations and coordination. Use when launching /team, understanding teammate communication, or choosing between parallel workflows (new-feature, bug-fix, code-review, refactor, docs-update).
 ---

@@ -1,11 +1,34 @@
 ---
+name: "conference"
+description: "Twilio development skill: conference"
+---
+
+---
 name: conference
 description: Twilio Conference development guide. Use when building call orchestration with hold/mute, warm transfers, coaching/whisper/barge, or any call flow needing Conference or Participants API.
+allowed-tools: mcp__twilio__*, Read, Grep, Glob
 ---
 
 # Conference Development Skill
 
 Comprehensive decision-making guide for Twilio Conference. Load this skill when building call flows that need hold, mute, warm transfer, coaching, or any multi-party orchestration.
+
+> **WARNING: Conference REST API state can be misleading.** The REST API may report a conference as `in-progress` with participants `muted: false` when audio is actually muted (all participants have `startConferenceOnEnter=false`). Do not trust API state alone for audio-level verification. Use Conference Insights for authoritative post-call state. See Gotcha #2.
+
+**Evidence date**: 2026-03-24 | **Account**: ACb4de2... | **Intelligence Service**: GA7d01ec... (conference-validation)
+
+## What Conference Cannot Do
+
+Explicit list of things developers commonly assume work but don't:
+
+- **Cannot use `<Gather>` inside a conference** — DTMF goes into the audio mix, not a handler
+- **Cannot rely on speaker events for app logic** — fire too frequently to be actionable
+- **Cannot get post-flight participant data from REST API** — completed conferences return empty; Insights is the only source
+- **Cannot verify coaching via conference recording** — coach audio is NOT in the conference mix recording; only REST API and Insights events confirm coaching [Evidence: GT6e8b15..., 2026-03-24]
+- **Cannot filter Insights list endpoint by `processing_state`** — must fetch by SID directly
+- **Cannot use PII in friendlyName** — compliance requirement, not just a suggestion
+- **Cannot create a conference with 0 call legs and get Insights data** — Insights requires ≥1 participant call attempt
+- **Cannot poll Insights immediately after conference end** — takes 15-30+ minutes even for `in_progress` state
 
 ## What Conference Actually Is
 
@@ -127,7 +150,7 @@ Conference recording captures hold music — be aware when transcribing.
 ### Startup
 
 1. **≥2 participants required**: Conference needs at least 2 participants, with at least one having `startConferenceOnEnter=true`, before it starts. A solo participant with `startConferenceOnEnter=false` waits forever hearing hold music.
-2. **Startup sequence matters**: If all participants have `startConferenceOnEnter=false`, the conference stays in `init` permanently.
+2. **Startup sequence matters**: If all participants have `startConferenceOnEnter=false`, participants hear hold music and are audio-muted. However, the REST API may show the conference as `in-progress` with participants `muted: false` — the API state does not reliably reflect the audio-level hold/mute behavior of the `startConferenceOnEnter` gate. [Evidence: CFb40284..., 2026-03-24]
 
 ### Configuration
 
@@ -159,12 +182,16 @@ Conference recording captures hold music — be aware when transcribing.
 19. **SID-based creation needs active conference**: Creating a participant with a ConferenceSid (CF...) fails if that conference isn't active. Use FriendlyName to auto-create.
 20. **Jitter buffer tradeoffs**: `large` (default, 300-1000ms latency, most resilient), `small` (150-200ms, more artifacts), `off` (zero added latency, drops packets >20ms jitter). Spikes can exceed average by 50%.
 21. **Speaker events fire too frequently**: Conference speaker status callback events fire at very high frequency — nearly useless for application logic. Don't build state machines on them.
+22. **Conference recording does NOT capture coaching audio**: The coach's voice is routed only to the coached participant and never enters the conference mixer output. Conference-level recordings are blind to coaching. Use REST API state and Insights events to verify coaching behavior. [Evidence: GT6e8b15..., Intelligence analysis detected only 2 voices in 3-party coaching conference]
 
 ## Related Resources
 
 - **Voice skill** — Conference vs Dial decision framework, broader voice context
+- **Voice CLAUDE.md** (`CLAUDE.md`) — TwiML control model, conference function inventory, coding-level gotchas
+- **Voice REFERENCE.md** (`REFERENCE.md`) — Conference REST API code patterns, safe transfer pattern
 - **Voice Use Case Map** — UC 3 (Contact Center), UC 4 (Warm Transfer), UC 7 (Coaching) all use Conference
 - **Conference MCP Tools**: `list_conferences`, `get_conference`, `update_conference`, `list_conference_participants`, `get_conference_participant`, `update_conference_participant`, `add_participant_to_conference`, `list_conference_recordings`, `get_conference_summary`, `list_conference_participant_summaries`, `get_conference_participant_summary`
+- **Codebase functions**: `create-conference.protected.js`, `add-conference-participant.protected.js`, `end-conference.protected.js`, `outbound-dialer.private.js`, `outbound-customer-leg.js`, `outbound-agent-leg.js`, `sales-dialer-prospect.js`, `sales-dialer-agent.js`
 
 ## Reference Files
 
@@ -173,3 +200,5 @@ Conference recording captures hold music — be aware when transcribing.
 | Call flow patterns | `references/patterns.md` | Building warm transfer, moderated conferences, outbound dialer, sales dialer |
 | Participant management | `references/participant-management.md` | Coach/whisper/barge, hold/mute, DTMF, dynamic control, API parameters |
 | Insights & validation | `references/insights-and-validation.md` | Conference Insights, quality thresholds, debugging, validation checklists |
+| Test results | `references/test-results.md` | Live test evidence with SID matrix, Intelligence analysis |
+| Assertion audit | `references/assertion-audit.md` | Adversarial audit of every factual claim with verdicts |

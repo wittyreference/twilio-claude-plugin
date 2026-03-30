@@ -1,13 +1,19 @@
 ---
+name: "recordings"
+description: "Twilio development skill: recordings"
+---
+
+---
 name: recordings
 description: Twilio call recording guide. Use when recording calls, choosing recording methods, managing recording lifecycle, transcribing recordings, or debugging missing/broken recordings.
+allowed-tools: mcp__twilio__*, Read, Grep, Glob
 ---
 
 # Recordings Skill
 
 Decision-making guide for Twilio voice call recording across all products. Load this skill when choosing a recording method, implementing recording callbacks, setting up Voice Intelligence transcription, or debugging recording issues.
 
-All behavioral claims validated by live testing with 47 tests across 14 recording methods. See [references/test-results.md](references/test-results.md) for the full evidence matrix with call SIDs.
+All behavioral claims validated by live testing (2026-03-24, account ACb4de2...) with 47 tests across 14 recording methods. See [references/test-results.md](references/test-results.md) for the full evidence matrix with call SIDs.
 
 ---
 
@@ -21,18 +27,18 @@ All behavioral claims validated by live testing with 47 tests across 14 recordin
 - Recording callbacks and webhook payloads
 
 **What recordings CANNOT do** (things a developer might reasonably assume):
-- Cannot record only one party's audio via TwiML `recordingTrack` — the parameter has no observable effect on `<Start><Recording>`. Use the `start_call_recording` API with `recordingTrack` for actual isolation.
-- Cannot start API recordings on ConversationRelay-connected calls — "not eligible for recording." Must use `<Start><Recording>` before `<Connect>`.
+- Cannot record only one party's audio via TwiML `recordingTrack` — the parameter has no observable effect on `<Start><Recording>`. Use the `start_call_recording` API with `recordingTrack` for actual isolation. [Evidence: R7/R8 vs D4/D5]
+- Cannot start API recordings on ConversationRelay-connected calls — "not eligible for recording." Must use `<Start><Recording>` before `<Connect>`. [Evidence: F1-F3]
 - Cannot pause/resume recordings via TwiML — only via the REST API (`update_call_recording`)
 - Cannot get dual-channel conference recordings — conference recording is always mono (all participants mixed)
-- Cannot get dual-channel from `Record=true` on Calls API without specifying `recordingChannels: 'dual'` — defaults to mono
-- Cannot transcribe recordings created while PCI mode was enabled, even after PCI is disabled
+- Cannot get dual-channel from `Record=true` on Calls API without specifying `recordingChannels: 'dual'` — defaults to mono [Evidence: R9]
+- Cannot transcribe recordings created while PCI mode was enabled, even after PCI is disabled [Evidence: session debugging]
 
 **Out of scope** (covered by other skills):
-- Video recording → [video skill](../video/SKILL.md)
-- Real-time transcription during calls → [real-time-transcription skill](../real-time-transcription/SKILL.md)
-- Media Streams raw audio → [media-streams skill](../media-streams/SKILL.md)
-- Deepgram STT engine selection → [deepgram skill](../deepgram/SKILL.md)
+- Video recording → [video skill](/skills/video/SKILL.md)
+- Real-time transcription during calls → [real-time-transcription skill](/skills/real-time-transcription/SKILL.md)
+- Media Streams raw audio → [media-streams skill](/skills/media-streams.md)
+- Deepgram STT engine selection → [deepgram skill](/skills/deepgram/SKILL.md)
 
 ---
 
@@ -150,7 +156,7 @@ Three-step flow for post-call analysis. Detail in [references/transcription-pipe
 2. **Create transcript** → `client.intelligence.v2.transcripts.create()` with `source_sid` (NOT `media_url`)
 3. **Transcript completes** → `voice_intelligence_transcript_available` webhook fires with operator results
 
-Configure Language Operators on the Intelligence Service to auto-run analysis (summarization, sentiment, custom validators).
+Use a dedicated Intelligence Service per validation domain. Configure Language Operators on the service to auto-run analysis (summarization, sentiment, custom validators).
 
 ---
 
@@ -159,6 +165,7 @@ Configure Language Operators on the Intelligence Service to auto-run analysis (s
 ### Background Recording + ConversationRelay (Tested)
 
 ```javascript
+// Pattern from agent-a-inbound.protected.js
 const twiml = new Twilio.twiml.VoiceResponse();
 
 // Start recording BEFORE ConversationRelay (CR rejects API recordings)
@@ -203,55 +210,55 @@ await client.calls(callSid).recordings('Twilio.CURRENT').update({
 
 ### Syntax & Setup
 
-1. **`.recording()` not `.record()`**: `twiml.start().recording({...})` creates `<Start><Recording>`. `twiml.record({...})` creates `<Record>` verb. Different behavior entirely.
+1. **`.recording()` not `.record()`**: `twiml.start().recording({...})` creates `<Start><Recording>`. `twiml.record({...})` creates `<Record>` verb. Different behavior entirely. [Evidence: codebase pattern, `CLAUDE.md`]
 
-2. **`<Record>` without `action` creates infinite loop**: POSTs back to self, re-executing and creating multiple recordings. Always set `action` to a different handler.
+2. **`<Record>` without `action` creates infinite loop**: POSTs back to self, re-executing and creating multiple recordings. Always set `action` to a different handler. [Evidence: `CLAUDE.md` gotchas]
 
-3. **`<Start><Recording>` requires absolute callback URLs**: Relative paths trigger error 11200. Recording completes but callback never fires. `<Gather action>` and `<Dial action>` resolve relative URLs fine.
+3. **`<Start><Recording>` requires absolute callback URLs**: Relative paths trigger error 11200. Recording completes but callback never fires. `<Gather action>` and `<Dial action>` resolve relative URLs fine. [Evidence: `CLAUDE.md` gotchas]
 
 ### Channel & Track Behavior
 
-4. **`<Start><Recording>` always produces 2 channels**: Regardless of `recordingTrack` parameter. The TwiML verb ignores `recordingTrack` for channel isolation. Use `start_call_recording` API for actual control.
+4. **`<Start><Recording>` always produces 2 channels**: Regardless of `recordingTrack` parameter. The TwiML verb ignores `recordingTrack` for channel isolation. Use `start_call_recording` API for actual control. [Evidence: R6/R7/R8 all 2ch]
 
-5. **Channel assignment differs between API and trunk recordings**: API/TwiML: ch1=child(TO), ch2=parent(FROM). Trunk: ch1=Twilio, ch2=PBX. Get this wrong and Voice Intelligence speaker labels are swapped.
+5. **Channel assignment differs between API and trunk recordings**: API/TwiML: ch1=child(TO), ch2=parent(FROM). Trunk: ch1=Twilio, ch2=PBX. Get this wrong and Voice Intelligence speaker labels are swapped. [Evidence: R3/R6/R11 transcripts vs R16 trunk transcript]
 
-6. **`Record=true` on Calls API defaults to mono**: If you need dual-channel, use `start_call_recording` API with `recordingChannels: 'dual'` after the call connects.
+6. **`Record=true` on Calls API defaults to mono**: If you need dual-channel, use `start_call_recording` API with `recordingChannels: 'dual'` after the call connects. [Evidence: R9 — 1ch confirmed]
 
 ### Concurrent & Conflicting
 
-7. **Don't combine `Record=true` API with `<Start><Recording>` TwiML**: Creates two separate recordings with different channel counts and sources. Pick one method.
+7. **Don't combine `Record=true` API with `<Start><Recording>` TwiML**: Creates two separate recordings with different channel counts and sources. Pick one method. [Evidence: E2 — 2 recordings, OutboundAPI 1ch + StartCallRecordingAPI 2ch]
 
-8. **Two `start_call_recording` on same call: silent no-op**: The second call returns success but only one recording is produced. No error, no warning.
+8. **Two `start_call_recording` on same call: silent no-op**: The second call returns success but only one recording is produced. No error, no warning. [Evidence: E3]
 
-9. **ConversationRelay calls reject `start_call_recording` and pause/resume**: "Requested resource is not eligible for recording." Must use `<Start><Recording>` BEFORE `<Connect><ConversationRelay>`.
+9. **ConversationRelay calls reject `start_call_recording` and pause/resume**: "Requested resource is not eligible for recording." Must use `<Start><Recording>` BEFORE `<Connect><ConversationRelay>`. [Evidence: F1-F3, error text confirmed]
 
 ### Callbacks & Retrieval
 
-10. **Append `.mp3` or `.wav` to `RecordingUrl`**: The raw callback URL returns JSON metadata, not audio. Add extension for playable file.
+10. **Append `.mp3` or `.wav` to `RecordingUrl`**: The raw callback URL returns JSON metadata, not audio. Add extension for playable file. [Evidence: H1-H4 callback payloads]
 
-11. **Return 200 from recording callbacks even on error**: Non-200 causes Twilio to retry, potentially triggering duplicate processing. Return 200 and log the error.
+11. **Return 200 from recording callbacks even on error**: Non-200 causes Twilio to retry, potentially triggering duplicate processing. Return 200 and log the error. [Evidence: `recording-complete.protected.js` pattern, 54301 duplicate handling]
 
-12. **`RecordingTrack` appears in ALL callback payloads**: Defaults to `both` even for methods that don't support track selection (e.g., `<Dial record>`).
+12. **`RecordingTrack` appears in ALL callback payloads**: Defaults to `both` even for methods that don't support track selection (e.g., `<Dial record>`). [Evidence: H1-H5 raw payloads in Sync]
 
 ### Lifecycle
 
-13. **`<Start><Recording>` continues after TwiML redirect**: Background recording persists through `<Redirect>`, conference join/leave, and subsequent webhook responses. Only stops on call end or explicit API stop.
+13. **`<Start><Recording>` continues after TwiML redirect**: Background recording persists through `<Redirect>`, conference join/leave, and subsequent webhook responses. Only stops on call end or explicit API stop. [Evidence: `REFERENCE.md` lines 167-182]
 
-14. **Conference recording captures hold music**: When `Record=true` on Participants API, recording starts from conference creation. AMD classification time means minutes of hold music in recordings.
+14. **Conference recording captures hold music**: When `Record=true` on Participants API, recording starts from conference creation. AMD classification time means minutes of hold music in recordings. [Evidence: `CLAUDE.md` gotchas]
 
-15. **Conference API uses boolean, TwiML uses string**: Participants API: `conferenceRecord: true`. TwiML: `record="record-from-start"`. Passing TwiML values to API returns HTTP 400.
+15. **Conference API uses boolean, TwiML uses string**: Participants API: `conferenceRecord: true`. TwiML: `record="record-from-start"`. Passing TwiML values to API returns HTTP 400. [Evidence: `CLAUDE.md` gotchas]
 
-16. **Soft delete retains metadata 40 days**: `DELETE /Recordings/{sid}` is soft delete. Use `includeSoftDeleted: true` to see deleted recordings in list queries.
+16. **Soft delete retains metadata 40 days**: `DELETE /Recordings/{sid}` is soft delete. Use `includeSoftDeleted: true` to see deleted recordings in list queries. [Evidence: Twilio docs, MCP `list_recordings` tool description]
 
 ### Voice Intelligence
 
-17. **Use `source_sid` not `media_url` for Voice Intelligence**: Intelligence API cannot authenticate to `api.twilio.com`. Always use the Recording SID as `source_sid`.
+17. **Use `source_sid` not `media_url` for Voice Intelligence**: Intelligence API cannot authenticate to `api.twilio.com`. Always use the Recording SID as `source_sid`. [Evidence: `CLAUDE.md` troubleshooting, `recording-complete.protected.js`]
 
-18. **PCI mode blocks Voice Intelligence permanently**: Recordings created while PCI mode is enabled cannot be transcribed even after PCI is disabled. The taint is permanent per-recording.
+18. **PCI mode blocks Voice Intelligence permanently**: Recordings created while PCI mode is enabled cannot be transcribed even after PCI is disabled. The taint is permanent per-recording. [Evidence: session debugging — 20+ transcripts stuck, resolved only with fresh recordings post-PCI-disable]
 
 ### Trunk-Specific
 
-19. **Trunk recording SID is on the trunk leg's call SID**: Not the parent API call. You must find the trunk-direction call to list its recordings. The parent call shows 0 recordings.
+19. **Trunk recording SID is on the trunk leg's call SID**: Not the parent API call. You must find the trunk-direction call to list its recordings. The parent call shows 0 recordings. [Evidence: R16 — parent CA=CAf52bcd02..., trunk leg CA=CAa3cbcf63..., recording only on trunk leg]
 
 ---
 
@@ -269,6 +276,19 @@ await client.calls(callSid).recordings('Twilio.CURRENT').update({
 | Validate recording | `validate_recording` | Deep validation (polls for completion) |
 | Validate full flow | `validate_voice_ai_flow` | End-to-end: call + recording + transcript |
 | SIP trunk recording | `get_trunk_recording` / `update_trunk_recording` | Trunk-level config |
+
+---
+
+## Related Resources
+
+- [Voice skill](/skills/voice/SKILL.md) — Recording Method Selection summary, TwiML verb reference
+- [Deepgram skill](/skills/deepgram/SKILL.md) — STT engine selection for real-time transcription
+- [Voice Insights skill](/skills/voice-insights/SKILL.md) — Call quality diagnostics on recorded calls
+- [Video skill](/skills/video/SKILL.md) — Video room recordings and compositions
+- [CLAUDE.md](/CLAUDE.md) — TwiML patterns, `<Start><Recording>` syntax
+- [CLAUDE.md](/CLAUDE.md) — Voice AI recording + transcription patterns
+- [Voice Intelligence Skill](/skills/voice-intelligence/SKILL.md) — v3 API: Language Operators, real-time/post-call analysis (separate from v2 transcription pipeline)
+- [recording-complete.protected.js](/recording-complete.protected.js) — Production recording callback → Voice Intelligence
 
 ---
 

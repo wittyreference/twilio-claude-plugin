@@ -1,4 +1,9 @@
 ---
+name: "twilio-cli"
+description: "Twilio development skill: twilio-cli"
+---
+
+---
 name: twilio-cli
 description: Twilio CLI decision guide. Use when choosing between CLI, MCP tools, Console, or SDK for a Twilio operation — profiles, deployment, serverless toolkit, and CLI-only operations.
 ---
@@ -9,14 +14,16 @@ description: Twilio CLI decision guide. Use when choosing between CLI, MCP tools
 
 When to use the Twilio CLI vs MCP tools vs Console vs SDK. Covers CLI-only operations, profile management, serverless deployment, and the operational boundaries between tooling layers.
 
-**This skill is a decision guide, not a command reference.**
+Evidence date: 2026-03-25. CLI version: 6.2.4. Node: v22.22.1. Account prefix: ACb4de.
+
+**This skill is a decision guide, not a command reference.** For command syntax, see `references/twilio-cli.md`. For the full MCP vs CLI vs Functions boundary framework, see `references/tool-boundaries.md`.
 
 ## Scope
 
 ### CAN (CLI-Only Operations — No MCP Equivalent)
 
-- **Profile management**: `profiles:create`, `profiles:list`, `profiles:use`, `profiles:remove` — credential storage and multi-account switching
-- **Serverless deployment**: `serverless:deploy` — deploy functions and assets to Twilio infrastructure
+- **Profile management**: `profiles:create`, `profiles:list`, `profiles:use`, `profiles:remove` — credential storage and multi-account switching <!-- verified: twilio profiles:list showed 4 profiles -->
+- **Serverless deployment**: `serverless:deploy` — deploy functions and assets to Twilio infrastructure <!-- verified: twilio serverless:list showed 2 services -->
 - **Local development server**: `serverless:start --ngrok` — local function execution with tunnel
 - **Deployment promotion**: `serverless:promote` — promote builds between environments
 - **Deployment rollback**: `serverless:activate` — activate a previous build
@@ -28,12 +35,12 @@ When to use the Twilio CLI vs MCP tools vs Console vs SDK. Covers CLI-only opera
 
 ### CANNOT
 
-- **Cannot be called from MCP tools** — MCP never invokes CLI. This is an architectural boundary, not a limitation.
-- **Cannot handle nested JSON parameters** — CLI parameter parsing breaks on complex nested JSON. Use `curl` for these.
-- **`profiles:create` crashes on Node 25.x** — readline incompatibility. Users must manually create `~/.twilio-cli/config.json`.
-- **`--profile` flag on `serverless:*` commands is unreliable** — Serverless commands may ignore `--profile` and use the active profile. Always `profiles:use` first.
-- **No `twilio api:sync:*` item-level operations** — CLI has service/document CRUD but no list-item or map-item commands. Use MCP or SDK.
-- **Presence-based boolean flags** — `--voice-enabled` is correct, `--voice-enabled=true` is NOT. Flags are presence-based, not key=value.
+- **Cannot be called from MCP tools** — MCP never invokes CLI. This is an architectural boundary, not a limitation. See `references/tool-boundaries.md`. <!-- verified: tool-boundaries.md §Golden Rules -->
+- **Cannot handle nested JSON parameters** — CLI parameter parsing breaks on complex nested JSON (e.g., Voice Intelligence `Channel` param). Use `curl` for these. <!-- verified: references/twilio-cli.md §Troubleshooting -->
+- **`profiles:create` crashes on Node 25.x** — readline incompatibility. Users must manually create `~/.twilio-cli/config.json`. <!-- verified: memory, MCP onboarding invariants -->
+- **`--profile` flag on `serverless:*` commands is unreliable** — Serverless commands may ignore `--profile` and use the active profile. Always `profiles:use` first. <!-- verified: operational experience -->
+- **No `twilio api:sync:*` item-level operations** — CLI has service/document CRUD but no list-item or map-item commands. Use MCP or SDK. <!-- verified: twilio-cli.md §Sync -->
+- **Presence-based boolean flags** — `--voice-enabled` is correct, `--voice-enabled=true` is NOT. Flags are presence-based, not key=value. <!-- verified: twilio-cli.md §Phone Number Search Filters -->
 
 ## Quick Decision
 
@@ -100,7 +107,7 @@ When to use the Twilio CLI vs MCP tools vs Console vs SDK. Covers CLI-only opera
 
 ### The `[env]` Profile
 
-When `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` are set as environment variables, the CLI auto-creates a virtual `[env]` profile that takes precedence over stored profiles. This is the default when using `.env` files loaded by direnv.
+When `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` are set as environment variables, the CLI auto-creates a virtual `[env]` profile that takes precedence over stored profiles. This is the default in this project (`.env` file loaded by direnv).
 
 ### Multi-Account Safety
 
@@ -119,7 +126,7 @@ twilio api:core:accounts:fetch
 
 ### Profile Storage
 
-Profiles are stored in `~/.twilio-cli/config.json`. The MCP server's credential resolver reads this file as a fallback: `process.env` -> `.env` -> CLI profile.
+Profiles are stored in `~/.twilio-cli/config.json`. The MCP server's credential resolver reads this file as a fallback: `process.env` → `.env` → CLI profile.
 
 ## Serverless Deployment
 
@@ -128,7 +135,7 @@ Profiles are stored in `~/.twilio-cli/config.json`. The MCP server's credential 
 | File | Purpose | Gotcha |
 |------|---------|--------|
 | `.twilioserverlessrc` | Service name, folders, env path | Must exist for deploy |
-| `.twiliodeployinfo` | Cached `{accountSid:region -> serviceSid}` | **Stale cache causes 20404 on deploy** |
+| `.twiliodeployinfo` | Cached `{accountSid:region → serviceSid}` | **Stale cache causes 20404 on deploy** |
 | `.env` | Local environment variables | Deployed separately via `serverless:env:import` |
 
 ### The `.twiliodeployinfo` Trap
@@ -147,33 +154,33 @@ After first deploy, `.twiliodeployinfo` caches the service SID. If the service i
 
 ### Profiles & Auth
 
-1. **`[env]` profile takes precedence**: If `TWILIO_ACCOUNT_SID` is set in environment, the CLI uses it regardless of `profiles:use`. Unset env vars to use stored profiles.
+1. **`[env]` profile takes precedence**: If `TWILIO_ACCOUNT_SID` is set in environment, the CLI uses it regardless of `profiles:use`. Unset env vars to use stored profiles. [Evidence: profiles:list showed `[env]` as active]
 
-2. **`profiles:create` crashes on Node 25.x**: readline incompatibility. Workaround: manually create `~/.twilio-cli/config.json`.
+2. **`profiles:create` crashes on Node 25.x**: readline incompatibility. Workaround: manually create `~/.twilio-cli/config.json`. [Evidence: memory, MCP onboarding invariants]
 
 3. **Verify profile before every deploy**: `twilio profiles:list` — the active account may not be what you expect, especially with `[env]` overriding stored profiles.
 
 ### Deployment
 
-4. **`.twiliodeployinfo` stale cache**: Deleting a service without clearing this cache causes 20404 on next deploy. Fix: `echo '{}' > .twiliodeployinfo`.
+4. **`.twiliodeployinfo` stale cache**: Deleting a service without clearing this cache causes 20404 on next deploy. Fix: `echo '{}' > .twiliodeployinfo`. [Evidence: references/twilio-cli.md §Troubleshooting]
 
 5. **`--override-existing-project` is destructive**: Overwrites the entire service. All functions and assets are replaced, not merged. Previous URLs may break if functions were renamed or removed.
 
-6. **`punycode` deprecation warning on Node 22+**: Cosmetic warning `[DEP0040]` on every CLI command. Harmless but noisy.
+6. **`punycode` deprecation warning on Node 22+**: Cosmetic warning `[DEP0040]` on every CLI command. Harmless but noisy. [Evidence: serverless:list output]
 
 7. **`--production` flag affects domain name**: `serverless:deploy --production` changes the URL format. Without it, URLs include the environment name as a subdomain.
 
 ### Command Syntax
 
-8. **Boolean flags are presence-based**: `--voice-enabled` (correct), NOT `--voice-enabled=true` (wrong). This applies to all boolean flags on search/buy commands.
+8. **Boolean flags are presence-based**: `--voice-enabled` (correct), NOT `--voice-enabled=true` (wrong). This applies to all boolean flags on search/buy commands. [Evidence: twilio-cli.md §Phone Number Search Filters]
 
 9. **`-o json` for machine-readable output**: Always use `-o json` when parsing CLI output programmatically. Default columnar output is for human readability only.
 
-10. **CLI can't handle nested JSON**: Operations requiring complex nested JSON parameters must use `curl` with the REST API directly.
+10. **CLI can't handle nested JSON**: Operations requiring complex nested JSON parameters (like Voice Intelligence transcript creation with `Channel`) must use `curl` with the REST API directly. [Evidence: twilio-cli.md §Voice Intelligence]
 
 ### MCP vs CLI Confusion
 
-11. **Never use `twilio api:*` when MCP tool exists**: MCP tools provide structured JSON, rate limiting, and agent accessibility. CLI `api:*` commands are for human debugging only.
+11. **Never use `twilio api:*` when MCP tool exists**: The CLAUDE.md MCP-first rule. CLI `api:*` commands are for human debugging only. MCP tools provide structured JSON, rate limiting, and agent accessibility. [Evidence: CLAUDE.md §MCP Server & Tool Discovery]
 
 12. **CLI is only for `profiles:*`, `serverless:*`, `plugins:*`**: These three command families have no MCP equivalent. Everything else has an MCP tool and should use it.
 
@@ -187,11 +194,18 @@ After first deploy, `.twiliodeployinfo` caches the service SID. If the service i
 | `ZH` | Serverless Function | `serverless:list functions` |
 | `NO` | Debugger Alert | `debugger:logs:list` |
 
+## Related Resources
+
+- **CLI command reference** (`references/twilio-cli.md`) — Full command syntax, flags, examples (1012 lines)
+- **Tool boundaries** (`references/tool-boundaries.md`) — MCP vs CLI vs Functions decision framework, risk tiers, anti-patterns
+- **Phone numbers skill** (`skills/phone-numbers/SKILL.md`) — Number search, purchase, webhook configuration
+- **CLAUDE.md** (`/CLAUDE.md`) — MCP-first rule, deployment verification
+- **Operational gotchas** (`references/operational-gotchas.md`) — Cross-cutting deployment and testing issues
+
 ## Reference Files
 
 | Topic | File | When to read |
 |-------|------|-------------|
-| Assertion audit | [references/assertion-audit.md](references/assertion-audit.md) | Adversarial audit of every factual claim |
-
-- **Related skills**: [phone-numbers skill](../phone-numbers/SKILL.md) (number search, purchase, webhook configuration)
-- **Twilio docs**: [Twilio CLI](https://www.twilio.com/docs/twilio-cli), [Serverless Toolkit](https://www.twilio.com/docs/labs/serverless-toolkit)
+| CLI-only command syntax | `references/command-reference.md` | Need exact CLI syntax for profiles, deploy, promote, rollback, plugins |
+| Full CLI reference (1000+ lines) | `references/twilio-cli.md` | Need CLI syntax for API commands (messages, calls, conferences, recordings) |
+| Assertion audit | `references/assertion-audit.md` | Adversarial audit of every factual claim |

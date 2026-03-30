@@ -63,8 +63,8 @@ The `/architect` subagent should recommend prototyping when:
 ## After the Spike
 
 - Pass the spike results to `/spec` as input context
-- Add any discovered gotchas to the relevant domain documentation
-- If a gotcha is cross-cutting, add it to the project's architectural invariants
+- Add any discovered gotchas to the relevant domain CLAUDE.md
+- If a gotcha is cross-cutting, add it to the Architectural Invariants section in root CLAUDE.md
 - Delete prototype code (it served its purpose)
 
 ## Examples of Past Spikes That Would Have Saved Time

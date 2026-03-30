@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Complete callback field reference for Twilio Real-Time Transcription events. -->
 <!-- ABOUTME: Covers all four event types with per-field documentation, parsing examples, and engine-specific differences. -->
 
@@ -130,7 +135,7 @@ Fires when the transcription engine fails.
 ## Callback Handler Pattern
 
 ```javascript
-// Transcription status callback handler
+// functions/callbacks/transcription-status.protected.js
 exports.handler = async function (context, event, callback) {
   const { TranscriptionEvent, TranscriptionSid, TranscriptionData, Final, Track, SequenceId } = event;
 

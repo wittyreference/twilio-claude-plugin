@@ -1,6 +1,6 @@
 ---
-name: debugging-recordings
-description: Troubleshooting guide for missing, empty, short, or broken recordings with MCP validation workflow.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Troubleshooting guide for missing, empty, short, or broken recordings. -->
@@ -30,9 +30,9 @@ description: Troubleshooting guide for missing, empty, short, or broken recordin
 ## Recording Shorter Than Expected
 
 - `<Record>` verb has `maxLength` limit (default 3600s)
-- `trim-silence` removed leading/trailing silence (confirmed: reduced 10s to 5s in testing)
+- `trim-silence` removed leading/trailing silence (confirmed: reduced 10s → 5s in testing)
 - `record-from-answer` excludes ring time (use `record-from-ringing` to include)
-- `pauseBehavior: 'skip'` removes paused time from duration (confirmed: 15s call to 7s recording)
+- `pauseBehavior: 'skip'` removes paused time from duration (confirmed: 15s call → 7s recording)
 - Call dropped before recording was flushed
 
 ## Recording Has Wrong Channel Count

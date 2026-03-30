@@ -1,10 +1,10 @@
 ---
-name: recording-methods
-description: Complete parameter reference for all 7 Twilio call recording methods with code snippets.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Complete parameter reference for all 7 Twilio call recording methods. -->
-<!-- ABOUTME: Code snippets, every attribute documented, live-tested. -->
+<!-- ABOUTME: Code snippets from codebase, every attribute documented, live-tested. -->
 
 # Recording Methods — Parameter Reference
 
@@ -26,7 +26,7 @@ Records the caller's speech after TwiML executes. Blocks subsequent TwiML until 
 | `recordingStatusCallbackMethod` | string | `POST` | HTTP method |
 
 ```javascript
-// Voicemail with action URL
+// Codebase pattern: voicemail with action URL
 twiml.say('Leave a message after the beep.');
 twiml.record({
   maxLength: 60,
@@ -54,6 +54,7 @@ Additional attributes on `<Dial>`:
 - `trim` — `trim-silence` or `do-not-trim`
 
 ```javascript
+// Codebase pattern: call-tracking-inbound.js
 const dial = twiml.dial({
   record: 'record-from-answer-dual',
   recordingStatusCallback: `https://${domainName}/callbacks/call-status`,
@@ -77,6 +78,7 @@ Starts a background recording that persists across TwiML documents. Continues un
 **Always produces 2-channel recordings** regardless of `recordingTrack`. Source: `StartCallRecordingTwiML`.
 
 ```javascript
+// Codebase pattern: agent-a-inbound.protected.js
 const start = twiml.start();
 start.recording({
   recordingStatusCallback: `https://${context.DOMAIN_NAME}/conversation-relay/recording-complete`,

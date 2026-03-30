@@ -1,5 +1,10 @@
 ---
-name: Deep Validation
+name: "deep-validation"
+description: "Twilio development skill: deep-validation"
+---
+
+---
+name: deep-validation
 description: Validation patterns beyond HTTP 200. Use when building validation logic, testing Twilio integrations, or understanding status progression, Voice Insights, and debugger alert patterns.
 ---
 
@@ -93,7 +98,8 @@ interface CallValidation {
 // The enhanced Voice Insights check now interprets specific quality tags
 // (high_jitter, high_packet_loss, silence, etc.), SIP response codes
 // (range-based + 20 specific codes), and edge-specific quality metrics
-// against thresholds. See the Voice Insights skill for full diagnostic workflows.
+// against thresholds. See [Voice Insights skill](/skills/voice-insights/SKILL.md)
+// for full diagnostic workflows.
 ```
 
 **Status progression**: `queued` → `ringing` → `in-progress` → `completed`
@@ -348,133 +354,75 @@ validate_video_room(
 | No content validation | Forbidden pattern detection |
 | Manual error correlation | Unified error reporting |
 
-## Implementing Deep Validation
+## Using the DeepValidator (Programmatic)
 
-### Programmatic Pattern
-
-```typescript
-// Deep validation for a message
-async function validateMessage(client, messageSid, options = {}) {
-  const result = { success: true, errors: [] };
-
-  // 1. Poll for terminal status
-  let message;
-  const startTime = Date.now();
-  const timeout = options.timeout || 30000;
-
-  while (Date.now() - startTime < timeout) {
-    message = await client.messages(messageSid).fetch();
-    if (['delivered', 'undelivered', 'failed'].includes(message.status)) break;
-    await new Promise(r => setTimeout(r, 2000));
-  }
-
-  if (!['delivered', 'sent'].includes(message.status)) {
-    result.success = false;
-    result.errors.push(`Message status: ${message.status} (error: ${message.errorCode})`);
-  }
-
-  // 2. Check debugger
-  const alerts = await client.monitor.alerts.list({
-    startDate: new Date(Date.now() - 300000),
-    logLevel: 'error'
-  });
-
-  const relatedAlerts = alerts.filter(a =>
-    a.resourceSid === messageSid
-  );
-
-  if (relatedAlerts.length > 0) {
-    result.success = false;
-    result.errors.push(...relatedAlerts.map(a => `Alert ${a.errorCode}: ${a.alertText}`));
-  }
-
-  return result;
-}
-```
-
-### For Voice Calls
+For programmatic use in Node.js, the DeepValidator helper is at `twilio/src/validation/deep-validator.ts`:
 
 ```typescript
-async function validateCall(client, callSid, options = {}) {
-  const result = { success: true, errors: [] };
+import { DeepValidator } from '../validation/deep-validator';
 
-  // 1. Check call status
-  const call = await client.calls(callSid).fetch();
-  if (call.status !== 'completed') {
-    result.success = false;
-    result.errors.push(`Call status: ${call.status}`);
-  }
-
-  // 2. Check call events for HTTP errors
-  const events = await client.calls(callSid).events().list();
-  const httpErrors = events.filter(e =>
-    e.response && e.response.statusCode >= 400
-  );
-
-  if (httpErrors.length > 0) {
-    result.success = false;
-    result.errors.push(...httpErrors.map(e =>
-      `HTTP ${e.response.statusCode} at ${e.request.url}`
-    ));
-  }
-
-  // 3. Check debugger
-  const alerts = await client.monitor.alerts.list({
-    startDate: new Date(Date.now() - 300000),
-    logLevel: 'error'
-  });
-
-  const relatedAlerts = alerts.filter(a =>
-    a.resourceSid === callSid
-  );
-
-  if (relatedAlerts.length > 0) {
-    result.success = false;
-    result.errors.push(...relatedAlerts.map(a => `Alert ${a.errorCode}: ${a.alertText}`));
-  }
-
-  // 4. Optional: Voice Insights (wait for partial data)
-  if (options.checkVoiceInsights) {
-    await new Promise(r => setTimeout(r, 120000)); // Wait ~2 min for partial
-    const summary = await client.insights.v1.calls(callSid).summary().fetch();
-    if (summary.callQuality === 'poor') {
-      result.errors.push(`Poor call quality: jitter=${summary.jitter}, packetLoss=${summary.packetLoss}`);
-    }
-  }
-
-  return result;
-}
-```
-
-## Integration with Jest Tests
-
-```typescript
-// Custom matchers for deep validation
-expect.extend({
-  async toBeDelivered(messageSid) {
-    const message = await client.messages(messageSid).fetch();
-    const pass = ['delivered', 'sent'].includes(message.status);
-    return {
-      pass,
-      message: () => `Expected message ${messageSid} to be delivered, got ${message.status}`
-    };
-  },
-
-  async toCompleteSuccessfully(callSid) {
-    const call = await client.calls(callSid).fetch();
-    const pass = call.status === 'completed';
-    return {
-      pass,
-      message: () => `Expected call ${callSid} to complete, got ${call.status}`
-    };
-  }
+// Validate a message
+const result = await DeepValidator.validateMessage(messageSid, {
+  waitForTerminal: true,  // Wait for delivered/failed status
+  timeout: 30000          // Max wait time
 });
 
-// Usage in tests
+if (!result.success) {
+  console.log('Failures:', result.errors);
+}
+
+// Validate a call
+const callResult = await DeepValidator.validateCall(callSid, {
+  waitForComplete: true,
+  checkVoiceInsights: true
+});
+
+// Validate a conference
+const confResult = await DeepValidator.validateConference(conferenceSid, {
+  waitForComplete: true,
+  checkParticipantQuality: true
+});
+```
+
+## Integration with Tests
+
+### Jest Matchers
+
+The test helper provides custom matchers:
+
+```typescript
+import { setupDeepValidation } from '../helpers/deep-validation';
+
+beforeAll(() => {
+  setupDeepValidation();
+});
+
 test('SMS delivers successfully', async () => {
   const message = await sendTestSms();
+
   await expect(message.sid).toBeDelivered();
+  await expect(message.sid).toHaveNoDebuggerAlerts();
 });
+
+test('Call completes with good quality', async () => {
+  const call = await makeTestCall();
+
+  await expect(call.sid).toCompleteSuccessfully();
+  await expect(call.sid).toHaveGoodVoiceQuality();
+});
+```
+
+### Callback Infrastructure
+
+For deep validation of callbacks, the project uses Sync-based callback capture:
+
+```
+
+├── status-callback.protected.js    # Captures message/call status
+├── fallback-handler.protected.js   # Captures fallback events
+└── voice-events.protected.js       # Captures voice events
+
+All callbacks write to Sync documents with 24hr TTL for test retrieval.
 ```
 
 ## Validation Checklist
@@ -535,10 +483,10 @@ validate_message(messageSid: "SM123...", waitForTerminal: true)
 ### Do This Instead (Programmatic)
 
 ```typescript
-// GOOD: Deep validation
+// GOOD: Deep validation in code
 const message = await client.messages.create({ to, from, body });
-const validation = await validateMessage(client, message.sid, {
-  timeout: 30000
+const validation = await DeepValidator.validateMessage(message.sid, {
+  waitForTerminal: true
 });
 
 if (validation.success) {
@@ -547,3 +495,12 @@ if (validation.success) {
   console.log('Issues found:', validation.errors);
 }
 ```
+
+## Related Documentation
+
+- [MCP Validation Tools](/twilio/src/tools/validation.ts) - Tool definitions
+- [DeepValidator source](/twilio/src/validation/deep-validator.ts) - Library implementation
+- [Validation CLAUDE.md](/twilio/src/validation/CLAUDE.md) - Validation patterns
+- [Callback functions](/CLAUDE.md) - Callback infrastructure
+- [Voice skill](/skills/voice/SKILL.md) - Voice-specific validation
+- [Video skill](/skills/video/SKILL.md) - Video-specific validation and use cases

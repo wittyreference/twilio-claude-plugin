@@ -1,11 +1,19 @@
 ---
-name: pay
-description: Twilio Pay functions for PCI-compliant DTMF payment collection during voice calls.
+name: "pay"
+description: "Twilio development skill: pay"
 ---
 
-# Pay Skill
+# Pay Functions Context
 
-Twilio Pay functions for PCI-compliant DTMF payment collection during voice calls.
+This directory contains Twilio Pay functions for PCI-compliant payment collection during voice calls.
+
+## Files
+
+| File | Access | Description |
+|------|--------|-------------|
+| `collect-payment.js` | Public | Voice webhook returning `<Pay>` TwiML to collect credit card via DTMF |
+| `payment-complete.protected.js` | Protected | `<Pay>` action URL — receives tokenized card result, returns confirmation TwiML |
+| `payment-status.protected.js` | Protected | `<Pay>` statusCallback — logs payment progress events |
 
 ## PCI Mode Requirement
 
@@ -16,13 +24,13 @@ Twilio Pay functions for PCI-compliant DTMF payment collection during voice call
 ```
 Caller dials in
     ↓
-Webhook → <Say> greeting → <Pay> verb
+collect-payment.js → <Say> greeting → <Pay> verb
     ↓
 Twilio prompts for: card number → expiry → CVV → zip (DTMF)
     ↓
-Status callback receives progress events
+payment-status.protected.js receives progress events
     ↓
-Action URL receives tokenized result
+payment-complete.protected.js receives tokenized result
     ↓
 <Say> confirmation/failure → <Hangup>
 ```
@@ -63,10 +71,18 @@ The `action` URL receives these parameters:
 | `PaymentCardType` | `visa`, `mastercard`, `amex`, etc. |
 | `PaymentConfirmationCode` | Confirmation code from connector |
 
+## Agent-Assisted Payment Files
+
+| File | Access | Description |
+|------|--------|-------------|
+| `pay-simulator.js` | Public | Test payment processor for Generic Pay Connector (simple/robust modes) |
+| `payment-status-sync.protected.js` | Protected | `<Pay>` statusCallback → writes to Sync for real-time observability |
+| `dtmf-inject.js` | Public | Returns `<Play digits>` TwiML for conference DTMF injection (unused — see gotchas) |
+
 ## Agent-Assisted Payment Flow (REST API)
 
 ```
-Customer on active call (e.g., in conference with voice AI agent)
+Customer on active call (e.g., in conference with CR agent)
     ↓
 create_payment(callSid) → starts payment session
     ↓
@@ -86,8 +102,8 @@ Status callback with Result=success or payment-connector-error
 ## Generic Pay Connector Setup
 
 1. Console → Voice → Pay Connectors → Create Generic Pay Connector
-2. Endpoint URL: your deployed pay simulator endpoint
-3. Username/Password: credentials for your connector
+2. Endpoint URL: `https://prototype-8922-dev.twil.io/pay/pay-simulator`
+3. Username/Password: `pay_user`/`pay_pass`
 4. Mode: TEST for development, LIVE for production
 
 The connector sends POST with lowercase fields: `method`, `cardnumber`, `expiry_month`, `expiry_year`, `cvv`, `postal_code`, `amount`.
@@ -115,3 +131,8 @@ The connector sends POST with lowercase fields: `method`, `cardnumber`, `expiry_
 9. **Generic Pay Connector uses lowercase field names** — `method`, `cardnumber`, `expiry_month`, `expiry_year`, `cvv`. NOT `Method`, `CardNumber`, `ExpirationDate`.
 
 10. **`create_payment` rejects `ChargeAmount` and `TokenType` params** — Despite being documented, passing these on the REST API returns error 64020. Use minimal params: `IdempotencyKey`, `StatusCallback`, `PaymentConnector` only.
+
+## File Naming Conventions
+
+- `*.js` - Public endpoints (voice webhooks Twilio calls directly)
+- `*.protected.js` - Protected endpoints (action URLs, status callbacks)

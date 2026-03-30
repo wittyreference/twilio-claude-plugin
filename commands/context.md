@@ -4,7 +4,7 @@ description: Optimize session context usage. Use when context is getting large, 
 
 # Context Optimization
 
-Optimize context for the current session. Use context compression and optimization techniques.
+Optimize context for the current session. Load the `context-engineering` skill for techniques.
 
 ## Actions
 
@@ -23,7 +23,7 @@ Optimize context for the current session. Use context compression and optimizati
 | Tests (pass) | `Tests: 12 passed (voice: 4, msg: 4, verify: 4)` |
 | Errors | `Error 11200: /voice/incoming 502 — 5x in 2 min` |
 
-For full techniques, load the `context-compression` or `context-fundamentals` skill.
+For full techniques, load the `context-engineering` skill.
 
 <user_request>
 $ARGUMENTS

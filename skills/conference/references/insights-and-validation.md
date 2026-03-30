@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Conference Insights API reference and validation checklists for conference implementations. -->
 <!-- ABOUTME: Covers quality thresholds, post-flight participant data, and systematic debugging workflows. -->
 
@@ -33,10 +38,10 @@ Data with `processing_state: in_progress` includes participant list, basic timin
 
 ### Event Streams (Fastest Path)
 
-For real-time access faster than REST polling, use Twilio Event Streams:
+For real-time access faster than REST polling, use Twilio Event Streams (see [Event Streams Skill](/.claude/skills/event-streams/SKILL.md)):
 - `com.twilio.voice.insights.conference-summary.partial` — fires at conference start
 - `com.twilio.voice.insights.conference-summary.complete` — fires at conference end
-- `com.twilio.voice.insights.participant-summary.complete` — fires at participant leave
+- `com.twilio.voice.insights.conference-participant-summary.complete` — fires at participant leave
 
 ## Quality Thresholds
 
@@ -66,7 +71,7 @@ Use `get_conference_summary` (MCP tool) for aggregate conference data:
 - Region (media mixing location)
 - Reason Ended + Ended By (call SID or API)
 - Participant Count, Max Concurrent Participants
-- Processing State (`partial` or `complete`)
+- Processing State (`in_progress` or `complete`)
 - Quality metrics (when `complete`)
 
 ### Tracked Timeline Events
@@ -204,7 +209,36 @@ Mandatory checks for every conference implementation. A 200 OK on conference cre
 ### Validation Workflow
 
 1. **During call**: `get_conference` + `list_conference_participants` to verify state
-2. **Immediately after** (~2 min): `get_conference_summary` with `processingState=partial` for participant list
+2. **After processing** (~15-30 min): `get_conference_summary` — check `processing_state` field for data completeness
 3. **Post-flight** (~30 min): `get_conference_summary` + `list_conference_participant_summaries` for full quality data
 4. **Per-leg**: `validate_call` on each participant's Call SID for call-level issues
 5. **Debugger**: `validate_debugger` filtered by conference SID or participant call SIDs
+
+## Intelligence Service Integration (Triple Validation)
+
+For the highest confidence in conference behavior, use three independent validation signals:
+
+1. **REST API state** — Participant resource fields (muted, hold, coaching, endConferenceOnExit)
+2. **Conference Insights** — Timeline events (mute/unmute, hold/unhold, coaching started/stopped/modified) with timestamps
+3. **Voice Intelligence analysis** — Generative Language Operator analyzes conference recording audio
+
+### Conference-Validation Intelligence Service
+
+Create an Intelligence Service (Console only) with a Generative Language Operator configured to detect conference behaviors from audio:
+- Participant presence (join/leave timing)
+- Mute detection (one-way audio periods)
+- Hold detection (silence or hold music)
+- Coaching/whisper detection (directional audio)
+- Warm transfer pattern (2→3→2 speakers)
+- Audio quality issues
+
+**Limitation**: Conference-level recordings do NOT capture coaching audio. The coach's voice is routed only to the coached participant and never enters the mixer output. Intelligence analysis of conference recordings is blind to coaching — use REST API and Insights events instead.
+
+### Workflow
+
+1. Record conferences with `record="record-from-start"`
+2. After conference ends, list recordings via `list_conference_recordings`
+3. Submit each recording: `create_transcript(serviceSid=<GA...>, sourceSid=<RE...>)`
+4. Wait for completion: `validate_transcript(transcriptSid=<GT...>)`
+5. Fetch operator results: `validate_language_operator(transcriptSid=<GT...>)`
+6. Compare AI analysis against REST API state and Insights events

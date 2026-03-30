@@ -1,4 +1,9 @@
 ---
+name: "phone-numbers"
+description: "Twilio development skill: phone-numbers"
+---
+
+---
 name: phone-numbers
 description: Twilio phone number management guide. Use when searching, purchasing, configuring webhooks, releasing numbers, or debugging number-related issues.
 ---
@@ -8,6 +13,8 @@ description: Twilio phone number management guide. Use when searching, purchasin
 # Twilio Phone Numbers
 
 Search, purchase, configure, and release phone numbers. Covers number types, search filters, webhook configuration, capabilities, address requirements, and the purchase/release lifecycle.
+
+Evidence date: 2026-03-25. Account prefix: ACb4de.
 
 ## Scope
 
@@ -28,14 +35,17 @@ Search, purchase, configure, and release phone numbers. Covers number types, sea
 
 ### CANNOT
 
-- **No mobile number type in the US** — `availablePhoneNumbers('US').mobile.list()` returns 404. US numbers are classified as local or toll-free only. Mobile is available in other countries (e.g., GB).
-- **Cannot use both voiceApplicationSid and voiceUrl** — Setting voiceApplicationSid causes voiceUrl to be ignored. Setting one auto-clears the other. Same applies to smsApplicationSid vs smsUrl.
-- **Cannot use voiceApplicationSid and trunkSid simultaneously** — Setting one auto-deletes the other.
-- **`contains` pattern requires minimum 2 characters** — Single-character patterns (e.g., "5") return 400 "Invalid Pattern Provided". Wildcards `*` mid-pattern also fail — the pattern is matched as a substring, not a glob.
-- **Geographic search is US/Canada only** — `nearNumber`, `nearLatLong`, `inPostalCode`, `inRegion`, `inRateCenter`, `inLata` parameters are ignored or error for non-US/CA countries.
-- **`areaCode` filter is US/Canada only** — Does not apply to international numbers.
+<!-- verified: all CANNOT items live-tested 2026-03-25 unless noted -->
+
+- **No mobile number type in the US** — `availablePhoneNumbers('US').mobile.list()` returns 404. US numbers are classified as local or toll-free only. Mobile is available in other countries (e.g., GB). <!-- verified: 20404 on US/Mobile.json -->
+- **Cannot use both voiceApplicationSid and voiceUrl** — Setting voiceApplicationSid causes voiceUrl to be ignored. Setting one auto-clears the other. Same applies to smsApplicationSid vs smsUrl. <!-- verified: twilio.com/docs/phone-numbers/api/incomingphonenumber-resource -->
+- **Cannot use voiceApplicationSid and trunkSid simultaneously** — Setting one auto-deletes the other. <!-- verified: twilio.com/docs/phone-numbers/api/incomingphonenumber-resource -->
+- **`contains` pattern requires minimum 2 characters** — Single-character patterns (e.g., "5") return 400 "Invalid Pattern Provided". Wildcards `*` mid-pattern also fail — the pattern is matched as a substring, not a glob. <!-- verified: "5" → 400; "206*55*" → 400; "55" → OK -->
+- **Geographic search is US/Canada only** — `nearNumber`, `nearLatLong`, `inPostalCode`, `inRegion`, `inRateCenter`, `inLata` parameters are ignored or error for non-US/CA countries. <!-- verified: twilio.com/docs/phone-numbers/api/availablephonenumberlocal-resource -->
+- **`areaCode` filter is US/Canada only** — Does not apply to international numbers. <!-- verified: twilio.com/docs docs -->
 - **No undo for release** — Once released, the number goes back to the pool. Another customer may purchase it immediately. There is no grace period or reclaim mechanism.
-- **Address required for many international numbers** — `addressRequirements` can be `none`, `any`, `local`, or `foreign`. UK local numbers require a local address (`addressRequirements: "local"`). Purchase will fail without the required address/bundle.
+- **Address required for many international numbers** — `addressRequirements` can be `none`, `any`, `local`, or `foreign`. UK local numbers require a local address (`addressRequirements: "local"`). Purchase will fail without the required address/bundle. <!-- verified: GB search returned addressRequirements="local" -->
+- **Purchasing not exposed as a serverless function** — Intentionally excluded from `` due to cost implications. Use MCP tools, CLI, or Console instead. <!-- verified: CLAUDE.md -->
 
 ## Quick Decision
 
@@ -65,7 +75,7 @@ Search, purchase, configure, and release phone numbers. Covers number types, sea
 |------|----------|-----------|
 | Specific area code | Search local with areaCode | `areaCode: 206` (US/CA only) |
 | Vanity number | Search with letter pattern | `contains: 'TEST'` (maps to 8378) |
-| Near existing number | Geographic proximity | `nearNumber: '+1XXXXXXXXXX', distance: 10` |
+| Near existing number | Geographic proximity | `nearNumber: '+12069666002', distance: 10` |
 | SMS-capable only | Capability filter | `smsEnabled: true` |
 | No address hassle | Exclude address-required | `excludeAllAddressRequired: true` |
 | International | Specify country code | `countryCode: 'GB'`, check addressRequirements |
@@ -140,33 +150,33 @@ const byName = await client.incomingPhoneNumbers.list({
 
 ### Search
 
-1. **Capabilities keys have inconsistent casing**: Available numbers return `MMS` and `SMS` (uppercase) while owned numbers return `mms` and `sms` (lowercase). `voice` and `fax` are lowercase in both. Normalize case before comparing.
+1. **Capabilities keys have inconsistent casing**: Available numbers return `MMS` and `SMS` (uppercase) while owned numbers return `mms` and `sms` (lowercase). `voice` and `fax` are lowercase in both. Normalize case before comparing. [Evidence: available caps keys MMS/SMS/fax/voice vs owned fax/mms/sms/voice]
 
-2. **`contains` pattern does not support wildcards**: Despite docs mentioning `*` metacharacter, mid-pattern wildcards like `206*55*` return 400 "Invalid Pattern Provided". Only simple substrings work (e.g., `"55"`, `"TEST"`). Minimum 2 characters.
+2. **`contains` pattern does not support wildcards**: Despite docs mentioning `*` metacharacter, mid-pattern wildcards like `206*55*` return 400 "Invalid Pattern Provided". Only simple substrings work (e.g., `"55"`, `"TEST"`). Minimum 2 characters. [Evidence: "206*55*" → 400; "55" → OK; "5" → 400]
 
-3. **US has no mobile number type**: `availablePhoneNumbers('US').mobile.list()` returns 404. US numbers are local or toll-free only. Use `smsEnabled: true` to find SMS-capable local numbers instead.
+3. **US has no mobile number type**: `availablePhoneNumbers('US').mobile.list()` returns 404. US numbers are local or toll-free only. Use `smsEnabled: true` to find SMS-capable local numbers instead. [Evidence: 20404 on US/Mobile.json]
 
-4. **International numbers may require address verification**: UK local numbers require `addressRequirements: "local"`. Purchase fails without the required regulatory bundle and address. Check `addressRequirements` in search results before attempting purchase.
+4. **International numbers may require address verification**: UK local numbers require `addressRequirements: "local"`. Purchase fails without the required regulatory bundle and address. Check `addressRequirements` in search results before attempting purchase. [Evidence: GB search returned addressRequirements="local"]
 
 ### Configuration
 
-5. **Invalid webhook URL returns specific error 21402**: Not a generic 400 — the error code 21402 specifically identifies "VoiceUrl is not valid". Useful for distinguishing URL validation errors from other configuration issues.
+5. **Invalid webhook URL returns specific error 21402**: Not a generic 400 — the error code 21402 specifically identifies "VoiceUrl is not valid". Useful for distinguishing URL validation errors from other configuration issues. [Evidence: "not-a-url" → error 21402]
 
-6. **voiceApplicationSid and voiceUrl are mutually exclusive**: Setting voiceApplicationSid causes Twilio to ignore voiceUrl. Setting voiceUrl after voiceApplicationSid clears the application. Same for SMS counterparts.
+6. **voiceApplicationSid and voiceUrl are mutually exclusive**: Setting voiceApplicationSid causes Twilio to ignore voiceUrl. Setting voiceUrl after voiceApplicationSid clears the application. Same for SMS counterparts. [Evidence: Twilio docs confirm; voiceApplicationSid validation tested — non-existent AP SID returns 400]
 
-7. **voiceApplicationSid and trunkSid are mutually exclusive**: Setting one auto-deletes the other. A number can route to a TwiML App OR a SIP trunk, not both.
+7. **voiceApplicationSid and trunkSid are mutually exclusive**: Setting one auto-deletes the other. A number can route to a TwiML App OR a SIP trunk, not both. [Evidence: Twilio docs]
 
 ### Lifecycle
 
-8. **Release is irreversible and immediate**: `remove()` returns `true` and the number is gone. Fetch after release returns 404. No grace period, no undo. Another customer can purchase it within seconds.
+8. **Release is irreversible and immediate**: `remove()` returns `true` and the number is gone. Fetch after release returns 404. No grace period, no undo. Another customer can purchase it within seconds. [Evidence: PNa869b36b released, immediate 404 on fetch]
 
-9. **Purchased numbers start as `in-use` immediately**: No provisioning delay — `status: "in-use"` on the create response. Webhooks are active from the moment of purchase if configured.
+9. **Purchased numbers start as `in-use` immediately**: No provisioning delay — `status: "in-use"` on the create response. Webhooks are active from the moment of purchase if configured. [Evidence: PNa869b36b status=in-use on create]
 
-10. **SID format is PN-prefixed**: Phone number SIDs start with `PN` followed by 32 hex characters. Do not confuse with phone numbers in E.164 format. List and filter endpoints accept both SIDs and phone numbers as identifiers.
+10. **SID format is PN-prefixed**: Phone number SIDs start with `PN` followed by 32 hex characters. Do not confuse with phone numbers in E.164 format. List and filter endpoints accept both SIDs and phone numbers as identifiers. [Evidence: PNfd5828a6... format confirmed]
 
 ### Pricing
 
-11. **Toll-free numbers have higher monthly fees than local**: Toll-free numbers typically cost more per month. Search results do not include pricing — check Console or Pricing API for current rates before purchasing.
+11. **Toll-free numbers have higher monthly fees than local**: Toll-free numbers typically cost more per month. Search results do not include pricing — check Console or Pricing API for current rates before purchasing. [Evidence: Twilio pricing docs]
 
 ## Error Code Reference
 
@@ -181,8 +191,12 @@ const byName = await client.incomingPhoneNumbers.list({
 
 | Topic | File | When to read |
 |-------|------|-------------|
-| Assertion audit | [references/assertion-audit.md](references/assertion-audit.md) | Verifying claim provenance, reviewing evidence chain |
+| Assertion audit | `references/assertion-audit.md` | Verifying claim provenance, reviewing evidence chain |
 
+## Related Resources
+
+- **Domain docs**: `CLAUDE.md` (function inventory, search params, manage actions)
+- **Codebase functions**: `search-numbers.protected.js`, `manage-number.protected.js`
 - **MCP tools**: `mcp__twilio__search_available_numbers`, `mcp__twilio__list_phone_numbers`, `mcp__twilio__configure_webhook`, `mcp__twilio__purchase_phone_number`, `mcp__twilio__release_phone_number`, `mcp__twilio__lookup_phone_number`
-- **Related skills**: [proxy skill](../proxy/SKILL.md) (number pools for masking), [verify skill](../verify/SKILL.md) (phone verification)
+- **Related skills**: `/skills/lookup/SKILL.md` (phone number intelligence — line type, carrier, fraud detection, identity match), `/skills/proxy/SKILL.md` (number pools for masking), `/skills/verify/SKILL.md` (phone verification), `/skills/compliance-regulatory.md` (regulatory bundles, address requirements), `/skills/branded-calling/SKILL.md` (branded caller ID, SHAKEN/STIR, Voice Integrity, CNAM)
 - **Twilio docs**: [IncomingPhoneNumber API](https://www.twilio.com/docs/phone-numbers/api/incomingphonenumber-resource), [AvailablePhoneNumber API](https://www.twilio.com/docs/phone-numbers/api/availablephonenumber-resource), [Pricing](https://www.twilio.com/docs/phone-numbers/pricing)

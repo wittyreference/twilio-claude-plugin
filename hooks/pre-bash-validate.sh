@@ -49,14 +49,53 @@ if echo "$COMMAND" | grep -qE "git\s+commit.*\s-n(\s|$)"; then
 fi
 
 # ============================================
+# D44: SYMLINK LEAK PREVENTION (BLOCKING)
+# ============================================
+# Worktree setup symlinks node_modules and dist/ for efficiency.
+# If those symlinks get staged, they poison every branch on checkout.
+# Block any staged symlink (mode 120000) for a gitignored path.
+
+if echo "$COMMAND" | grep -qE "^git\s+commit"; then
+    # Check for ANY staged symlink (mode 120000) being added or present.
+    # Previous version used --diff-filter=A (new files only), which missed
+    # already-tracked symlinks that were never properly removed from the index.
+    # Exclude deletions (D) — removing a tracked symlink is the fix, not the problem.
+    SYMLINKS=$(git diff --cached --diff-filter=d --raw 2>/dev/null | awk '/120000/{print $NF}')
+    if [ -z "$SYMLINKS" ]; then
+        # Also check the index directly for tracked symlinks in known-bad paths
+        SYMLINKS=$(git ls-files --stage 2>/dev/null | awk '$1 == "120000" && ($4 == "node_modules" || $4 ~ /^agents\/mcp-servers\/twilio\/dist/) {print $4}')
+    fi
+    if [ -n "$SYMLINKS" ]; then
+        BLOCKED=""
+        for f in $SYMLINKS; do
+            if git check-ignore -q "$f" 2>/dev/null; then
+                BLOCKED="$BLOCKED $f"
+            fi
+        done
+        if [ -n "$BLOCKED" ]; then
+            echo "" >&2
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+            echo "BLOCKED: Staged symlinks for gitignored paths:$BLOCKED" >&2
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+            echo "" >&2
+            echo "This usually means a worktree symlink leaked into the commit." >&2
+            echo "Fix: git rm --cached$BLOCKED" >&2
+            echo "" >&2
+            echo "See DESIGN_DECISIONS.md D44 for context." >&2
+            echo "" >&2
+            exit 2
+        fi
+    fi
+fi
+
+# ============================================
 # PRE-COMMIT DOCUMENTATION REMINDER
 # ============================================
 
 # Check if this is a git commit (but not the --no-verify checks above which already exited)
 if echo "$COMMAND" | grep -qE "^git\s+commit"; then
-    # Determine project root
+    # Determine project root and source environment detection
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
     # ============================================
     # EPHEMERAL BRANCH WARNING
@@ -141,6 +180,20 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
     fi
 
     # ============================================
+    # META REFERENCE LEAKAGE WARNING
+    # ============================================
+        echo "" >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "" >&2
+        echo "This may indicate meta-development content leaking into shipped code." >&2
+        echo "" >&2
+        echo "If this is intentional documentation about the separation, proceed." >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "" >&2
+    fi
+
+    # ============================================
     # LOCAL PATH LEAKAGE CHECK (BLOCKING)
     # ============================================
     # Block commits that ship hardcoded local directory paths.
@@ -167,6 +220,55 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
         echo "" >&2
         if [ "${SKIP_PATH_CHECK:-}" != "true" ]; then
             exit 2
+        fi
+    fi
+
+    # ============================================
+    # META-ONLY HOOK REGISTRATION CHECK (BLOCKING)
+    # ============================================
+    # Block commits that register meta-only scripts as shipped hooks.
+    # meaning it does nothing for fresh-clone users — dead code in settings.json.
+    if git diff --staged --name-only 2>/dev/null | grep -qF '.claude/settings.json'; then
+        # Extract hook script filenames from added lines in the diff
+        NEW_HOOK_FILES=$(git diff --staged -- .claude/settings.json 2>/dev/null \
+            | grep '^+' | grep '\.sh"' \
+            | grep -oE '[a-zA-Z0-9_-]+\.sh' \
+            | sort -u)
+
+        if [ -n "$NEW_HOOK_FILES" ]; then
+            META_ONLY_HOOKS=""
+            for hook_file in $NEW_HOOK_FILES; do
+                # Resolve to full path (hooks live in .claude/hooks/)
+                hook_path="$PROJECT_ROOT/.claude/hooks/$hook_file"
+                [ -f "$hook_path" ] || continue
+
+                # Check first 20 lines for meta-mode-only guard:
+                if head -20 "$hook_path" | tr '\n' ' ' \
+                    META_ONLY_HOOKS="${META_ONLY_HOOKS}  → ${hook_file} (exits when not in meta-mode)\n"
+                fi
+            done
+
+            if [ -n "$META_ONLY_HOOKS" ]; then
+                echo "" >&2
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "BLOCKED: Meta-only script registered as a shipped hook" >&2
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "" >&2
+                printf "%b" "$META_ONLY_HOOKS" >&2
+                echo "" >&2
+                echo "Scripts that exit 0 outside meta-mode do nothing for" >&2
+                echo "fresh-clone users. Don't register them in settings.json." >&2
+                echo "" >&2
+                echo "Instead: put the script in scripts/ and call it from" >&2
+                echo "/wrap-up (step 7b/7c, meta-mode section)." >&2
+                echo "" >&2
+                echo "Override: SKIP_META_HOOK_CHECK=true git commit ..." >&2
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "" >&2
+                if [ "${SKIP_META_HOOK_CHECK:-}" != "true" ]; then
+                    exit 2
+                fi
+            fi
         fi
     fi
 
@@ -216,6 +318,73 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
         fi
     fi
 
+    if [ -x "$FLYWHEEL_HOOK" ]; then
+        "$FLYWHEEL_HOOK" --force
+    fi
+
+    # ============================================
+    # AUTO-CLEAR ADDRESSED PENDING ACTIONS
+    # ============================================
+    PENDING_ACTIONS="$CLAUDE_PENDING_ACTIONS"
+    if [ -f "$PENDING_ACTIONS" ] && command -v jq &>/dev/null && jq empty "$PENDING_ACTIONS" 2>/dev/null; then
+        STAGED_FILES=$(git diff --staged --name-only 2>/dev/null)
+        if [ -n "$STAGED_FILES" ]; then
+            CLEARED_COUNT=0
+            ACTION_COUNT=$(jq '.actions | length' "$PENDING_ACTIONS" 2>/dev/null || echo "0")
+
+            if [ "$ACTION_COUNT" -gt 0 ]; then
+                # Build a jq filter that removes actions whose target matches a staged file
+                # Resolve aliases for target matching
+                KEEP_FILTER='[.actions[] | select('
+                FIRST=true
+                while IFS= read -r staged_file; do
+                    [ -z "$staged_file" ] && continue
+                done <<< "$STAGED_FILES"
+
+                # Use jq to filter: keep actions whose target is NOT in staged files
+                STAGED_PATTERN=$(echo "$STAGED_FILES" | tr '\n' '|' | sed 's/|$//')
+                UPDATED=$(jq --arg pattern "$STAGED_PATTERN" '
+                    .actions as $all |
+                    [$all[] | select(
+                        . as $action |
+                        ($pattern | split("|")) |
+                        map(. as $f | $action.target | contains($f)) |
+                        any | not
+                    )] as $remaining |
+                    ($all | length) - ($remaining | length) as $cleared |
+                    {actions: $remaining, _cleared: $cleared}
+                ' "$PENDING_ACTIONS" 2>/dev/null)
+
+                if [ -n "$UPDATED" ]; then
+                    CLEARED_COUNT=$(echo "$UPDATED" | jq -r '._cleared // 0')
+                    echo "$UPDATED" | jq 'del(._cleared)' > "$PENDING_ACTIONS"
+                    if [ "$CLEARED_COUNT" -gt 0 ]; then
+                        echo "" >&2
+                    fi
+                fi
+            fi
+        fi
+    fi
+
+    # ============================================
+    # PLUGIN SYNC AWARENESS (Non-blocking)
+    # ============================================
+    if [[ -f "$SYNC_MAP" ]] && command -v jq &>/dev/null; then
+        STAGED_LIST=$(git diff --staged --name-only 2>/dev/null)
+        if [[ -n "$STAGED_LIST" ]]; then
+            SYNCABLE_PATHS=$(jq -r '.mappings | to_entries[] | .value[] | .factory' "$SYNC_MAP" 2>/dev/null)
+            SYNCABLE_STAGED=0
+            while IFS= read -r staged_file; do
+                if echo "$SYNCABLE_PATHS" | grep -qF "$staged_file"; then
+                    SYNCABLE_STAGED=$((SYNCABLE_STAGED + 1))
+                fi
+            done <<< "$STAGED_LIST"
+            if [[ "$SYNCABLE_STAGED" -gt 0 ]]; then
+                echo "Note: $SYNCABLE_STAGED syncable file(s) staged. Plugin may need updating after commit." >&2
+            fi
+        fi
+    fi
+
     # ============================================
     # COMMIT CHECKLIST PROMPT (Non-blocking)
     # ============================================
@@ -227,6 +396,41 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
     echo "  [ ] Design decision documented if architectural?" >&2
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
     echo "" >&2
+
+    # ============================================
+    # PENDING DOCUMENTATION ACTIONS (BLOCKING)
+    # ============================================
+    if [ -f "$PENDING_ACTIONS" ] && command -v jq &>/dev/null && jq empty "$PENDING_ACTIONS" 2>/dev/null; then
+        ACTION_COUNT=$(jq '.actions | length' "$PENDING_ACTIONS" 2>/dev/null || echo "0")
+        if [ "$ACTION_COUNT" -gt 0 ]; then
+            echo "" >&2
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+            echo "PENDING DOCUMENTATION ACTIONS ($ACTION_COUNT items)" >&2
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+            echo "" >&2
+            # Show action items from JSON
+            jq -r '.actions[] | "- [\(.timestamp)] \(.target) - \(.reason)"' "$PENDING_ACTIONS" >&2
+            echo "" >&2
+
+            # Check for escape hatch (environment variable)
+            if [ "$SKIP_PENDING_ACTIONS" = "true" ] || [ "$SKIP_PENDING_ACTIONS" = "1" ]; then
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "" >&2
+            else
+                echo "BLOCKED: Pending documentation actions must be addressed!" >&2
+                echo "" >&2
+                echo "Options:" >&2
+                echo "  1. Address the pending actions and clear the file" >&2
+                echo "  2. Override: SKIP_PENDING_ACTIONS=true git commit ..." >&2
+                echo "" >&2
+                echo "To clear after addressing:" >&2
+                echo "  rm $PENDING_ACTIONS" >&2
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "" >&2
+                exit 2
+            fi
+        fi
+    fi
 fi
 
 # ============================================

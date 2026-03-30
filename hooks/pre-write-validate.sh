@@ -1,6 +1,11 @@
 #!/bin/bash
-# ABOUTME: Pre-write validation hook for credential safety and ABOUTME enforcement.
-# ABOUTME: Blocks writes containing hardcoded Twilio credentials or missing required headers.
+# ABOUTME: Pre-write validation hook for credential safety, ABOUTME, and meta isolation.
+# ABOUTME: Blocks writes containing hardcoded credentials, missing headers, or violating meta mode.
+#
+# META MODE BYPASS: Use Bash with inline env var to write to production paths:
+#   CLAUDE_ALLOW_PRODUCTION_WRITE=true cat > functions/path/file.js << 'EOF'
+#   ...
+#   EOF
 
 # Claude Code passes tool input as JSON on stdin, not env vars.
 HOOK_INPUT=""
@@ -22,6 +27,147 @@ fi
 # Exit early if no content to validate
 if [ -z "$CONTENT" ]; then
     exit 0
+fi
+
+# ============================================
+# META-MODE ISOLATION CHECK
+# ============================================
+
+# Source meta-mode detection
+HOOK_DIR="$(dirname "$0")"
+if [ -f "$HOOK_DIR/_meta-mode.sh" ]; then
+fi
+
+# Check meta-mode isolation (can be bypassed with CLAUDE_ALLOW_PRODUCTION_WRITE=true)
+    # Get project root for path comparison
+    PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
+    # Resolve symlinks in both paths to handle macOS /tmp → /private/tmp
+    # For new files, resolve directory portion (file doesn't exist yet)
+    _META_DIR="$(dirname "$FILE_PATH")"
+    _META_RESOLVED_DIR="$(realpath "$_META_DIR" 2>/dev/null || echo "$_META_DIR")"
+    RESOLVED_FILE_PATH="$_META_RESOLVED_DIR/$(basename "$FILE_PATH")"
+    RESOLVED_PROJECT_ROOT="$(realpath "$PROJECT_ROOT" 2>/dev/null || echo "$PROJECT_ROOT")"
+
+    # Compute relative path from both resolved and raw FILE_PATH.
+    # realpath resolves it outside PROJECT_ROOT, breaking the prefix strip.
+    # Fall back to the raw FILE_PATH (relative to PROJECT_ROOT) for pattern matching.
+    RELATIVE_PATH="${RESOLVED_FILE_PATH#$RESOLVED_PROJECT_ROOT/}"
+    if [[ "$RELATIVE_PATH" == "$RESOLVED_FILE_PATH" ]]; then
+        # Resolved path is outside project root — use raw path instead
+        RELATIVE_PATH="${FILE_PATH#$RESOLVED_PROJECT_ROOT/}"
+        # If still absolute, try stripping unresolved PROJECT_ROOT
+        if [[ "$RELATIVE_PATH" == "$FILE_PATH" ]]; then
+            RELATIVE_PATH="${FILE_PATH#$PROJECT_ROOT/}"
+        fi
+    fi
+
+    # Only enforce meta-mode isolation for files INSIDE the project root.
+    # Files outside (e.g., ~/.claude/plans/, ~/.claude/memory/) are not
+    # production code — credential checks below still apply to them.
+    if [[ "$RELATIVE_PATH" != "$FILE_PATH" ]]; then
+        # Allowed paths in meta mode
+        # - .claude/* - Claude Code configuration (hooks, plans, etc.)
+        # - scripts/* - development scripts (often need updating)
+        # - __tests__/* - test files (part of development)
+        # - *.md in root - documentation files
+
+        ALLOWED=false
+        case "$RELATIVE_PATH" in
+                ALLOWED=true
+                ;;
+            .claude/*)
+                ALLOWED=true
+                ;;
+            scripts/*)
+                ALLOWED=true
+                ;;
+            .github/*)
+                ALLOWED=true
+                ;;
+            __tests__/*)
+                ALLOWED=true
+                ;;
+            agents/*)
+                ALLOWED=true
+                ;;
+            .env|.env.*)
+                # .env files are gitignored local config, not production code
+                ALLOWED=true
+                ;;
+            */CLAUDE.md)
+                # Domain CLAUDE.md files are development documentation, not production code
+                ALLOWED=true
+                ;;
+            *.md)
+                # Root-level markdown files are docs
+                if [[ "$RELATIVE_PATH" != */* ]]; then
+                    ALLOWED=true
+                fi
+                ;;
+        esac
+
+        if [ "$ALLOWED" = "false" ]; then
+            echo "BLOCKED: Meta mode active - changes to production code blocked!" >&2
+            echo "" >&2
+            echo "" >&2
+            echo "Attempted to write: $RELATIVE_PATH" >&2
+            echo "" >&2
+            echo "Allowed paths in meta mode:" >&2
+            echo "  - .claude/plans/*" >&2
+            echo "  - .claude/archive/*" >&2
+            echo "" >&2
+            echo "To intentionally promote changes to production code:" >&2
+            echo "  export CLAUDE_ALLOW_PRODUCTION_WRITE=true" >&2
+            echo "" >&2
+            echo "" >&2
+            exit 2
+        fi
+    fi
+fi
+
+# ============================================
+# LEARNINGS ARCHIVAL GUARD
+# ============================================
+# Blocks bulk truncation of learnings.md without a recent archive update.
+# Prevents the doc-flywheel Step 3 archival step from being skipped.
+# Bypass: SKIP_LEARNINGS_GUARD=true
+
+if [[ "$SKIP_LEARNINGS_GUARD" != "true" ]] && \
+   [[ "$FILE_PATH" =~ learnings\.md$ ]] && \
+   [[ ! "$FILE_PATH" =~ learnings-archive\.md$ ]]; then
+    # Resolve the actual file (may be behind a symlink)
+    _LEARNINGS_DIR="$(dirname "$FILE_PATH")"
+    _LEARNINGS_REAL_DIR="$(realpath "$_LEARNINGS_DIR" 2>/dev/null || echo "$_LEARNINGS_DIR")"
+    _LEARNINGS_REAL="$_LEARNINGS_REAL_DIR/$(basename "$FILE_PATH")"
+    if [ -f "$_LEARNINGS_REAL" ]; then
+        _CURRENT_LINES=$(wc -l < "$_LEARNINGS_REAL" | tr -d ' ')
+        _NEW_LINES=$(echo "$CONTENT" | wc -l | tr -d ' ')
+        # Trigger: file >100 lines being reduced to <50% of current size
+        if [ "$_CURRENT_LINES" -gt 100 ] && [ "$_NEW_LINES" -lt $(( _CURRENT_LINES / 2 )) ]; then
+            _ARCHIVE_REAL="$_LEARNINGS_REAL_DIR/learnings-archive.md"
+            _ARCHIVE_FRESH=false
+            if [ -f "$_ARCHIVE_REAL" ]; then
+                _ARCHIVE_MTIME=$(stat -f %m "$_ARCHIVE_REAL" 2>/dev/null || stat -c %Y "$_ARCHIVE_REAL" 2>/dev/null || echo 0)
+                _NOW=$(date +%s)
+                # Archive must have been modified within last 5 minutes
+                if [ $(( _NOW - _ARCHIVE_MTIME )) -lt 300 ]; then
+                    _ARCHIVE_FRESH=true
+                fi
+            fi
+            if [ "$_ARCHIVE_FRESH" = "false" ]; then
+                echo "BLOCKED: learnings.md is being reduced from $_CURRENT_LINES to $_NEW_LINES lines" >&2
+                echo "without a recent update to learnings-archive.md." >&2
+                echo "" >&2
+                echo "Per doc-flywheel Step 3: ALWAYS copy entries to learnings-archive.md" >&2
+                echo "before clearing them from learnings.md." >&2
+                echo "" >&2
+                echo "To fix: append entries to learnings-archive.md first, then clear." >&2
+                echo "Override: SKIP_LEARNINGS_GUARD=true" >&2
+                exit 2
+            fi
+        fi
+    fi
 fi
 
 # ============================================
@@ -101,6 +247,31 @@ if [ "$SKIP_CREDENTIALS" = "false" ]; then
 fi
 
 # ============================================
+# MARKDOWN CREDENTIAL CHECK
+# ============================================
+# .md files are exempt from SID checks (AC.../SK... appear in format docs),
+# but we still catch ACTUAL credential values — 32-char hex strings
+# directly assigned to credential keywords. This catches real tokens
+# leaked into test-results.md or similar documentation files.
+# Pattern: keyword followed by separator then a quoted 32-char hex value
+# e.g., auth_token: "ff5711..." or secret = "abc123..."
+
+if [[ "$FILE_PATH" =~ \.md$ ]] && [ -n "$CONTENT" ]; then
+    if echo "$CONTENT" | grep -qiE '(auth_token|_secret|password|authtoken)["'"'"'"]?[[:space:]]*[:=][[:space:]]*["'"'"'"][a-f0-9]{32}["'"'"'"]'; then
+        echo "BLOCKED: Possible credential value in markdown file!" >&2
+        echo "" >&2
+        echo "Found a 32-character hex string adjacent to a credential keyword" >&2
+        echo "in: $FILE_PATH" >&2
+        echo "" >&2
+        echo "If this is a real credential, replace it with [REDACTED] or a placeholder." >&2
+        echo "If this is a format example, use a clearly fake value like:" >&2
+        echo "  a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4" >&2
+        echo "" >&2
+        exit 2
+    fi
+fi
+
+# ============================================
 # PROMPT INJECTION HEURISTIC CHECK
 # ============================================
 
@@ -113,7 +284,6 @@ if [[ "$FILE_PATH" =~ \.md$ ]] || [[ "$FILE_PATH" =~ CLAUDE\.md$ ]] || \
 fi
 
 if [ "$SKIP_INJECTION" = "false" ] && [ -n "$CONTENT" ]; then
-    HOOK_DIR="$(dirname "$0")"
     source "$HOOK_DIR/_emit-event.sh"
     source "$HOOK_DIR/_safety-patterns.sh"
     EMIT_SESSION_ID="$(echo "$HOOK_INPUT" | jq -r '.session_id // empty' 2>/dev/null)"
@@ -196,6 +366,8 @@ if { [[ "$FILE_PATH" =~ functions/.*\.js$ ]] || [[ "$RESOLVED_FILE_PATH" =~ func
                 echo "  /architect [feature]   # Start with design review" >&2
                 echo "  /test-gen [feature]    # Write failing tests first" >&2
                 echo "  /dev [task]            # Then implement" >&2
+                echo "" >&2
+                echo "See .claude/references/workflow-patterns.md for full phase sequences." >&2
                 echo "" >&2
                 echo "Override: SKIP_PIPELINE_GATE=true (for emergency fixes)" >&2
                 exit 2

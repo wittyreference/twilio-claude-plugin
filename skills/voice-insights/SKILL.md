@@ -1,4 +1,9 @@
 ---
+name: "voice-insights"
+description: "Twilio development skill: voice-insights"
+---
+
+---
 name: voice-insights
 description: Voice Insights diagnostic guide. Use when investigating call quality, diagnosing "what happened on this call," auditing call patterns, or enabling Voice Insights Advanced Features.
 ---
@@ -322,18 +327,20 @@ Full reference with all ranges in [references/sip-response-codes.md](references/
 | Participant isolation | One participant has bad metrics, others fine | That participant's network is the problem | Compare inbound vs outbound loss on that participant to determine direction |
 | Conference silence | `detected_silence` tag, all participants low MOS | No audio flowing through mixer | Check if all participants muted, verify audio tracks publishing |
 
-
 ---
 
 ## Related Resources
 
-- Voice skill - Use case ladder, decision frameworks, TwiML patterns
-- Deep Validation skill - Enhanced `checkVoiceInsights` and `checkConferenceInsights` with threshold comparison and tag interpretation
-- ConversationRelay skill - CR protocol, streaming, LLM integration, troubleshooting
-- Voice MCP Tools - 41 tools including:
+- [Voice Development Skill](/skills/voice/SKILL.md) - Use case ladder, decision frameworks, TwiML patterns
+- [Deep Validation Skill](/skills/deep-validation.md) - Enhanced `checkVoiceInsights` and `checkConferenceInsights` with threshold comparison and tag interpretation
+- [Validation Tools Source](/twilio/src/validation/deep-validator.ts) - `validateCall()` and `validateConference()` implementation
+- [ConversationRelay CLAUDE.md](/CLAUDE.md) - CR protocol, streaming, LLM integration, troubleshooting
+- [Event Streams Skill](/skills/event-streams/SKILL.md) - Push-based delivery of Voice Insights events (call-summary, call-event, call-metrics) via sinks
+- [Voice MCP Tools](/twilio/src/tools/voice.ts) - 41 tools including:
   - Insights search: `list_call_summaries`, `list_conference_summaries`
   - Insights data: `get_call_summary`, `list_call_metrics`, `list_call_events`
   - Conference Insights: `get_conference_summary`, `list_conference_participant_summaries`, `get_conference_participant_summary`
   - Annotation: `get_call_annotation`, `update_call_annotation`
   - Settings: `get_insights_settings`, `update_insights_settings`
   - Reports v2: `get_account_voice_report`, `get_inbound_number_report`, `get_outbound_number_report`
+- [Branded Calling Skill](/skills/branded-calling/SKILL.md) — SHAKEN/STIR attestation, Voice Integrity, Reports API for branded calling ROI measurement

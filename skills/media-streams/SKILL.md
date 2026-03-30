@@ -1,4 +1,9 @@
 ---
+name: "media-streams"
+description: "Twilio development skill: media-streams"
+---
+
+---
 name: media-streams
 description: Twilio Media Streams WebSocket guide. Use when building voice AI with custom STT/TTS, real-time audio processing, bidirectional audio, or <Connect><Stream> integration.
 ---
@@ -465,3 +470,9 @@ Relative WebSocket URLs are not supported. Always use a full `wss://` URL.
 ### Recording + Stream Independence
 
 `<Start><Recording>` and `<Start><Stream>` are independent background operations. Recording captures the full call audio; the stream provides a real-time copy. Both can run simultaneously.
+
+---
+
+## Reference Implementation
+
+See `stream-connect.js` for the TwiML setup pattern used in this project.

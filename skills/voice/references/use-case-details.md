@@ -1,6 +1,6 @@
 ---
-name: use-case-details
-description: Detailed implementation guidance for each voice use case including notifications, IVR, contact centers, AI agents, sales dialer, call tracking, and PSTN connectivity.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 # Voice Use Case Implementation Details
@@ -20,13 +20,15 @@ Detailed implementation guidance for each voice use case. See [../SKILL.md](../S
 
 **Answer Optimization (critical for business outcomes):**
 
+For full trust product details, onboarding paths, and gotchas, load the [Voice Trust skill](/.claude/skills/voice-trust/SKILL.md).
+
 | Feature | What It Does | Setup |
 |---------|--------------|-------|
 | **SHAKEN/STIR** | Green checkmark on mobile, proves number isn't spoofed | Per-number via Business Profile + Trust Product |
 | **Branded Calling** | Display business name (15-32 chars) | Requires Voice Integrity approval |
 | **Enhanced Branded Calling** | Name + logo + call reason | Requires SHAKEN/STIR Level A + LOA |
 | **Voice Integrity** | Register with carrier analytics to avoid spam labels | Business Profile with EIN/DUNS, 24-48hr remediation |
-| **AMD** | Detect human vs answering machine | `MachineDetection` parameter on Calls API |
+| **AMD** | Detect human vs answering machine | `MachineDetection` parameter on Calls API (see AMD decision framework in SKILL.md) |
 
 **CPS (Calls Per Second) Limits:**
 - Default: 1 CPS per account
@@ -77,7 +79,7 @@ AI agents require additional monitoring:
 
 **Connectivity Options:**
 - PSTN → Twilio number
-- Voice SDKs (JavaScript, iOS, Android) for agent softphones
+- [Voice SDKs](/.claude/skills/voice-sdks.md) (JavaScript, iOS, Android, React Native) for agent softphones
 - SIP interface for existing infrastructure
 - BYOC for existing phone numbers
 
@@ -172,11 +174,11 @@ Currently less common but increasing. Consider starting with Conference if AI ag
 
 | Feature | Elastic SIP Trunking | Programmable Voice |
 |---------|---------------------|-------------------|
-| TwiML | Not available | Full access |
-| AMD | Not available | Available |
-| Custom call flows | Not available | Full flexibility |
-| Recording | At trunk level | Multiple methods |
-| Voice Insights | Available | Available |
+| TwiML | ❌ Not available | ✅ Full access |
+| AMD | ❌ Not available | ✅ Available |
+| Custom call flows | ❌ Not available | ✅ Full flexibility |
+| Recording | ✅ At trunk level | ✅ Multiple methods |
+| Voice Insights | ✅ Available | ✅ Available |
 | CPS | Per trunk, per region | Per account |
 
 **When to use Elastic SIP Trunking:**
@@ -211,7 +213,7 @@ WHEN USING CONFERENCE (add these):
 □ Conference Insights Participant Summary - per-participant metrics, join/leave times
 ```
 
-**Voice/Conference Insights Timing:**
+**⚠️ Voice/Conference Insights Timing:**
 Summaries are NOT immediately available after call/conference ends:
 - **Partial data:** ~2 minutes after end (no SLA guarantee)
 - **Final data:** Locked and immutable 30 minutes after end
@@ -221,6 +223,8 @@ Summaries are NOT immediately available after call/conference ends:
 **Feature Factory Enforcement:** Dev and review agents MUST verify all applicable checks pass. Use `DeepValidator.validateCall()` for calls and `DeepValidator.validateConference()` for conferences.
 
 ### Trust & Answer Rates
+
+For full trust product guidance, onboarding paths, StirVerstat reference, and carrier-specific behavior, load the [Voice Trust skill](/.claude/skills/voice-trust/SKILL.md).
 
 For outbound calls, implement all four:
 

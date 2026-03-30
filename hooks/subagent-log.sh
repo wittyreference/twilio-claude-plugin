@@ -1,16 +1,14 @@
 #!/bin/bash
-# ABOUTME: Hook for SubagentStop events - logs agent type and activity.
-# ABOUTME: Runs after any subagent completes work with timestamped logging.
+# ABOUTME: Hook for SubagentStop events - logs agent type and triggers doc update reminder.
+# ABOUTME: Runs after any subagent completes work - natural checkpoint for docs.
 
-# Determine the project root (where plugin is installed or logs should go)
-PROJECT_ROOT="${PWD}"
-LOG_DIR="$PROJECT_ROOT/.claude/logs"
-LOG_FILE="$LOG_DIR/subagent-activity.log"
+# Subagent completion is a great time to remind about docs because:
+# - Work was just completed that might need documenting
+# - There's a natural pause before the next task
+# - The debounce (2 min) prevents spam during rapid subagent calls
 
-# Create log directory if it doesn't exist
-mkdir -p "$LOG_DIR"
-
-# Read JSON input from stdin
+# Read JSON input from stdin (CC v2.1.47+ provides last_assistant_message,
+# CC v2.1.69+ provides agent_id and agent_type)
 HOOK_INPUT=""
 if [ ! -t 0 ]; then
     HOOK_INPUT="$(cat)"
@@ -30,39 +28,24 @@ fi
 # Structured event emission (observability)
 if [ -n "$HOOK_INPUT" ] && command -v jq &>/dev/null; then
     SUBAGENT_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // ""' 2>/dev/null)
-    if [ -f "$SCRIPT_DIR/_emit-event.sh" ]; then
-        source "$SCRIPT_DIR/_emit-event.sh"
-        EMIT_SESSION_ID="$SUBAGENT_SESSION_ID"
-        emit_event "subagent_complete" "$(jq -nc \
-            --arg type "${AGENT_TYPE:-unknown}" \
-            --arg aid "${AGENT_ID:-}" \
-            '{subagent_type: $type, agent_id: $aid}')"
-    fi
+    source "$SCRIPT_DIR/_emit-event.sh"
+    EMIT_SESSION_ID="$SUBAGENT_SESSION_ID"
+    emit_event "subagent_complete" "$(jq -nc \
+        --arg type "${AGENT_TYPE:-unknown}" \
+        --arg aid "${AGENT_ID:-}" \
+        '{subagent_type: $type, agent_id: $aid}')"
 fi
 
-# Get timestamp
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-
-# Get git context if available
-GIT_BRANCH="N/A"
-if [ -d "$PROJECT_ROOT/.git" ]; then
-    GIT_BRANCH=$(cd "$PROJECT_ROOT" && git branch --show-current 2>/dev/null || echo "N/A")
+# Call the consolidated flywheel-doc-check (environment-aware)
+FLYWHEEL_HOOK="$SCRIPT_DIR/flywheel-doc-check.sh"
+if [ -x "$FLYWHEEL_HOOK" ]; then
+    "$FLYWHEEL_HOOK"
 fi
 
-# Log the subagent completion
-{
-    echo "[$TIMESTAMP] Subagent completed"
-    echo "  Branch: $GIT_BRANCH"
-    echo "  Directory: $(pwd)"
-    echo "---"
-} >> "$LOG_FILE"
-
-# Keep log file from growing too large (keep last 500 lines)
-if [ -f "$LOG_FILE" ]; then
-    LINES=$(wc -l < "$LOG_FILE" | tr -d ' ')
-    if [ "$LINES" -gt 500 ]; then
-        tail -500 "$LOG_FILE" > "$LOG_FILE.tmp" && mv "$LOG_FILE.tmp" "$LOG_FILE"
-    fi
+# Trigger learning exercise generation after autonomous work completes
+LEARNING_HOOK="$SCRIPT_DIR/generate-learning-exercises.sh"
+if [ -x "$LEARNING_HOOK" ]; then
+    "$LEARNING_HOOK" 2>/dev/null || true
 fi
 
 exit 0

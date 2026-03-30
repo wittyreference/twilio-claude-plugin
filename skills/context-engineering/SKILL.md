@@ -1,4 +1,9 @@
 ---
+name: "context-engineering"
+description: "Twilio development skill: context-engineering"
+---
+
+---
 name: context-engineering
 description: Context management and compression techniques. Use when optimizing context window usage, managing large sessions, or applying compression strategies for Twilio development.
 ---
@@ -38,8 +43,11 @@ Unified context management skill — fundamentals, compression techniques, and s
 
 ## Loading Strategy
 
+**Always loaded** (~2,900 tokens / 1.4% of 200K):
+- Root CLAUDE.md, CLAUDE.md, MEMORY.md
+
 **Load on demand** (when entering domain):
-- Domain CLAUDE.md (e.g., voice, messaging, conversation-relay)
+- Domain CLAUDE.md (e.g., `CLAUDE.md`)
 - Similar existing function as pattern
 - Relevant test file
 

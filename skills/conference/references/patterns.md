@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Conference call flow patterns including warm transfer, moderated conferences, and outbound dialer. -->
 <!-- ABOUTME: Contains startOnEnter/endOnExit configuration tables and TwiML attribute reference. -->
 
@@ -15,6 +20,8 @@ The most common conference usage: two participants bridged via Conference to gai
 |-------------|----------------------|---------------------|-----|
 | Party A | `true` | `true` | Either party hanging up ends the call |
 | Party B | `true` | `true` | Symmetric — both can end |
+
+For the existing implementation, see `functions/voice/create-conference.protected.js` and `functions/voice/add-conference-participant.protected.js`.
 
 ## Warm Transfer Pattern
 
@@ -41,6 +48,8 @@ The critical setting is Agent1's `endConferenceOnExit=false`. Without it, Agent1
 ### Conference ID Strategy for Warm Transfer
 
 Use the customer's Call SID as the conference FriendlyName: guaranteed unique per call, easy to correlate in logs.
+
+For the existing safe transfer pattern, see `functions/voice/REFERENCE.md` lines 192-216.
 
 ## Moderated Conference Pattern
 
@@ -79,6 +88,11 @@ Agent-initiated outbound calls using conference as the bridge. AMD (Answering Ma
 - Agent: `startConferenceOnEnter=true`, `endConferenceOnExit=false`
 - AMD: `MachineDetection=Enable` on customer's Participants API call
 
+For the existing implementation, see:
+- `functions/voice/outbound-dialer.private.js` — orchestrator
+- `functions/voice/outbound-customer-leg.js` — customer joins conference with `endConferenceOnExit=true`
+- `functions/voice/outbound-agent-leg.js` — agent joins with whisper greeting
+
 ## Sales Dialer Pattern
 
 Variant of the outbound contact center pattern optimized for high-volume prospecting.
@@ -86,6 +100,10 @@ Variant of the outbound contact center pattern optimized for high-volume prospec
 - Prospect called with conference recording from start (`record: 'record-from-start'`)
 - Agent joins the same conference
 - Status callbacks track call outcomes
+
+For the existing implementation, see:
+- `functions/voice/sales-dialer-prospect.js` — prospect leg with recording
+- `functions/voice/sales-dialer-agent.js` — agent leg
 
 ## Safe vs Dangerous Transfer
 
@@ -100,9 +118,13 @@ Everyone stays connected. The new party joins the existing mix.
 // → Agent can drop off by having their participant removed
 ```
 
+See `functions/voice/REFERENCE.md` lines 192-216 for the code pattern.
+
 ### Dangerous: Update Call TwiML
 
 Updating a participant's call with new TwiML (via `client.calls(sid).update({twiml: ...})`) **immediately removes them from the conference**. If that participant had `endConferenceOnExit=true`, the entire conference tears down — appearing as a dropped call to everyone else.
+
+See `functions/voice/REFERENCE.md` lines 218-227 for the anti-pattern.
 
 **Rule**: In a conference context, "transfer" means adding a new participant, never replacing TwiML.
 

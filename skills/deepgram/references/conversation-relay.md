@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Deepgram configuration details specific to ConversationRelay. -->
 <!-- ABOUTME: Covers attributes, TwiML syntax, codebase examples, and TTS pairing guidance. -->
 
@@ -49,13 +54,13 @@ The established codebase pattern is **Deepgram STT + Google Neural TTS**.
 
 ## Codebase Examples
 
-Common handler patterns use `transcriptionProvider: 'deepgram'` with `speechModel: 'nova-3-general'`:
+All three handlers use `transcriptionProvider: 'deepgram'` with `speechModel: 'nova-3-general'`:
 
-| Handler Pattern | TTS Voice | Notable Features |
+| Handler | TTS Voice | Notable Features |
 |---------|-----------|-----------------|
-| AI assistant inbound | `Google.en-US-Neural2-F` | Background recording, env var validation |
-| Relay handler | `Polly.Amy` | Minimal configuration example |
-| Pizza agent connect | `Google.en-US-Neural2-F` | `welcomeGreeting`, background recording |
+| `ai-assistant-inbound.js` | `Google.en-US-Neural2-F` | Background recording, env var validation |
+| `relay-handler.js` | `Polly.Amy` | Minimal configuration example |
+| `pizza-agent-connect.js` | `Google.en-US-Neural2-F` | `welcomeGreeting`, background recording |
 
 ## Gotchas
 

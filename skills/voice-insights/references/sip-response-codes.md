@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Comprehensive SIP response code reference for Voice Insights call diagnostics. -->
 <!-- ABOUTME: Covers range-based classification, top 25 specific codes, and carrier-origin actionability notes. -->
 

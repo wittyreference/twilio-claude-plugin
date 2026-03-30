@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Comprehensive reference for all 85 Voice SDK events in Twilio Voice Insights. -->
 <!-- ABOUTME: Covers trigger thresholds, WebRTC state machines, event sequence patterns, and diagnostic correlation. -->
 

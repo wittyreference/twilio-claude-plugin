@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Deepgram configuration for Gather and Start-Transcription TwiML verbs. -->
 <!-- ABOUTME: Covers attribute syntax, TwiML examples, and cross-product naming inconsistencies. -->
 

@@ -1,4 +1,9 @@
 ---
+name: "real-time-transcription"
+description: "Twilio development skill: real-time-transcription"
+---
+
+---
 name: real-time-transcription
 description: Twilio Real-Time Transcription development guide. Use when adding live transcription to voice calls via <Start><Transcription> or the Transcriptions REST API — covers engine selection, callback format, track behavior, and Voice Intelligence integration.
 ---
@@ -79,7 +84,7 @@ All claims backed by live testing (2026-03-24, account ACb4de2...). See [referen
 | Case sensitivity | N/A | `transcriptionEngine` is case-insensitive (`deepgram` or `Deepgram`) |
 | HIPAA eligibility | Yes (with persisted transcripts) | Yes (with persisted transcripts, GA since Oct 2025) |
 
-For full Deepgram model compatibility across products (ConversationRelay, Gather, RTT), load the Deepgram skill.
+For full Deepgram model compatibility across products (ConversationRelay, Gather, RTT), load the [Deepgram skill](/skills/deepgram/SKILL.md).
 
 ### Track Selection
 
@@ -259,7 +264,7 @@ transcription-started  →  transcription-content (repeated)  →  transcription
 
 9. **Default engine is Google, default model is `telephony`**: If you omit both `transcriptionEngine` and `speechModel`, you get Google's telephony model. The `transcription-started` callback confirms the engine and model in `ProviderConfiguration`.
 
-10. **Deepgram model names differ from `<Gather>`**: RTT uses bare names (`nova-3`). `<Gather>` requires the `deepgram_` prefix (`deepgram_nova-3-general`). ConversationRelay uses `nova-3-general`. Using the wrong format for the wrong product causes silent failures. See the Deepgram skill for the cross-product attribute map.
+10. **Deepgram model names differ from `<Gather>`**: RTT uses bare names (`nova-3`). `<Gather>` requires the `deepgram_` prefix (`deepgram_nova-3-general`). ConversationRelay uses `nova-3-general`. Using the wrong format for the wrong product causes silent failures. See the [Deepgram skill](/skills/deepgram/SKILL.md) for the cross-product attribute map.
 
 ### Runtime
 
@@ -304,17 +309,20 @@ start.transcription({
 3. Language Operators run on the persisted transcript (summarization, PII detection, sentiment, custom extraction)
 4. Results available via `list_operator_results` MCP tool or REST API
 
-**Intelligence Services** must be created in the Twilio Console — there is no creation API. A future Voice Intelligence skill will cover the full pipeline.
+**Intelligence Services** (v2) must be created in the Twilio Console — there is no creation API. For the v3 Voice Intelligence API (Language Operators, real-time analysis, cross-channel), see [Voice Intelligence Skill](/skills/voice-intelligence/SKILL.md).
 
 ---
 
 ## Related Resources
 
-- **Deepgram STT Skill** — Cross-product model naming, Deepgram-specific config, tested model matrix
-- **Voice Skill** — Transcription Method Selection framework, broader voice context
-- **Voice Use Case Map Skill** — Per-use-case product recommendations
-- **Media Streams Skill** — Alternative: raw audio WebSocket with custom STT
+- [Deepgram STT Skill](/skills/deepgram/SKILL.md) — Cross-product model naming, Deepgram-specific config, tested model matrix
+- [Voice Skill](/skills/voice/SKILL.md) — Transcription Method Selection framework, broader voice context
+- [Voice Use Case Map](/skills/voice-use-case-map/SKILL.md) — Per-use-case product recommendations
+- [Media Streams Skill](/skills/media-streams.md) — Alternative: raw audio WebSocket with custom STT
+- [Voice CLAUDE.md](/CLAUDE.md) — TwiML control model, background operations
 - **MCP Tools**: `validate_transcript`, `get_transcript`, `list_transcripts`, `delete_transcript`, `create_transcript`, `list_sentences`, `list_operator_results`, `get_transcript_media`, `list_recording_transcriptions`, `get_transcription`
+- [Voice Intelligence Skill](/skills/voice-intelligence/SKILL.md) — v3 API: Language Operators, real-time/post-call analysis, cross-channel
+- **Codebase**: `transcription-status.protected.js` — RTT callback handler with Sync logging
 
 ## Reference Files
 

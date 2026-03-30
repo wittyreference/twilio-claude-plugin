@@ -1,4 +1,9 @@
 ---
+name: "env-doctor"
+description: "Twilio development skill: env-doctor"
+---
+
+---
 name: env-doctor
 description: Diagnose shell and .env credential conflicts. Use when hitting 401 errors, auth failures after switching Twilio accounts, or mysterious environment variable issues.
 ---
@@ -46,7 +51,15 @@ The MCP server inherits env at launch. If shell had stale vars when Claude Code 
 
 **Fix:** Restart Claude Code entirely after fixing env vars.
 
+## Integration
+
+- Runs automatically before `npm start` (via `prestart` hook in `package.json`)
+- Referenced in CLAUDE.md Documentation Protocol section
+- Also available via `/preflight` (Check 2.8)
+
 ## Exit Codes
 
 - `0` — Clean (or warnings only)
 - `1` — Conflicts detected that will cause auth failures
+
+$ARGUMENTS

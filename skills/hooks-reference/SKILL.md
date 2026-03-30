@@ -1,4 +1,9 @@
 ---
+name: "hooks-reference"
+description: "Twilio development skill: hooks-reference"
+---
+
+---
 name: hooks-reference
 description: Reference for project hook configuration. Use when understanding pre/post tool hooks, modifying quality gates, or debugging why a hook blocked an action.
 ---

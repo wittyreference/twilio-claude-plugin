@@ -66,6 +66,12 @@ functions/
 | Real-time transcription | Voice API | `<Start><Transcription>` noun |
 | Phone verification | Verify API | REST API |
 | 2FA | Verify API | REST API |
+| Transactional email | SendGrid API | `@sendgrid/mail` SDK |
+| Inbound email | SendGrid Inbound Parse | MX records + webhook |
+| Email OTP | Verify API + SendGrid | Mailer config on Verify Service |
+| User analytics / CDP | Segment Connections | Sources + Destinations |
+| Event tracking | Segment HTTP Tracking API | identify, track, page, group |
+| Data pipeline to destinations | Segment Destinations | Cloud-mode routing |
 
 #### Advanced APIs (Use Only When Needed)
 
@@ -76,6 +82,8 @@ These add complexity. Default to simpler solutions for prototypes.
 | **Sync** | Real-time state across devices, multi-step call flows needing persistent state, collaborative features | Simple webhooks work, state fits in cookies/query params, single-user flows |
 | **TaskRouter** | Skills-based routing to agents, contact center features, task queuing with SLAs | Simple call forwarding, single destination, no agent availability logic |
 | **Messaging Services** | High-volume campaigns, multiple sender numbers, A2P 10DLC compliance, sticky sender needed | Single phone number, low volume, simple notifications |
+| **Segment Functions** | Custom webhook ingestion, data transformation/enrichment before destinations, PII tokenization | Standard source/destination pairs in the catalog handle the use case |
+| **Segment Reverse ETL** | Warehouse data needs to flow to marketing/sales tools | Data already flows through Segment event streams |
 
 #### Deprecated Products (Do Not Use)
 
@@ -103,6 +111,12 @@ Q: Do you need to route tasks to available workers with skills matching?
 ├── Yes → Consider TaskRouter
 └── No → Use simple <Dial> or conditional logic
 
+Q: Do you need to stream platform events (calls, messages, errors) to an external system?
+├── Yes, to a webhook → Consider Event Streams with webhook sink
+├── Yes, to AWS → Consider Event Streams with Kinesis sink
+├── Yes, to Segment/CDP → Consider Event Streams with Segment sink
+└── No, just per-resource callbacks → Use StatusCallback on each resource
+
 Q: Do you need to send from multiple numbers or manage sender pools?
 ├── Yes → Consider Messaging Services
 └── No → Use single phone number with basic Messaging API
@@ -112,6 +126,12 @@ Q: Do you need transcription during live calls?
 ├── Yes, tied to AI agent → ConversationRelay (built-in STT)
 ├── Yes, custom STT engine → `<Start><Stream>` + your own STT
 └── No, post-call only → Voice Intelligence batch via recording `source_sid`
+
+Q: Do you need to track user events or build a data pipeline?
+├── Yes, customer analytics/CDP → Segment Sources + Destinations
+├── Yes, custom ingestion from webhook → Segment Source Functions
+├── Yes, enrich/transform before destination → Segment Insert Functions
+└── No, just Twilio operational data → Debugger + Voice Insights
 ```
 
 #### High-Volume Outbound Patterns

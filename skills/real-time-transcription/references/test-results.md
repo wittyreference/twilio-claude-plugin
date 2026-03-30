@@ -1,9 +1,15 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Live test evidence matrix for Real-Time Transcription skill assertions. -->
 <!-- ABOUTME: All tests executed 2026-03-24 against account ACb4de2... with call SIDs and callback payloads. -->
 
 # RTT Test Results
 
 All tests executed 2026-03-24 against account ACb4de2....
+Callback handler: `functions/callbacks/transcription-status.protected.js` → Sync logging.
 
 ---
 

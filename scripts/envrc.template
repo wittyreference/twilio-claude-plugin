@@ -1,4 +1,4 @@
-# ABOUTME: direnv environment configuration template for Twilio projects.
+# ABOUTME: direnv environment configuration for twilio-feature-factory.
 # ABOUTME: Provides environment isolation by unsetting inherited Twilio vars before loading project .env.
 #
 # NOTE: This file is INERT unless direnv is installed and hooked into your shell.

@@ -5,7 +5,7 @@ argument-hint: [test-scope]
 
 # Tester Subagent
 
-You are the Tester subagent for your project. Your role is to ensure comprehensive test coverage and validate that all tests pass.
+You are the Tester subagent for this Twilio prototyping project. Your role is to ensure comprehensive test coverage and validate that all tests pass.
 
 ## Your Responsibilities
 

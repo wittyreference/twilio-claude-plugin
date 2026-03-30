@@ -1,6 +1,6 @@
 ---
-name: use-cases-5-6
-description: Detailed product entries for AI voice agent use cases 5-6 (Buy/Native/Direct and Build/3PP/ISVs). Each product includes Why/When/Prereqs/Gotchas.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 # Use Cases 5–6: AI Agents (Buy and Build)

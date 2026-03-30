@@ -1,6 +1,12 @@
 ---
+name: "deepgram"
+description: "Twilio development skill: deepgram"
+---
+
+---
 name: deepgram
 description: Deepgram STT integration with Twilio Voice. Use when configuring speech recognition with Deepgram for ConversationRelay, Gather, or real-time Transcription.
+allowed-tools: Read, Grep, Glob
 ---
 
 # Deepgram Integration Skill
@@ -139,16 +145,14 @@ See [references/gather-and-transcription.md](references/gather-and-transcription
 
 7. **`<Gather>` fails silently with wrong model format**: Error 13334 is a WARNING, not a hard failure. The call continues with Google STT. You will get speech recognition results — just not from Deepgram. Always check call notifications after testing to confirm.
 
-
 ---
 
 ## Related Resources
 
-- ConversationRelay skill — Protocol, streaming, WebSocket handler patterns
-- Voice skill — Transcription Method Selection framework, TTS Voice Tier guidance
-- Voice Use Case Map skill — Per-use-case product recommendations
-- Real-Time Transcription skill — Full RTT guide: callback format, track behavior, REST API, Voice Intelligence integration
-- Media Streams skill — Raw audio alternative (no native Deepgram, bring-your-own STT)
+- [ConversationRelay CLAUDE.md](/CLAUDE.md) — Protocol, streaming, WebSocket handler patterns
+- [Voice Skill](/skills/voice/SKILL.md) — Transcription Method Selection framework, TTS Voice Tier guidance
+- [Voice Use Case Map](/skills/voice-use-case-map/SKILL.md) — Per-use-case product recommendations
+- [Media Streams Skill](/skills/media-streams.md) — Raw audio alternative (no native Deepgram, bring-your-own STT)
 
 ---
 

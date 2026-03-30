@@ -1,11 +1,11 @@
 ---
-name: workflows
-description: Development workflow patterns for Twilio projects. Pipeline definitions for new features, bug fixes, refactors, security audits, and documentation. Includes when to use orchestrated vs team-based vs standalone agents.
+name: "workflows"
+description: "Twilio development skill: workflows"
 ---
 
 # Development Workflows
 
-This skill covers the available workflow patterns for developing Twilio features using Claude Code subagents and agent teams.
+This document describes the available workflow patterns for developing Twilio features using Claude Code subagents and agent teams.
 
 ## Available Subagents
 
@@ -30,7 +30,7 @@ This skill covers the available workflow patterns for developing Twilio features
 Full development pipeline for building new Twilio functionality:
 
 ```text
-/architect --> /prototype (if unknowns) --> /spec --> /test-gen --> /dev --> /review --> /test --> /docs
+/architect ──► /prototype (if unknowns) ──► /spec ──► /test-gen ──► /dev ──► /review ──► /test ──► /docs
 ```
 
 **Execution**:
@@ -49,7 +49,7 @@ Full development pipeline for building new Twilio functionality:
 Quick fix pipeline for resolving issues:
 
 ```text
-/twilio-logs --> /architect --> /test-gen --> /dev --> /review --> /test
+/twilio-logs ──► /architect ──► /test-gen ──► /dev ──► /review ──► /test
 ```
 
 **Execution**:
@@ -66,7 +66,7 @@ Quick fix pipeline for resolving issues:
 Improve code structure without changing behavior:
 
 ```text
-/test --> /architect --> /dev --> /review --> /test
+/test ──► /architect ──► /dev ──► /review ──► /test
 ```
 
 **Execution**:
@@ -94,7 +94,7 @@ Update documentation without code changes:
 Review code for security issues:
 
 ```text
-/review --> /dev --> /test
+/review ──► /dev ──► /test
 ```
 
 **Execution**:
@@ -120,8 +120,8 @@ For tasks that benefit from parallel work or inter-agent discussion, use `/team`
 ### Team: New Feature (Parallel Review)
 
 ```text
-Phase 1 (Sequential): architect --> spec --> test-gen --> dev
-Phase 2 (Parallel):   qa --+-- review
+Phase 1 (Sequential): architect → spec → test-gen → dev
+Phase 2 (Parallel):   qa ──┬── review
 Phase 3 (Sequential): docs
 ```
 
@@ -132,10 +132,10 @@ QA and review teammates work in parallel after implementation, each with a fresh
 ### Team: Bug Fix (Competing Hypotheses)
 
 ```text
-Phase 1 (Parallel): investigator-1 --+-- investigator-2 --+-- investigator-3
-                    (code path)       |   (logs/debugger)  |   (config/env)
+Phase 1 (Parallel): investigator-1 ──┬── investigator-2 ──┬── investigator-3
+                    (code path)       │   (logs/debugger)  │   (config/env)
 Phase 2: Lead synthesizes strongest hypothesis
-Phase 3 (Sequential): test-gen --> dev --> review
+Phase 3 (Sequential): test-gen → dev → review
 ```
 
 Run with: `/team bug-fix [issue]`
@@ -145,7 +145,7 @@ Three investigators work in parallel, messaging each other to challenge hypothes
 ### Team: Code Review (Multi-Lens)
 
 ```text
-Phase 1 (Parallel): security --+-- performance --+-- testing
+Phase 1 (Parallel): security ──┬── performance ──┬── testing
 Phase 2: Cross-challenge (each reads others' findings)
 Phase 3: Lead compiles unified review
 ```
@@ -157,9 +157,9 @@ Three reviewers with different focus areas. After initial review, each reads oth
 ### Team: Refactor (Parallel Analysis)
 
 ```text
-Phase 1 (Parallel): baseline-qa --+-- architect
+Phase 1 (Parallel): baseline-qa ──┬── architect
 Phase 2 (Sequential): dev (tests must stay green)
-Phase 3 (Parallel): verify-qa --+-- reviewer
+Phase 3 (Parallel): verify-qa ──┬── reviewer
 ```
 
 Run with: `/team refactor [target]`
@@ -169,7 +169,7 @@ Baseline QA and architect work in parallel to establish metrics and plan. After 
 ### Team: Validation (Parallel Domain Coverage)
 
 ```text
-Phase 1 (Parallel): call-validator --+-- recording-validator --+-- taskrouter-validator --+-- debugger-validator
+Phase 1 (Parallel): call-validator ──┬── recording-validator ──┬── taskrouter-validator ──┬── debugger-validator
 Phase 2 (Sequential): Lead aggregates results into unified validation report
 ```
 
@@ -189,7 +189,7 @@ Example:
 
 ```text
 /architect voice IVR menu with speech recognition
-# Claude guides you through spec --> test-gen --> dev --> review --> docs
+# Claude guides you through spec → test-gen → dev → review → docs
 ```
 
 ### Team-Based Mode
@@ -205,7 +205,7 @@ Example:
 
 ```text
 /team bug-fix "webhook returning 500 for empty body"
-/team code-review functions/voice/
+/team code-review 
 ```
 
 ### Standalone Mode

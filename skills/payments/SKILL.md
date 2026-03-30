@@ -1,4 +1,9 @@
 ---
+name: "payments"
+description: "Twilio development skill: payments"
+---
+
+---
 name: payments
 description: Twilio Pay PCI-compliant payment guide. Use when implementing credit card capture during voice calls, payment processing, <Pay> verb, tokenization, or PCI compliance patterns.
 ---
@@ -215,3 +220,9 @@ ACH collects:
 `create_payment` — Initiate payment capture on active call
 `update_payment` — Complete, cancel, or capture next field
 `get_payment` — Check payment status and token
+
+## Function Patterns Available
+
+`collect-payment.js` — TwiML webhook with `<Pay>` verb
+`payment-complete.protected.js` — Action URL handler
+`payment-status.protected.js` — Status callback handler

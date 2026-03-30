@@ -15,30 +15,52 @@ If the user provided a use case or question, match it to the relevant skills bel
 ### Voice & Calling
 | Skill | Use When |
 |-------|----------|
-| `/voice` | Building IVR, call routing, TwiML flows, outbound calls |
+| `/voice` | Building IVR, call routing, TwiML flows, outbound calls, AMD, limits |
 | `/voice-use-case-map` | Choosing between Twilio voice products (Programmable Voice, Elastic SIP, Voice AI) |
-| `/conversation-relay` | Building real-time voice AI with LLM integration, WebSocket audio |
+| `/voice-sdks` | Browser softphones, mobile calling apps, AccessTokens, TwiML Apps, edge locations |
+| `/android-sdk` | Android native Voice + Video — Gradle, FCM push, ConnectionService, permissions, emulator testing |
+| `/voice-trust` | Spam/blocked calls, answer rates, SHAKEN/STIR, StirVerstat, CallToken, Branded Calling, Voice Integrity, CNAM |
+| `/whatsapp-business-calling` | Voice calls over WhatsApp endpoints, `<Dial><WhatsApp>` |
 | `/media-streams` | Real-time audio processing, transcription, bidirectional streaming |
-| `/real-time-transcription` | Live call transcription via `<Start><Transcription>` or REST API, engine selection, callbacks |
+| `/recordings` | Call recording methods, channel assignment, pause/resume, Voice Intelligence transcription |
+| `/sip` | Programmable SIP — SIP Domains, registration, custom headers, auth models, `<Dial><Sip>` |
 | `/sip-byoc` | SIP trunking, Bring Your Own Carrier, Elastic SIP Trunking |
+| `/elastic-sip-trunking` | Deep Elastic SIP Trunking — trunk lifecycle, routing, recording, security, auth, diagnostics |
 
-### Messaging
+### AI Agents & Middleware
+| Skill | Use When |
+|-------|----------|
+| `` | Connecting LLM apps to Twilio voice/SMS via middleware,  integration |
+| `/conversationrelay` | Building voice AI agents with ConversationRelay — TwiML attributes, WebSocket protocol, STT/TTS providers, ngrok setup, CI integration |
+| `/synthetic-calls` | Generating bulk synthetic calls with customer personas, stress-testing voice AI, building demo data at scale |
+
+### Messaging & Email
 | Skill | Use When |
 |-------|----------|
 | `/messaging` | SMS/MMS sending, receiving, webhooks, carrier behavior |
 | `/messaging-services` | Campaign management, A2P 10DLC, messaging templates, sender pools |
+| `/sendgrid-email` | Sending transactional/bulk email, dynamic templates, event webhooks, Inbound Parse, suppressions |
 
 ### Identity & Security
 | Skill | Use When |
 |-------|----------|
+| `/iam` | Authentication methods, API keys (Standard/Main/Restricted), Access Tokens, auth token rotation, subaccounts, test credentials, PKCV |
 | `/verify` | Phone/email OTP verification, fraud prevention |
+| `/lookup` | Phone number intelligence — line type, carrier, CNAM, SIM swap, SMS pumping risk, identity match |
+| `/branded-calling` | Branded Calling (Basic/Enhanced), SHAKEN/STIR attestation, Voice Integrity spam remediation, CNAM, improving answer rates |
 | `/compliance-regulatory` | GDPR, TCPA, PCI, HIPAA, A2P 10DLC compliance |
 
 ### Data & Orchestration
 | Skill | Use When |
 |-------|----------|
-| `/sync` | Real-time state sync (documents, lists, maps), live dashboards |
-| `/taskrouter` | Skills-based routing, contact center queuing, worker management |
+| `/segment` | Segment Connections — sources, destinations, custom Functions, Reverse ETL, Segment Spec, connection modes, data pipeline design |
+| `/sync` | Real-time state sync — Documents, Lists, Maps, Streams, TTL lifecycle, data type selection, MCP tool gaps, error codes |
+| `/` |  () — profiles, traits, observations, Recall, identity resolution, AI-powered personalization |
+| `/conversations` | Multi-channel conversation tracking (Conversations), omnichannel history, participant types, v1 migration |
+| `/voice-intelligence` | Real-time/post-call conversation analysis, Language Operators, sentiment, agent assist, cross-channel analytics (v3 API) |
+| `` | Unified Voice AI stack — Conversations +  + Voice Intelligence pipeline, end-to-end setup, cross-product integration patterns and gotchas |
+| `/taskrouter` | Skills-based routing — workflows, queues, expressions, reservations, assignment callbacks, 30 MCP tools |
+| `/event-streams` | Streaming Twilio events to webhooks/Kinesis/Segment — sinks, subscriptions, CloudEvents, deduplication |
 | `/callbacks` | Status webhooks, delivery receipts, event handling |
 
 ### Payments & Privacy
@@ -46,18 +68,20 @@ If the user provided a use case or question, match it to the relevant skills bel
 |-------|----------|
 | `/payments` | Choosing between Pay, Pay Connectors, and custom payment flows |
 | `/pay` | PCI-compliant payment collection during voice calls |
-| `/proxy` | Phone number masking, anonymous communications |
+| `/proxy` | Number masking (rider/driver, buyer/seller) — sessions, pools, webhooks, geo-matching. Public Beta. |
 
 ### Video
 | Skill | Use When |
 |-------|----------|
 | `/video` | Video rooms, participants, tracks, use case selection |
 | `/video-patterns` | Compositions, recordings, network optimization, SDK integration |
+| `/ios-sdk` | Native iOS apps — Voice SDK CallKit/PushKit, Video SDK tracks/rooms, permissions, background modes |
 
 ### Infrastructure & Tools
 | Skill | Use When |
 |-------|----------|
-| `/twilio-cli` | CLI flags, profiles, deployment patterns, troubleshooting |
+| `/phone-numbers` | Searching, purchasing, configuring webhooks, releasing phone numbers |
+| `/twilio-cli` | CLI vs MCP vs Console decision guide — profiles, deployment, CLI-only operations, serverless toolkit |
 | `/tool-boundaries` | Deciding between MCP tools, CLI, and Serverless Functions |
 | `/twilio-invariants` | Architectural rules that prevent subtle bugs (credential patterns, FriendlyName limits, etc.) |
 | `/env-doctor` | Environment validation, credential troubleshooting |
@@ -75,7 +99,6 @@ If the user provided a use case or question, match it to the relevant skills bel
 | `/memory-systems` | Session memory, project state, cross-session persistence |
 | `/brainstorm` | Feature ideation, design space exploration |
 | `/workflows` | Pipeline overview (architect → spec → test-gen → dev → review → docs) |
-| `/skill-builder` | Building new domain skills — research, testing, synthesis, adversarial validation |
 
 ## Use Case Quick Reference
 
@@ -83,18 +106,28 @@ If the user provided a use case or question, match it to the relevant skills bel
 |--------------|------------|
 | Build an IVR | `/voice` then `/voice-use-case-map` |
 | Add phone verification | `/verify` |
+| Check phone number type/carrier/fraud | `/lookup` |
 | Send SMS/MMS | `/messaging` |
-| Build a voice AI agent | `/conversation-relay` |
+| Send transactional email | `/sendgrid-email` |
+| Build a voice AI agent | `/conversationrelay` or `` |
+| Connect LLM to Twilio with customer memory | `` then `/` |
+| Store customer context across sessions | `/` |
 | Process real-time audio | `/media-streams` |
 | Handle payments over the phone | `/pay` |
 | Build a contact center | `/taskrouter` then `/voice` |
-| Add video to my app | `/video` |
+| Add video to my app | `/video` then `/ios-sdk` or `/android-sdk` for native |
+| Build a native iOS calling app | `/ios-sdk` then `/voice-sdks` |
+| Build native Android calling/video app | `/android-sdk` |
 | Mask phone numbers | `/proxy` |
 | Sync real-time state | `/sync` |
-| Connect my SIP infrastructure | `/sip-byoc` |
+| Connect my SIP infrastructure | `/sip` or `/elastic-sip-trunking` |
 | Set up A2P 10DLC | `/messaging-services` then `/compliance-regulatory` |
+| Analyze conversations with AI (sentiment, summary, agent assist) | `/voice-intelligence` |
+| Stream events to my analytics pipeline | `/event-streams` |
 | Debug a failing call | `/deep-validation` then `/operational-gotchas` |
 | Understand what MCP tools to use | `/tool-boundaries` |
+| Build a data pipeline with Segment | `/segment` |
+| Write custom Segment Functions | `/segment` (see Functions reference) |
 | Start a new Twilio project | `/getting-started` |
 
 ## Arguments

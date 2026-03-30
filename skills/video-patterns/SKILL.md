@@ -1,21 +1,23 @@
 ---
-name: "Video Patterns"
-description: Twilio Video serverless function patterns — token generation, room/recording/composition/transcription callbacks, and Sync logging.
+name: "video-patterns"
+description: "Twilio development skill: video-patterns"
 ---
 
 # Video Functions Context
 
-Twilio Video API patterns for video rooms, token generation, and status callbacks.
+This directory contains Twilio Video API functions for video rooms, token generation, and status callbacks.
 
 ## Functions
 
 | Function | Access | Purpose |
 |----------|--------|---------|
-| `token.js` | Public | Generate Video SDK access tokens |
-| `room-status.protected.js` | Protected | Room and participant status callbacks |
-| `recording-status.protected.js` | Protected | Track recording callbacks |
-| `composition-status.protected.js` | Protected | Composition callbacks |
-| `transcription-status.protected.js` | Protected | Real-time transcription callbacks |
+| `token.js` | Public* | Generate Video SDK access tokens |
+| `callbacks/room-status.protected.js` | Protected | Room and participant status callbacks |
+| `callbacks/recording-status.protected.js` | Protected | Track recording callbacks |
+| `callbacks/composition-status.protected.js` | Protected | Composition callbacks |
+| `callbacks/transcription-status.protected.js` | Protected | Real-time transcription callbacks |
+
+*`token.js` is intentionally public because browser clients cannot generate Twilio request signatures. For production, add application-level auth (API key, session token, CORS).
 
 ## Room Types
 
@@ -23,14 +25,14 @@ Twilio Video API patterns for video rooms, token generation, and status callback
 
 | Room Type | Recommendation | Why |
 |-----------|----------------|-----|
-| `group` | ALWAYS | HIPAA-eligible, full features, scalable |
-| `group-small` | AVOID | Legacy alias, use `group` instead |
-| `peer-to-peer` | NEVER | Not HIPAA-eligible, limited features |
-| `go` | NEVER | Not HIPAA-eligible, legacy WebRTC |
+| `group` | ✅ ALWAYS | HIPAA-eligible, full features, scalable |
+| `group-small` | ❌ AVOID | Legacy alias, use `group` instead |
+| `peer-to-peer` | ❌ NEVER | Not HIPAA-eligible, limited features |
+| `go` | ❌ NEVER | Not HIPAA-eligible, legacy WebRTC |
 
 ## Token Generation
 
-The token endpoint generates JWT access tokens for the Video SDK.
+The `token.js` endpoint generates JWT access tokens for the Video SDK.
 
 **Parameters:**
 - `identity` (optional): Participant identity, defaults to `video-user-{timestamp}`
@@ -123,18 +125,12 @@ await client.video.v1.compositionHooks.create({
 
 ## Deep Validation
 
-Use MCP tool `validate_video_room` after room creation to verify:
-- Room status and type
-- Participant connections
-- Published tracks
-- Recording/composition status
-
 Callbacks log to Sync for deep validation:
 - `callbacks-video-room-{RoomSid}` - Room/participant events
 - `callbacks-video-recording-{RecordingSid}` - Recording events
 - `callbacks-video-composition-{CompositionSid}` - Composition events
 
-After room creation, also verify:
+Use MCP tool `validate_video_room` after room creation to verify:
 - Room status and type
 - Participant connections
 - Published tracks
@@ -167,7 +163,7 @@ if (room.status === 'completed') {
 
 ### Storage Retention
 
-Without external S3 storage, recordings are deleted after 24 hours. Configure S3 in Console > Video > Recording Settings for production.
+Without external S3 storage, recordings are deleted after 24 hours. Configure S3 in Console → Video → Recording Settings for production.
 
 ## Logging Rules
 
@@ -188,10 +184,22 @@ response.setBody(JSON.stringify({ success: true }));
 
 ## E2E Testing
 
-Video SDK tests verify:
+A complete E2E test suite exists at `__tests__/e2e/video-sdk/`:
+
+```bash
+# Run video SDK tests
+npm run test:video-sdk
+
+# Run with visible browser
+npm run test:video-sdk:headed
+```
+
+Tests verify:
 - Token generation and room connection
 - Two-party video calls
 - Video stream rendering (dimensions > 0)
 - Audio stream detection (Web Audio API)
 - Room API state (type, participants)
 - Disconnect handling
+
+See `skills/video/SKILL.md` for detailed testing patterns.

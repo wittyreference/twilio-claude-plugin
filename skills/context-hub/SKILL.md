@@ -1,4 +1,9 @@
 ---
+name: "context-hub"
+description: "Twilio development skill: context-hub"
+---
+
+---
 name: context-hub
 description: External API documentation fetcher. Use when writing code that calls external APIs (OpenAI, Stripe, etc.) to get curated docs and prevent hallucinated API shapes.
 ---

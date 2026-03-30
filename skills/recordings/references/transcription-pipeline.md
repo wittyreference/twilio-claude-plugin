@@ -1,10 +1,10 @@
 ---
-name: transcription-pipeline
-description: End-to-end recording-to-transcription workflow with Voice Intelligence.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: End-to-end recording-to-transcription workflow with Voice Intelligence. -->
-<!-- ABOUTME: Covers transcript creation, channel mapping, Language Operators, and patterns. -->
+<!-- ABOUTME: Covers transcript creation, channel mapping, Language Operators, and codebase patterns. -->
 
 # Recording → Transcription Pipeline
 
@@ -19,6 +19,7 @@ description: End-to-end recording-to-transcription workflow with Voice Intellige
 When a recording completes, the `recordingStatusCallback` fires:
 
 ```javascript
+// recording-complete.protected.js
 exports.handler = async function (context, event, callback) {
   const { RecordingSid, RecordingUrl, RecordingStatus, CallSid } = event;
 
@@ -76,6 +77,7 @@ Voice Intelligence sends a webhook when the transcript is ready:
 Configure in Console: Voice → Voice Intelligence → [Service] → Webhooks.
 
 ```javascript
+// transcript-complete.js
 const { transcript_sid, customer_key, event_type } = event;
 
 if (event_type !== 'voice_intelligence_transcript_available') {
@@ -115,6 +117,18 @@ for (const op of ops) {
   console.log(op.name, op.extractedResults);
 }
 ```
+
+## Dual Service Pattern
+
+Use separate Intelligence Services to control which operators run:
+
+| Service | Operators | Use Case |
+|---------|-----------|----------|
+| `twilio-agent-factory` | Summary + Sentiment (auto) | Demo calls, production |
+| `recording-validation` | 5 custom validators | Recording matrix testing |
+| `no-auto-transcribe` | None | Manual transcript creation, no operators |
+
+Operators are per-service and auto-run on ALL transcripts. No per-transcript bypass. Create separate services for different operator sets.
 
 ## MCP Validation Flow
 

@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Adversarial assertion audit log for the Real-Time Transcription skill. -->
 <!-- ABOUTME: Every factual claim verified against live test evidence or official documentation. -->
 
@@ -109,8 +114,8 @@ Note: 177 raw assertions were extracted; 25 were duplicates of the same claim st
 | 172-173 | `intelligenceService`: Service SID or name for post-call analysis | CONFIRMED | twilio.com/docs + changelog |
 | 176-177 | `name`: alphanumeric identifier for API referencing | CONFIRMED | twilio.com/docs/voice/api/realtime-transcription-resource |
 | 60, 156 | Google models: `telephony`, `short` | CONFIRMED | twilio.com/docs: "Google STTv2 models" |
-| 14-15 | Cannot transcribe encrypted recordings (VI batch) | CONFIRMED | Twilio documentation |
-| 81-82 | `TranscriptionText` is Video's field, not voice RTT | CONFIRMED | Video callback handler uses `TranscriptionText`; voice RTT uses `TranscriptionData` (cross-referenced) |
+| 14-15 | Cannot transcribe encrypted recordings (VI batch) | CONFIRMED | Codebase knowledge: functions/voice/CLAUDE.md documents this |
+| 81-82 | `TranscriptionText` is Video's field, not voice RTT | CONFIRMED | Video callback handler uses `TranscriptionText`; voice RTT uses `TranscriptionData` (cross-referenced code) |
 
 ---
 
@@ -118,11 +123,11 @@ Note: 177 raw assertions were extracted; 25 were duplicates of the same claim st
 
 | # | Assertion | Verdict | Source |
 |---|-----------|---------|--------|
-| 9, 160-163 | `inboundTrackLabel`/`outboundTrackLabel` attributes exist | CONFIRMED | Deepgram skill documents them with TwiML syntax |
-| 106-110 | Model naming differs across products (RTT bare, Gather prefix, CR full) | CONFIRMED | Deepgram skill Attribute Name Map — live-tested across all 3 products |
-| 34 | ConversationRelay has built-in STT, sub-second latency | CONFIRMED | Voice skill Transcription Method Selection |
-| 36 | Voice Intelligence batch: minutes latency, full operator support | CONFIRMED | Voice skill Transcription Method Selection |
-| 149 | Results available via `list_operator_results` MCP tool | CONFIRMED | MCP server REFERENCE.md — Intelligence tools section |
+| 9, 160-163 | `inboundTrackLabel`/`outboundTrackLabel` attributes exist | CONFIRMED | deepgram/references/gather-and-transcription.md documents them with TwiML syntax |
+| 106-110 | Model naming differs across products (RTT bare, Gather prefix, CR full) | CONFIRMED | deepgram/SKILL.md §Attribute Name Map — live-tested across all 3 products |
+| 34 | ConversationRelay has built-in STT, sub-second latency | CONFIRMED | voice/SKILL.md §Transcription Method Selection |
+| 36 | Voice Intelligence batch: minutes latency, full operator support | CONFIRMED | voice/SKILL.md §Transcription Method Selection |
+| 149 | Results available via `list_operator_results` MCP tool | CONFIRMED | agents/mcp-servers/twilio/REFERENCE.md — Intelligence tools section |
 
 ---
 

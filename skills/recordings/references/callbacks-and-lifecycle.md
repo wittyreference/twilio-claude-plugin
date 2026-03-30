@@ -1,6 +1,6 @@
 ---
-name: callbacks-and-lifecycle
-description: Recording status callbacks, lifecycle states, and retrieval patterns.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Recording status callbacks, lifecycle states, and retrieval patterns. -->
@@ -32,7 +32,7 @@ All recording status callbacks include these fields (confirmed via live testing)
 
 | Field | Type | Example | Notes |
 |-------|------|---------|-------|
-| `AccountSid` | string | `AC...` | Account that owns the recording |
+| `AccountSid` | string | `ACb4de2...` | Account that owns the recording |
 | `CallSid` | string | `CA...` | Call the recording is associated with |
 | `RecordingSid` | string | `RE...` | Unique recording identifier |
 | `RecordingUrl` | string | `https://api.twilio.com/.../RE...` | **Without file extension** |
@@ -73,6 +73,7 @@ Default: only `completed` events fire.
 Twilio retries callbacks on non-200 responses. Always handle duplicates:
 
 ```javascript
+// Pattern from recording-complete.protected.js
 try {
   await client.sync.v1.services(syncSid).documents.create({
     uniqueName: `recording-${CallSid}`,

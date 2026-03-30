@@ -1,3 +1,8 @@
+---
+name: "references"
+description: "Twilio development skill: references"
+---
+
 <!-- ABOUTME: Conference participant lifecycle management via the Participants REST API. -->
 <!-- ABOUTME: Covers coach/whisper/barge mechanics, hold/mute, DTMF, rate limits, and regional hosting. -->
 

@@ -1,6 +1,6 @@
 ---
-name: channel-mapping-and-formats
-description: Dual-channel recording mechanics, channel assignment rules, and audio formats.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Dual-channel recording mechanics, channel assignment rules, and audio formats. -->

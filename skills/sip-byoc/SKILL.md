@@ -1,11 +1,18 @@
 ---
+name: "sip-byoc"
+description: "Twilio development skill: sip-byoc"
+---
+
+---
 name: sip-byoc
-description: Twilio SIP connectivity guide (SIP Interface, Elastic Trunking, BYOC). Use when working with enterprise telephony, SIP trunks, carrier connectivity, or PSTN integration.
+description: Twilio Elastic SIP Trunking and BYOC guide. Use when working with carrier-grade PSTN pipes or bring-your-own-carrier connectivity. For Programmable SIP (SIP Domains, registration, custom headers), use the `/sip` skill instead.
 ---
 
 # SIP Connectivity Development Skill
 
-Comprehensive guide for Twilio's three SIP connectivity options: SIP Interface (Programmable SIP), Elastic SIP Trunking, and BYOC. Load this skill when working with enterprise telephony, SIP infrastructure, or carrier connectivity.
+> **SIP Interface has moved.** For Programmable SIP (SIP Domains, SIP registration, custom headers, `<Dial><Sip>`), see [`.claude/skills/sip/SKILL.md`](/.claude/skills/sip/SKILL.md). This file covers Elastic SIP Trunking and BYOC only.
+
+Guide for Twilio's carrier connectivity options: Elastic SIP Trunking and BYOC. Load this skill when working with PSTN pipes, carrier trunks, or bring-your-own-carrier.
 
 ---
 
@@ -144,6 +151,8 @@ The SIP leg of the call is charged at $0.004/min. The PSTN leg (if any) is charg
 ---
 
 ## Elastic SIP Trunking
+
+> **Deep dive available**: For trunk lifecycle, recording modes, auth patterns, transfer configuration, origination routing, and live-tested gotchas, load `/.claude/skills/elastic-sip-trunking/SKILL.md`.
 
 ### What It Is
 

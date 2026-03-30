@@ -1,6 +1,6 @@
 ---
-name: use-cases-1-4
-description: Detailed product entries for voice use cases 1-4 (Notifications, IVR, Inbound Contact Center, Outbound Contact Center). Each product includes Why/When/Prereqs/Gotchas.
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 # Use Cases 1–4: Notifications, IVR, Contact Centers
