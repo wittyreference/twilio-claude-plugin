@@ -65,6 +65,13 @@ Add entries to the learnings file using the standard format:
 
 If a learning is stable and broadly applicable, promote it directly to the target doc (CLAUDE.md, design docs, etc.) and note "Promoted to: [target]" in the learnings entry.
 
+### 2b. Learnings Archival (if clearing)
+
+If learnings.md will be cleared (partially or fully):
+
+1. **First**: Append entries being removed to `learnings-archive.md` (same directory, insert below header, above existing entries)
+2. **Then**: Remove them from `learnings.md`
+
 ### 3. Update Documentation
 
 For each changed file, determine if documentation needs updating:
@@ -122,7 +129,18 @@ Example:
 
 If the session completed or progressed a tracked task, update the todo file.
 
-### 6. Infrastructure Health Checks
+### 6. Context Budget Check
+
+Quick health check on auto-loaded context size:
+
+```bash
+MEMORY_PATH="$HOME/.claude/projects/$(pwd | sed 's|/|-|g')/memory/MEMORY.md"
+wc -l CLAUDE.md "$MEMORY_PATH" 2>/dev/null
+```
+
+Report the MEMORY.md line count in the summary. If over 150 lines, flag it — entries beyond 200 are truncated and never seen. Prune by replacing promoted entries with pointers.
+
+### 7. Infrastructure Health Checks
 
 Quick checks that hooks and automation are still working:
 
@@ -135,7 +153,7 @@ If plans are not being archived after plan mode exits, verify the `archive-plan.
 
 Report any issues in the summary. Skip if healthy.
 
-### 7. Summary
+### 8. Summary
 
 Output what was updated:
 

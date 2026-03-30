@@ -86,6 +86,28 @@ Improve code quality while keeping tests green.
 - Change behavior
 - Break tests
 
+## TDD Enforcement
+
+### Pre-Phase Checks
+
+Before the Green Phase (dev), verify TDD was followed:
+
+1. **Tests must exist**: At least one test file from the Red Phase
+2. **Tests must fail**: Test status must be `failing` — if tests pass before implementation, they aren't testing new functionality
+3. **Coverage threshold**: After Green Phase, verify minimum coverage (80%+ lines recommended)
+
+If any check fails, go back to the Red Phase and fix the tests before proceeding.
+
+### Recovering from TDD Violations
+
+If you find yourself with passing tests before writing implementation:
+
+1. **Stop** — don't proceed to implementation
+2. Go back to the Red Phase
+3. Write tests for NEW functionality that doesn't exist yet
+4. Verify the new tests fail for the right reason (missing function/module, not syntax error)
+5. Resume the Green Phase
+
 ## Common TDD Pitfalls
 
 ### Pitfall 1: Tests Pass Before Implementation
