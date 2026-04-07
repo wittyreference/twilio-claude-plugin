@@ -4,11 +4,11 @@ description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Live test evidence matrix for Real-Time Transcription skill assertions. -->
-<!-- ABOUTME: All tests executed 2026-03-24 against account ACb4de2... with call SIDs and callback payloads. -->
+<!-- ABOUTME: All tests executed 2026-03-24 against account ACxx...xx with call SIDs and callback payloads. -->
 
 # RTT Test Results
 
-All tests executed 2026-03-24 against account ACb4de2....
+All tests executed 2026-03-24 against account ACxx...xx.
 Callback handler: `functions/callbacks/transcription-status.protected.js` → Sync logging.
 
 ---
@@ -114,7 +114,7 @@ Callback handler: `functions/callbacks/transcription-status.protected.js` → Sy
 **API Response**:
 ```json
 {
-  "account_sid": "ACb4de2...",
+  "account_sid": "ACxx...xx",
   "call_sid": "CA455c3c65745cef2195ebeb0236ff31db",
   "sid": "GTd914e4d9582d9c1ae89d87f91668f9c4",
   "status": "in-progress",

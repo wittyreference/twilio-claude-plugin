@@ -8,7 +8,7 @@ description: "Twilio development skill: references"
 
 # Lookup v2 Data Package Reference
 
-Complete response shapes and field enums for each data package. All response shapes verified via live testing (2026-03-29, account ACb4de2...) except where noted.
+Complete response shapes and field enums for each data package. All response shapes verified via live testing (2026-03-29, account ACxx...xx) except where noted.
 
 ---
 

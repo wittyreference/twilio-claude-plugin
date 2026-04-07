@@ -460,3 +460,4 @@ The android-sdk-lab uses a TestBridge HTTP server pattern (port 8765) to export 
 |-------|------|-------------|
 | Test results & evidence | `references/test-results.md` | Reviewing SDK behavior evidence from emulator testing |
 | Assertion audit | `references/assertion-audit.md` | Verifying provenance of every claim in this skill |
+| Voice SDK ↔ SIP bridge | `/skills/sip/references/sdk-sip-bridge.md` | Bridging SDK calls to SIP endpoints, codec negotiation, decision matrix |

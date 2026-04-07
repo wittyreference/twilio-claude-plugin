@@ -8,7 +8,7 @@ description: "Twilio development skill: references"
 
 # ConversationRelay WebSocket Protocol Reference
 
-All message formats verified by live testing (2026-03-28, account ACb4de2...). See [test-results.md](test-results.md) for SID evidence.
+All message formats verified by live testing (2026-03-28, account ACxx...xx). See [test-results.md](test-results.md) for SID evidence.
 
 ## Connection
 
@@ -35,8 +35,8 @@ Sent once immediately after WebSocket connection. Contains call metadata and cus
   "callSid": "CAb74ac38038b5378b26090bf02066450e",
   "parentCallSid": "",
   "accountSid": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-  "from": "+12069666002",
-  "to": "+12068990235",
+  "from": "+15551234567",
+  "to": "+15550100004",
   "forwardedFrom": "",
   "callerName": "",
   "direction": "outbound-api",

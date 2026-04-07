@@ -86,6 +86,8 @@ Twilio Serverless Functions have built-in constraints relevant to production dep
 | Memory | 256 MB | Large audio processing should happen externally |
 | Deployment size | 50 MB | Limit dependencies; use external packages via layers if needed |
 
+> **Callback-driven load multiplier**: Status callbacks multiply the effective concurrent load on your Functions. At 50 simultaneous calls with 6 callbacks each, your callback endpoints receive ~300 invocations — 10x the concurrent execution limit. See `operational-reference.md` → "Status Callback Resilience" for the thin-receiver pattern and thundering herd mitigation.
+
 ### When Functions Aren't Enough
 
 For production contact centers or high-volume voice applications, consider:

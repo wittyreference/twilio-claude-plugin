@@ -37,8 +37,8 @@ If the user provided a use case or question, match it to the relevant skills bel
 ### Messaging & Email
 | Skill | Use When |
 |-------|----------|
-| `/messaging` | SMS/MMS sending, receiving, webhooks, carrier behavior |
-| `/messaging-services` | Campaign management, A2P 10DLC, messaging templates, sender pools |
+| `/voice` (see `functions/messaging/CLAUDE.md`) | SMS/MMS — no dedicated skill; see function docs |
+| `/compliance-regulatory` | Campaign management, A2P 10DLC, messaging compliance |
 | `/sendgrid-email` | Sending transactional/bulk email, dynamic templates, event webhooks, Inbound Parse, suppressions |
 
 ### Identity & Security
@@ -61,20 +61,20 @@ If the user provided a use case or question, match it to the relevant skills bel
 | `` | Unified Voice AI stack — Conversations +  + Voice Intelligence pipeline, end-to-end setup, cross-product integration patterns and gotchas |
 | `/taskrouter` | Skills-based routing — workflows, queues, expressions, reservations, assignment callbacks, 30 MCP tools |
 | `/event-streams` | Streaming Twilio events to webhooks/Kinesis/Segment — sinks, subscriptions, CloudEvents, deduplication |
-| `/callbacks` | Status webhooks, delivery receipts, event handling |
+| `/event-streams` | Status webhooks, delivery receipts, event streaming |
 
 ### Payments & Privacy
 | Skill | Use When |
 |-------|----------|
 | `/payments` | Choosing between Pay, Pay Connectors, and custom payment flows |
-| `/pay` | PCI-compliant payment collection during voice calls |
+| `/payments` | PCI-compliant payment collection during voice calls |
 | `/proxy` | Number masking (rider/driver, buyer/seller) — sessions, pools, webhooks, geo-matching. Public Beta. |
 
 ### Video
 | Skill | Use When |
 |-------|----------|
 | `/video` | Video rooms, participants, tracks, use case selection |
-| `/video-patterns` | Compositions, recordings, network optimization, SDK integration |
+| `/video` | Compositions, recordings, network optimization, SDK integration |
 | `/ios-sdk` | Native iOS apps — Voice SDK CallKit/PushKit, Video SDK tracks/rooms, permissions, background modes |
 
 ### Infrastructure & Tools
@@ -82,23 +82,23 @@ If the user provided a use case or question, match it to the relevant skills bel
 |-------|----------|
 | `/phone-numbers` | Searching, purchasing, configuring webhooks, releasing phone numbers |
 | `/twilio-cli` | CLI vs MCP vs Console decision guide — profiles, deployment, CLI-only operations, serverless toolkit |
-| `/tool-boundaries` | Deciding between MCP tools, CLI, and Serverless Functions |
-| `/twilio-invariants` | Architectural rules that prevent subtle bugs (credential patterns, FriendlyName limits, etc.) |
+| `/twilio-cli` | Deciding between MCP tools, CLI, and Serverless Functions (see also `.claude/references/tool-boundaries.md`) |
+| See `.claude/rules/*-invariants.md` | Architectural rules that prevent subtle bugs (auto-loaded by hooks) |
 | `/env-doctor` | Environment validation, credential troubleshooting |
 | `/deep-validation` | Validating beyond HTTP 200 — Voice Insights, debugger alerts, status checks |
-| `/operational-gotchas` | Common debugging pitfalls, cross-cutting failure patterns |
+| See `.claude/references/operational-gotchas.md` | Common debugging pitfalls, cross-cutting failure patterns |
 
 ### Development Methodology
 | Skill | Use When |
 |-------|----------|
-| `/getting-started` | First time using the plugin, bootstrapping a new Twilio project |
+| See `QUICKSTART.md` | First time using the toolkit, bootstrapping a new Twilio project |
 | `/tdd-workflow` | Test-driven development cycle, red/green/refactor |
 | `/multi-agent-patterns` | Orchestrating multiple Claude agents, parallel workflows |
 | `/context-engineering` | Managing context window, compression techniques |
 | `/context-hub` | Fetching external API docs (OpenAI, Stripe, SendGrid) |
 | `/memory-systems` | Session memory, project state, cross-session persistence |
-| `/brainstorm` | Feature ideation, design space exploration |
-| `/workflows` | Pipeline overview (architect → spec → test-gen → dev → review → docs) |
+| See `.claude/references/brainstorm.md` | Feature ideation, design space exploration |
+| See `.claude/references/workflow-patterns.md` | Pipeline overview (architect → spec → test-gen → dev → review → docs) |
 
 ## Use Case Quick Reference
 

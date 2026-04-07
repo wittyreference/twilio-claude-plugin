@@ -13,7 +13,7 @@ allowed-tools: mcp__twilio__*, Read, Grep, Glob, Bash
 
 Decision-making guide for building voice AI agents with Twilio ConversationRelay. ConversationRelay handles STT, TTS, interruption, and DTMF — you provide a WebSocket server with your LLM logic.
 
-All claims backed by live testing (2026-03-28, account ACb4de2...). See [references/test-results.md](references/test-results.md) for call SIDs.
+All claims backed by live testing (2026-03-28, account ACxx...xx). See [references/test-results.md](references/test-results.md) for call SIDs.
 
 ---
 
@@ -29,7 +29,7 @@ All claims backed by live testing (2026-03-28, account ACb4de2...). See [referen
 - Partial transcript streaming (`partialPrompts`)
 - Audio playback via `play` message (URL-based)
 - Mid-session language switching via `language` message
-- Native Voice Intelligence integration via `intelligenceService` attribute
+- Voice Intelligence v2 integration via `intelligenceService` attribute
 - Debug telemetry (round-trip latency, speaker events, tokens played)
 - X-Twilio-Signature on WebSocket handshake for request validation
 - Custom parameters passed from TwiML to WebSocket setup message
@@ -38,13 +38,13 @@ All claims backed by live testing (2026-03-28, account ACb4de2...). See [referen
 
 ### What ConversationRelay Does NOT Do
 
-1. **No raw audio access** — text in, text out. For raw audio use `<Connect><Stream>` (see [media-streams skill](/skills/media-streams.md))
+1. **No raw audio access** — text in, text out. For raw audio use `<Connect><Stream>` (see [media-streams skill](/skills/media-streams/SKILL.md))
 2. **No custom STT/TTS engines** — limited to Google + Deepgram (STT) and Google + Amazon + ElevenLabs (TTS)
 3. **No WebSocket auto-reconnection** — if WS drops, call disconnects. Implement recovery via `<Connect action>` URL
 4. **No mid-session voice/provider changes** — voice and provider are set at TwiML time. Only language can be switched mid-session via the `language` WebSocket message
 5. **No SMS/messaging** — voice only. For omnichannel, see Voice API (public beta)
 6. **No built-in memory/context** — BYO conversation history and context management
-7. **Not PCI compliant with Voice Intelligence** — do not enable `intelligenceService` in PCI workflows
+7. **Not PCI compliant with Voice Intelligence v2** — do not enable `intelligenceService` in PCI workflows
 8. **No LLM integration** — pure transport layer. You bring your own LLM via the WebSocket server
 9. **Cannot mix with Media Streams** — `<Connect><Stream>` and `<Connect><ConversationRelay>` are mutually exclusive on the same call
 10. **No server-side recording** — use `<Start><Recording>` or call-level `record` parameter separately. Recording must be set up before `<Connect>` in TwiML
@@ -60,7 +60,7 @@ All claims backed by live testing (2026-03-28, account ACb4de2...). See [referen
 | Custom STT/TTS engine | **Media Streams** | Raw audio access via `<Connect><Stream>` |
 | Real-time transcription alongside other TwiML | **`<Start><Transcription>`** | Non-blocking, runs in background |
 | Voice + SMS from one codebase | **Voice API** (beta) | Channel abstraction layer over CR |
-| Post-call transcript analysis | **Voice Intelligence** | Batch processing of recordings |
+| Post-call transcript analysis | **Voice Intelligence v2** | Batch processing of recordings |
 | Simple speech input (menus, numbers) | **`<Gather>`** | Single-turn input, no WebSocket needed |
 
 ---
@@ -73,11 +73,11 @@ All claims backed by live testing (2026-03-28, account ACb4de2...). See [referen
 |--------|--------|----------|
 | Default (post-Sept 2025 accounts) | No | **Yes** |
 | Default (pre-Sept 2025 accounts) | **Yes** | No |
-| Model for phone audio | `telephony` | `nova-3-general` |
+| Model for phone audio | `telephony` | `flux-general-en` (recommended), `nova-3-general` |
 | Smart formatting (numbers, dates) | No | `deepgramSmartFormat="true"` (default on) |
 | Attribute to select | `transcriptionProvider="Google"` | `transcriptionProvider="Deepgram"` |
 
-**Recommendation**: Deepgram `nova-3-general` for most use cases. Google `telephony` if you need specific Google Cloud Speech features. For full model compatibility matrix, see the [Deepgram skill](/skills/deepgram/SKILL.md).
+**Recommendation**: Deepgram `flux-general-en` for voice AI agents (optimized for turn-taking). Fallback: `nova-3-general` if Flux unavailable. Google `telephony` only if you need specific Google Cloud Speech features. For full model compatibility matrix, see the [Deepgram skill](/skills/deepgram/SKILL.md).
 
 ### TTS Provider Selection
 
@@ -90,7 +90,7 @@ All claims backed by live testing (2026-03-28, account ACb4de2...). See [referen
 | Text normalization | Automatic | Automatic | Manual or `elevenlabsTextNormalization="on"` |
 | Chirp3-HD naming | Omit `Google.` prefix | N/A | N/A |
 
-**Recommendation**: Google Neural2 for reliability. Chirp3-HD for highest quality (omit `Google.` prefix). ElevenLabs for premium voice quality if enabled on your account.
+**Recommendation**: ElevenLabs for production voice quality (requires account enablement). Default voice: Jessica (`cgSgspJ2msm6clMCkdW9`). Always set `elevenlabsTextNormalization: "on"`. Fallback: Google Neural2 if ElevenLabs not enabled on account.
 
 ### When to Add Recording
 
@@ -137,11 +137,12 @@ const connect = twiml.connect({
 connect.conversationRelay({
   url: context.CONVERSATION_RELAY_URL,
   // TTS
-  ttsProvider: 'Google',
-  voice: 'Google.en-US-Neural2-F',
+  ttsProvider: 'ElevenLabs',
+  voice: 'cgSgspJ2msm6clMCkdW9',          // ElevenLabs Jessica
+  elevenlabsTextNormalization: 'on',
   // STT
   transcriptionProvider: 'deepgram',
-  speechModel: 'nova-3-general',
+  speechModel: 'flux-general-en',
   // Language
   language: 'en-US',
   // Behavior
@@ -154,7 +155,7 @@ connect.conversationRelay({
   partialPrompts: 'true',
   hints: 'Twilio, ConversationRelay, Deepgram',
   // Observability
-  intelligenceService: context.TWILIO_INTELLIGENCE_SERVICE_SID,
+  intelligenceService: context.TWILIO_INTELLIGENCE_SERVICE_SID, // GA-prefixed SID (Voice Intelligence v2)
   debug: 'debugging speaker-events tokens-played',
 });
 return callback(null, twiml);
@@ -328,19 +329,19 @@ await client.conferences(conferenceSid)
 
 Do NOT use `make_call(url=conference-TwiML)` — the `url` parameter controls the parent leg only.
 
-### ConversationRelay + Voice Intelligence
+### ConversationRelay + Voice Intelligence v2
 
-Add `intelligenceService` to get automatic post-call transcripts and Language Operator analysis without recording:
+Add `intelligenceService` to get automatic post-call transcripts and Language Operator analysis without recording. The `intelligenceService` attribute accepts GA-prefixed SIDs (`GA...`) for Voice Intelligence v2. For Voice Intelligence (cross-channel, real-time), use the Voice AI pipeline (Conversations Configuration with `intelligenceConfigurationIds`). Do NOT pass Voice Intelligence IDs (`intelligence_configuration_*`) to `intelligenceService`.
 
 ```javascript
 connect.conversationRelay({
   url: wsUrl,
-  intelligenceService: context.TWILIO_INTELLIGENCE_SERVICE_SID,
+  intelligenceService: context.TWILIO_INTELLIGENCE_SERVICE_SID, // GA-prefixed SID (Voice Intelligence v2)
   // ... other attributes
 });
 ```
 
-The transcript appears in Voice Intelligence with:
+The transcript appears in Voice Intelligence v2 with:
 - `source`: `"ConversationRelay"` (not "Recording")
 - `source_sid`: The session VX SID
 - Participants auto-labeled as "Virtual Agent" (channel 1) and customer phone (channel 2)
@@ -406,19 +407,29 @@ The `<Connect action>` URL receives `HandoffData` as a POST parameter. Return Tw
 
 ### Observability
 
-17. **Intelligence transcripts don't need recordings**: `intelligenceService` creates transcripts directly from the CR session. Source is `"ConversationRelay"` with `source_sid` = VX session SID. No `<Start><Recording>` required for Intelligence. [Evidence: CAb46f3db6 → GTa86955e6]
+17. **Voice Intelligence v2 transcripts don't need recordings**: `intelligenceService` creates transcripts directly from the CR session via Voice Intelligence v2. Source is `"ConversationRelay"` with `source_sid` = VX session SID. No `<Start><Recording>` required. [Evidence: CAb46f3db6 → GTa86955e6]
 
-18. **Intelligence is post-call only**: Language Operators execute after the CR session ends (when call hangs up or WS sends `end`). No real-time operator results during the call.
+18. **Voice Intelligence v2 is post-call only**: Language Operators execute after the CR session ends (when call hangs up or WS sends `end`). No real-time operator results during the call. For real-time analysis, use Voice Intelligence via Voice AI pipeline.
 
-19. **Intelligence is not PCI compliant**: Do not enable `intelligenceService` in workflows that handle payment card data.
+19. **Voice Intelligence v2 is not PCI compliant**: Do not enable `intelligenceService` in workflows that handle payment card data.
+
+20. **LLM response burst after connectivity gap**: If your LLM provider becomes temporarily unreachable while the WebSocket stays open, STT transcripts queue on Twilio's side. When connectivity resumes, your server receives a burst of queued transcripts. Do not process all of them — discard transcripts older than a threshold (e.g., 5 seconds) since the conversation context has moved on. Responding to stale transcripts creates a garbled experience where the AI addresses things the caller said 10+ seconds ago.
 
 ### Session Lifecycle
 
-20. **`SessionStatus` values differ by end reason**: `completed` = call hung up normally. `ended` = WebSocket sent `end` message. When `ended`, the call is still alive — action URL TwiML takes over. [Evidence: CA92eb48b1]
+21. **`SessionStatus` values differ by end reason**: `completed` = call hung up normally. `ended` = WebSocket sent `end` message. When `ended`, the call is still alive — action URL TwiML takes over. [Evidence: CA92eb48b1]
 
-21. **WebSocket disconnect = call disconnect**: No auto-reconnect. If your server crashes, the call ends. Implement redundancy at the server level, not the protocol level.
+22. **WebSocket disconnect = call disconnect**: No auto-reconnect. If your server crashes, the call ends. Implement redundancy at the server level, not the protocol level.
 
-22. **`handoffData` is a string, not parsed JSON**: The action callback receives `HandoffData` as a raw string. If you send JSON, the receiver must `JSON.parse()` it. [Evidence: CA92eb48b1]
+23. **`handoffData` is a string, not parsed JSON**: The action callback receives `HandoffData` as a raw string. If you send JSON, the receiver must `JSON.parse()` it. [Evidence: CA92eb48b1]
+
+### Operational Failure Modes
+
+24. **LLM credential expiration mid-conversation**: If your LLM API key expires or is rate-limited during an active call, the WebSocket stays open but your server stops sending `text` messages. Twilio's behavior: the caller hears silence indefinitely. After 10 consecutive empty/malformed responses, error 64105 fires and the WebSocket closes, ending the call. **Detection**: Track time-since-last-text-sent. If >5 seconds with pending prompts, your LLM is likely failing. **Recovery**: Send an `end` message with `handoffData` containing the failure reason, then return fallback TwiML from the action URL (e.g., `<Say>` an apology + `<Enqueue>` for a human agent).
+
+25. **LLM provider connectivity vs credential failure**: A network timeout returns a retryable error; an expired API key returns 401. Your WebSocket server must distinguish these — retry on timeout (with backoff), gracefully end on auth failure. If you retry auth failures, you burn through the 10-malformed-message budget sending empty responses while the caller waits.
+
+26. **Heartbeat pattern for LLM health**: Send a lightweight LLM request (e.g., single-token completion) every 30 seconds during idle periods. If it fails, proactively send an `end` message before the caller notices degradation. This catches credential expiration before it affects an active conversation turn.
 
 ---
 
@@ -438,11 +449,11 @@ The `<Connect action>` URL receives `HandoffData` as a POST parameter. Return Tw
 | Topic | Resource |
 |-------|----------|
 | Deepgram STT config | [Deepgram skill](/skills/deepgram/SKILL.md), especially [CR reference](/skills/deepgram/references/conversation-relay.md) |
-| Raw audio WebSocket | [Media Streams skill](/skills/media-streams.md) |
+| Raw audio WebSocket | [Media Streams skill](/skills/media-streams/SKILL.md) |
 | Call recording with CR | [Recordings skill](/skills/recordings/SKILL.md) |
 | Voice use case routing | [Voice Use Case Map](/skills/voice-use-case-map/SKILL.md) |
 | Real-time transcription | [RTT skill](/skills/real-time-transcription/SKILL.md) |
-| Voice Intelligence | `/voice-intelligence` skill (private beta — gitignored) |
+| Voice Intelligence v2 | `/voice-intelligence` skill (private beta — gitignored) |
 | Domain functions | `` ([CLAUDE.md](../../CLAUDE.md)) |
 | MCP tools | `mcp__twilio__make_call`, `mcp__twilio__validate_call`, `mcp__twilio__get_call` |
 

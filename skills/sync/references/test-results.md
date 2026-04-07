@@ -8,7 +8,7 @@ description: "Twilio development skill: references"
 
 # Sync Skill — Live Test Results
 
-Evidence date: 2026-03-25. Account: ACb4de. Service: IS8d793d6cb78bcc3367d66a7eb9ab1f0b.
+Evidence date: 2026-03-25. Account: ACxx...xx. Service: IS8d793d6cb78bcc3367d66a7eb9ab1f0b.
 
 All tests run via MCP tools and direct REST API (`curl`). Resources cleaned up after testing.
 

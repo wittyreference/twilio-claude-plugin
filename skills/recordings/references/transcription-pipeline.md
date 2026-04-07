@@ -77,7 +77,7 @@ Voice Intelligence sends a webhook when the transcript is ready:
 Configure in Console: Voice → Voice Intelligence → [Service] → Webhooks.
 
 ```javascript
-// transcript-complete.js
+// transcript-complete.protected.js
 const { transcript_sid, customer_key, event_type } = event;
 
 if (event_type !== 'voice_intelligence_transcript_available') {

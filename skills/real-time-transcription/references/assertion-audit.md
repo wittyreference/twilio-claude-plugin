@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Skill**: real-time-transcription
 **Audit date**: 2026-03-24
-**Account**: ACb4de2...
+**Account**: ACxx...xx
 **Auditor**: Claude + MC
 
 ## Summary

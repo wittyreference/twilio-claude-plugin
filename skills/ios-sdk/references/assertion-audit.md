@@ -4,7 +4,7 @@ description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Adversarial assertion audit for the iOS skill — provenance chain for every factual claim. -->
-<!-- ABOUTME: Produced during Phase 4 of skill-builder on 2026-03-29 against account ACb4de2... -->
+<!-- ABOUTME: Produced during Phase 4 of skill-builder on 2026-03-29 against account ACxx...xx -->
 
 # Assertion Audit Log
 

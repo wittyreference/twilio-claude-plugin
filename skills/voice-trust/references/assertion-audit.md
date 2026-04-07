@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Skill**: voice-trust
 **Audit date**: 2026-03-28
-**Account**: ACb4de2...
+**Account**: ACxx...xx
 **Auditor**: Claude + MC
 **Cross-referenced audits**: branded-calling (65 assertions), voice (T1-T23)
 

@@ -13,7 +13,7 @@ allowed-tools: mcp__twilio__*, Read, Grep, Glob
 
 Decision framework for the Twilio call trust stack and inbound caller verification. Load this skill when a developer needs to choose trust products for answer rate improvement, verify inbound caller identity via SHAKEN/STIR, preserve attestation across call transfers, or route calls based on trust level. This is a medium-freedom skill — there are preferred product combinations, but the right stack depends on the use case.
 
-**Evidence date**: 2026-03-28 | **Account**: ACb4de2... | **Branded Calling assertions**: 65 live-tested (see `/branded-calling` skill)
+**Evidence date**: 2026-03-28 | **Account**: ACxx...xx | **Branded Calling assertions**: 65 live-tested (see `/branded-calling` skill)
 
 ---
 

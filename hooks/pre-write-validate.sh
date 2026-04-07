@@ -16,16 +16,23 @@ fi
 FILE_PATH=""
 CONTENT=""
 if [ -n "$HOOK_INPUT" ] && ! command -v jq &> /dev/null; then
-    echo "BLOCKED: jq not installed — safety hooks cannot run (credential detection, pipeline gate, ABOUTME). Install: brew install jq" >&2
+    echo "BLOCKED: jq not installed — safety hooks cannot run (credential detection, pipeline gate, ABOUTME)." >&2
+    if command -v brew &>/dev/null; then echo "  Install: brew install jq" >&2
+    elif command -v apt-get &>/dev/null; then echo "  Install: sudo apt-get install -y jq" >&2
+    else echo "  Install jq: https://jqlang.github.io/jq/download/" >&2; fi
+    echo "  See .claude/references/hook-troubleshooting.md for details." >&2
     exit 2
 fi
 if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
     FILE_PATH="$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)"
     CONTENT="$(echo "$HOOK_INPUT" | jq -r '.tool_input.content // .tool_input.new_string // empty' 2>/dev/null)"
+    OLD_STRING="$(echo "$HOOK_INPUT" | jq -r '.tool_input.old_string // empty' 2>/dev/null)"
 fi
 
-# Exit early if no content to validate
-if [ -z "$CONTENT" ]; then
+# Exit early if no content to validate — unless this is a learnings.md edit
+# (Edit operations clearing learnings.md have empty new_string, which is
+# exactly the case the learnings archival guard needs to catch)
+if [ -z "$CONTENT" ] && [[ ! "$FILE_PATH" =~ learnings\.md$ ]]; then
     exit 0
 fi
 
@@ -37,6 +44,19 @@ fi
 HOOK_DIR="$(dirname "$0")"
 if [ -f "$HOOK_DIR/_meta-mode.sh" ]; then
 fi
+
+# Lazy bypass event logger — sources _emit-event.sh on first call only
+_log_bypass() {
+    local var_name="$1" tier="$2" context="$3"
+    if [ -z "${_BYPASS_LOGGER_INIT:-}" ]; then
+        if [ -f "$HOOK_DIR/_emit-event.sh" ]; then
+            source "$HOOK_DIR/_emit-event.sh"
+            EMIT_SESSION_ID="$(echo "$HOOK_INPUT" | jq -r '.session_id // empty' 2>/dev/null)"
+        fi
+        _BYPASS_LOGGER_INIT=1
+    fi
+    emit_event "bypass_used" "$(jq -nc         --arg var "$var_name"         --arg tier "$tier"         --arg ctx "$context"         '{bypass_var:$var, tier:$tier, context:$ctx}' 2>/dev/null)" 2>/dev/null || true
+}
 
 # Check meta-mode isolation (can be bypassed with CLAUDE_ALLOW_PRODUCTION_WRITE=true)
     # Get project root for path comparison
@@ -50,13 +70,15 @@ fi
     RESOLVED_PROJECT_ROOT="$(realpath "$PROJECT_ROOT" 2>/dev/null || echo "$PROJECT_ROOT")"
 
     # Compute relative path from both resolved and raw FILE_PATH.
+    # FILE_PATH is guaranteed absolute (CC v2.1.88+) but not symlink-resolved.
     # realpath resolves it outside PROJECT_ROOT, breaking the prefix strip.
     # Fall back to the raw FILE_PATH (relative to PROJECT_ROOT) for pattern matching.
     RELATIVE_PATH="${RESOLVED_FILE_PATH#$RESOLVED_PROJECT_ROOT/}"
     if [[ "$RELATIVE_PATH" == "$RESOLVED_FILE_PATH" ]]; then
         # Resolved path is outside project root — use raw path instead
         RELATIVE_PATH="${FILE_PATH#$RESOLVED_PROJECT_ROOT/}"
-        # If still absolute, try stripping unresolved PROJECT_ROOT
+        # If strip failed, try with unresolved PROJECT_ROOT
+        # (handles case where PROJECT_ROOT itself is under a symlink)
         if [[ "$RELATIVE_PATH" == "$FILE_PATH" ]]; then
             RELATIVE_PATH="${FILE_PATH#$PROJECT_ROOT/}"
         fi
@@ -124,6 +146,64 @@ fi
             exit 2
         fi
     fi
+    _log_bypass "CLAUDE_ALLOW_PRODUCTION_WRITE" "1" "meta-mode isolation bypassed for: ${FILE_PATH##*/}"
+fi
+
+# ============================================
+# WORKTREE ISOLATION CHECK (BLOCKING)
+# ============================================
+# Sessions that write code MUST use a worktree. Concurrent sessions on the main
+# tree cause merge conflicts and silent overwrites. Exempt: plans, logs, learnings,
+# .meta, and other session-infrastructure paths that don't affect production code.
+# Bypass: CLAUDE_ALLOW_MAIN_WRITE=true
+
+if [ "${CLAUDE_ALLOW_MAIN_WRITE:-}" != "true" ] && [ "${CI:-}" != "true" ]; then
+    PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+    _GIT_COMMON="$(git rev-parse --git-dir 2>/dev/null || echo "")"
+
+    # Not in a worktree if git-dir does NOT contain /worktrees/
+    if [ -n "$_GIT_COMMON" ] && ! echo "$_GIT_COMMON" | grep -q '/worktrees/'; then
+        # Check if file is inside the repo
+        _WC_DIR="$(dirname "$FILE_PATH")"
+        _WC_RESOLVED_DIR="$(realpath "$_WC_DIR" 2>/dev/null || echo "$_WC_DIR")"
+        _WC_RESOLVED_FILE="$_WC_RESOLVED_DIR/$(basename "$FILE_PATH")"
+        _WC_RESOLVED_ROOT="$(realpath "$PROJECT_ROOT" 2>/dev/null || echo "$PROJECT_ROOT")"
+        _WC_REL="${_WC_RESOLVED_FILE#$_WC_RESOLVED_ROOT/}"
+        if [[ "$_WC_REL" == "$_WC_RESOLVED_FILE" ]]; then
+            _WC_REL="${FILE_PATH#$_WC_RESOLVED_ROOT/}"
+            if [[ "$_WC_REL" == "$FILE_PATH" ]]; then
+                _WC_REL="${FILE_PATH#$PROJECT_ROOT/}"
+            fi
+        fi
+
+        # Only enforce for files inside the project root
+        if [[ "$_WC_REL" != "$FILE_PATH" ]]; then
+            _WC_EXEMPT=false
+            case "$_WC_REL" in
+                .claude/plans/*)        _WC_EXEMPT=true ;;
+                .claude/logs/*)         _WC_EXEMPT=true ;;
+                .claude/pending-actions.json) _WC_EXEMPT=true ;;
+                .claude/learnings.md)   _WC_EXEMPT=true ;;
+                .claude/.update-cache/*) _WC_EXEMPT=true ;;
+            esac
+
+            if [ "$_WC_EXEMPT" = "false" ]; then
+                echo "BLOCKED: Write to repo file outside of a worktree" >&2
+                echo "" >&2
+                echo "  File: $_WC_REL" >&2
+                echo "" >&2
+                echo "  Sessions that write code MUST use a worktree for isolation." >&2
+                echo "  Run /worktree-start or call EnterWorktree() first." >&2
+                echo "" >&2
+                echo "  If this is a one-off edit that genuinely doesn't need isolation:" >&2
+                echo "    CLAUDE_ALLOW_MAIN_WRITE=true <your command>" >&2
+                echo "" >&2
+                exit 2
+            fi
+        fi
+    fi
+else
+    _log_bypass "CLAUDE_ALLOW_MAIN_WRITE" "1" "worktree isolation bypassed for: ${FILE_PATH##*/}"
 fi
 
 # ============================================
@@ -133,6 +213,9 @@ fi
 # Prevents the doc-flywheel Step 3 archival step from being skipped.
 # Bypass: SKIP_LEARNINGS_GUARD=true
 
+if [[ "$SKIP_LEARNINGS_GUARD" = "true" ]] && [[ "$FILE_PATH" =~ learnings\.md$ ]]; then
+    _log_bypass "SKIP_LEARNINGS_GUARD" "2" "learnings archival guard bypassed"
+fi
 if [[ "$SKIP_LEARNINGS_GUARD" != "true" ]] && \
    [[ "$FILE_PATH" =~ learnings\.md$ ]] && \
    [[ ! "$FILE_PATH" =~ learnings-archive\.md$ ]]; then
@@ -142,7 +225,21 @@ if [[ "$SKIP_LEARNINGS_GUARD" != "true" ]] && \
     _LEARNINGS_REAL="$_LEARNINGS_REAL_DIR/$(basename "$FILE_PATH")"
     if [ -f "$_LEARNINGS_REAL" ]; then
         _CURRENT_LINES=$(wc -l < "$_LEARNINGS_REAL" | tr -d ' ')
-        _NEW_LINES=$(echo "$CONTENT" | wc -l | tr -d ' ')
+        # Compute expected line count after this operation
+        if [ -n "$OLD_STRING" ]; then
+            # Edit operation: expected = current - removed + added
+            _OLD_LINES=$(printf '%s' "$OLD_STRING" | wc -l | tr -d ' ')
+            if [ -n "$CONTENT" ]; then
+                _ADD_LINES=$(printf '%s' "$CONTENT" | wc -l | tr -d ' ')
+            else
+                _ADD_LINES=0
+            fi
+            _NEW_LINES=$(( _CURRENT_LINES - _OLD_LINES + _ADD_LINES ))
+            [ "$_NEW_LINES" -lt 0 ] && _NEW_LINES=0
+        else
+            # Write operation: CONTENT is the full replacement file
+            _NEW_LINES=$(printf '%s' "$CONTENT" | wc -l | tr -d ' ')
+        fi
         # Trigger: file >100 lines being reduced to <50% of current size
         if [ "$_CURRENT_LINES" -gt 100 ] && [ "$_NEW_LINES" -lt $(( _CURRENT_LINES / 2 )) ]; then
             _ARCHIVE_REAL="$_LEARNINGS_REAL_DIR/learnings-archive.md"
@@ -174,11 +271,11 @@ fi
 # RESOLVE PATHS FOR DOWNSTREAM CHECKS
 # ============================================
 # Resolve symlinks once for all downstream sections.
-# macOS: /tmp → /private/tmp causes ${FILE_PATH#$PROJECT_ROOT/} to fail
-# when git rev-parse returns /private/tmp but Claude passes /tmp.
+# FILE_PATH is guaranteed absolute (CC v2.1.88+) but not symlink-resolved.
+# macOS: /tmp → /private/tmp still requires realpath resolution.
 # For new files (pre-write), realpath fails on the file itself because it
 # doesn't exist yet. Resolve the directory portion instead, then reattach
-# the filename. This handles the /tmp → /private/tmp symlink on macOS.
+# the filename.
 PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 _FILE_DIR="$(dirname "$FILE_PATH")"
 _RESOLVED_DIR="$(realpath "$_FILE_DIR" 2>/dev/null || echo "$_FILE_DIR")"
@@ -342,6 +439,7 @@ if { [[ "$FILE_PATH" =~ functions/.*\.js$ ]] || [[ "$RESOLVED_FILE_PATH" =~ func
         # Skip if override is set
         if [ "${SKIP_PIPELINE_GATE:-}" = "true" ]; then
             echo "Pipeline gate bypassed (SKIP_PIPELINE_GATE=true)" >&2
+            _log_bypass "SKIP_PIPELINE_GATE" "1" "TDD pipeline gate bypassed for: ${FILE_PATH##*/}"
         else
             # Derive expected test path
             # functions/voice/ivr-welcome.js → __tests__/unit/voice/ivr-welcome.test.js

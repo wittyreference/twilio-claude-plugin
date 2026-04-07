@@ -14,13 +14,13 @@ description: Twilio Proxy number masking guide. Use when building anonymous comm
 
 Anonymous number masking between two parties. Covers session lifecycle, participant management, number pool strategy, webhook types, and error handling. **Proxy is Public Beta, closed to new customers** — existing customers can continue using it but it is not covered by Twilio SLA.
 
-Evidence date: 2026-03-25. Account prefix: ACb4de. Services: KS7631760e (deleted), KS9493ceb9 (deleted).
+Evidence date: 2026-03-25. Account prefix: AC... Services: KS7631760e (deleted), KS9493ceb9 (deleted).
 
 ## Scope
 
 ### CAN
 
-- Mask phone numbers between exactly 2 participants per session <!-- verified: KP6aef10ec + KPbe9b838f, both got proxy +12067597288 -->
+- Mask phone numbers between exactly 2 participants per session <!-- verified: KP6aef10ec + KPbe9b838f, both got proxy +15550100001 -->
 - Voice calls and SMS through masked proxy numbers, configurable per session mode <!-- verified: KC3dce86d0, mode=voice-and-message -->
 - Auto-assign proxy numbers from the service's number pool based on geo-matching and stickiness <!-- verified: KP6aef10ec, auto-assigned from pool -->
 - Three session modes: `voice-and-message`, `voice-only`, `message-only` <!-- verified: KC3dce86d0 -->
@@ -194,13 +194,13 @@ Fires when an inbound call/SMS arrives on a proxy number with no matching active
 
 9. **Participant identifiers must be real, reachable numbers**: Proxy validates phone number reachability on add. Fake test numbers (like `+15551234567`) return 80404. Use real Twilio numbers or real mobile numbers for testing. [Evidence: 80404 on +15551234567]
 
-10. **Both participants share the same proxy number**: In a 2-party session with 1 pool number, both participants are assigned the same proxy number. Proxy routes based on who's calling — when A calls the proxy number, it connects to B, and vice versa. [Evidence: KP6aef10ec and KPbe9b838f both got +12067597288]
+10. **Both participants share the same proxy number**: In a 2-party session with 1 pool number, both participants are assigned the same proxy number. Proxy routes based on who's calling — when A calls the proxy number, it connects to B, and vice versa. [Evidence: KP6aef10ec and KPbe9b838f both got +15550100001]
 
 11. **Reserved numbers are excluded from auto-assignment**: Even with explicit `ProxyIdentifierSid`, reserved numbers may be rejected (80207). The documented behavior of explicit reserved number assignment did not work in live testing. To use a specific number, keep it unreserved. [Evidence: KCec4577f8, 80207 even with ProxyIdentifierSid]
 
 12. **Max 2 participants is not configurable**: Hard platform limit. For multi-party scenarios, create multiple Proxy sessions. [Evidence: 80609]
 
-13. **Duplicate participant identifier rejected**: Same phone number cannot appear twice in one session. Error 80103. [Evidence: duplicate +12069666002]
+13. **Duplicate participant identifier rejected**: Same phone number cannot appear twice in one session. Error 80103. [Evidence: duplicate +15551234567]
 
 ### Number Pool Limits
 

@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Skill**: Video
 **Audit date**: 2026-03-28
-**Account**: ACb4de2... (API Key auth)
+**Account**: ACxx...xx (API Key auth)
 **Auditor**: Claude (skill-builder validation)
 
 ## Summary

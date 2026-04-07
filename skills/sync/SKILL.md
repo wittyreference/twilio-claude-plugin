@@ -14,7 +14,7 @@ description: Twilio Sync development guide. Use when building real-time state sy
 
 Real-time state synchronization via four primitives: Documents (single JSON objects), Lists (ordered collections), Maps (key-value stores), and Streams (ephemeral pub/sub). Covers data type selection, TTL lifecycle, conflict resolution, MCP tool coverage, and error handling.
 
-Evidence date: 2026-03-25. Account prefix: ACb4de. Service: IS8d793d.
+Evidence date: 2026-03-25. Account prefix: AC... Service: IS8d793d.
 
 > **WARNING: Slash characters in Map keys cause silent data loss.** Keys containing `/` can be created but cannot be fetched, updated, or deleted via REST API or MCP tools. They become permanently orphaned. The MCP `add_sync_map_item` tool validates against this. See Gotcha #5.
 
@@ -48,7 +48,7 @@ Evidence date: 2026-03-25. Account prefix: ACb4de. Service: IS8d793d.
 - **No slash characters in Map keys** — Keys containing `/` can be created but **cannot be individually fetched, updated, or deleted** via REST API because the slash is interpreted as a URL path separator. They become orphaned — visible only via list/validate operations. This applies to both MCP tools and direct REST calls. <!-- verified: MPd79ca1ac, "key/with/slashes" created OK, get/remove returns "Parameter 'key' is not valid" -->
 - **Stream messages are not persisted** — No fetch, list, update, or delete operations exist. Messages are fire-and-forget with no delivery guarantee and no ordering guarantee. Max 30 msg/s per stream. <!-- verified: twilio.com/docs/sync/api/stream-message-resource -->
 - **MCP Stream tools cover lifecycle and publish only** — `create_sync_stream`, `list_sync_streams`, `delete_sync_stream`, and `publish_stream_message` are available via MCP. Stream messages themselves cannot be fetched, updated, or deleted (they are ephemeral).
-- **No `delete_sync_map` MCP tool** — Maps can only be deleted via REST API (`DELETE /v1/Services/{ServiceSid}/Maps/{MapSid}`, returns 204). <!-- verified: had to use curl to delete MPd79ca1ac -->
+- **`delete_sync_map` MCP tool exists** — Maps can be deleted via MCP (`mcp__twilio__delete_sync_map`) or REST API (`DELETE /v1/Services/{ServiceSid}/Maps/{MapSid}`, returns 204).
 - **No conditional updates via MCP** — `If-Match` header for optimistic concurrency is REST-only. MCP update tools always perform unconditional last-write-wins. <!-- verified: MCP tool schemas have no ifMatch/revision parameter -->
 - **No `get_sync_list` or `get_sync_map` MCP tools** — Cannot fetch container metadata (revision, dateExpires) via MCP. Use `validate_sync_list` / `validate_sync_map` as a workaround.
 - **No `get_sync_list_item` MCP tool** — Cannot fetch a single List item by index via MCP. Use `list_sync_list_items` with `from` param as a workaround.
@@ -82,7 +82,7 @@ Evidence date: 2026-03-25. Account prefix: ACb4de. Service: IS8d793d.
 | Ordering | N/A | Insertion order (indices) | Lexicographic by key | None guaranteed |
 | TTL support | On document | On list + per item | On map + per item | On stream |
 | Webhook events | create/update/remove | create/remove + item add/update/remove | create/remove + item add/update/remove | message_published |
-| MCP tool coverage | Full CRUD | Most operations (no single-item fetch) | Most operations (no container delete) | Create, list, delete stream + publish message |
+| MCP tool coverage | Full CRUD | Most operations (no single-item fetch) | Most operations (no container fetch) | Create, list, delete stream + publish message |
 | Conflict resolution | Last-write-wins (or If-Match) | Last-write-wins per item | Last-write-wins per item | N/A |
 
 ### TTL Strategy
@@ -132,12 +132,13 @@ Note: If-Match requires REST API. MCP tools always use unconditional writes.
 | `mcp__twilio__update_sync_list_item` | Update item (full replace) | `listSidOrName`, `index`, `data` (required), `ttl` |
 | `mcp__twilio__remove_sync_list_item` | Delete item | `listSidOrName`, `index` |
 
-### Maps (6 tools — no container fetch, no container delete)
+### Maps (7 tools — no container fetch)
 
 | Tool | Operation | Key params |
 |------|-----------|-----------|
 | `mcp__twilio__create_sync_map` | Create map | `uniqueName`, `ttl` |
 | `mcp__twilio__list_sync_maps` | List all maps | `limit` |
+| `mcp__twilio__delete_sync_map` | Delete map + all items | `mapSidOrName` |
 | `mcp__twilio__add_sync_map_item` | Create item (NOT upsert) | `mapSidOrName`, `key` (required), `data` (required), `ttl` |
 | `mcp__twilio__get_sync_map_item` | Fetch item by key | `mapSidOrName`, `key` |
 | `mcp__twilio__update_sync_map_item` | Update item (full replace) | `mapSidOrName`, `key`, `data` (required), `ttl` |
@@ -164,7 +165,6 @@ Note: If-Match requires REST API. MCP tools always use unconditional writes.
 
 | Operation | REST method | Notes |
 |-----------|------------|-------|
-| Delete a Map | `DELETE /v1/Services/{ServiceSid}/Maps/{MapSid}` | Returns 204 |
 | Fetch a List by SID | `GET /v1/Services/{ServiceSid}/Lists/{ListSid}` | For dateExpires, revision |
 | Fetch a Map by SID | `GET /v1/Services/{ServiceSid}/Maps/{MapSid}` | For dateExpires, revision |
 | Fetch single List item | `GET /v1/Services/{ServiceSid}/Lists/{ListSid}/Items/{Index}` | By index |
@@ -225,11 +225,33 @@ Note: If-Match requires REST API. MCP tools always use unconditional writes.
 
 19. **Object creation/deletion rate is per service**: 20 objects/s per service, not per object type. Creating 20 documents/s leaves no room for creating lists or maps in the same second. <!-- verified: twilio.com/docs/sync/limits -->
 
+### Burst Rate Limits
+
+Sync enforces per-object write rate limits:
+- **Documents**: 1 write/second per document
+- **Map Items**: 1 write/second per item, 20 writes/second per map
+- **List Items**: 1 write/second per item, 20 writes/second per list
+
+**High-volume patterns** (e.g., call tracking writing attribution on every inbound call): use Sync Maps with unique keys per call instead of updating a single Document. For burst scenarios (100+ concurrent writes), consider:
+- Fire-and-forget pattern: write asynchronously, don't block the TwiML response
+- Use `batchWithRateLimit()` from `helpers/resilience-patterns.private.js` with `concurrency: 1, delayMs: 50`
+- For analytics aggregation, batch writes via Event Streams → external datastore instead of direct Sync writes
+
 ### MCP-Specific
 
 20. **`created_by` is always "system" for MCP/REST operations**: SDK operations show the token identity. This matters for audit trails and webhook payloads. [Evidence: ETc9642713, created_by: "system"]
 
 21. **MCP `list_sync_list_items` supports order and from**: Unlike some MCP tools that strip query params, the Sync list items tool properly supports `order` (asc/desc) and `from` (index) for pagination. [Evidence: ES0251800d, order=desc returned 4,2,0]
+
+### Production Monitoring
+
+Sync operations can fail silently when called in fire-and-forget patterns (common in callback handlers and event pipelines). A Function that catches a Sync error and logs it continues executing — the call or message succeeds, but the data write is lost.
+
+**Monitoring patterns:**
+- **Wrap writes in try/catch with structured logging**: Log Sync failures to `console.log` (not `console.error` — see serverless invariants) with the operation type, key, and error code. Alert on error code patterns: 54006 (payload too large), 54007 (rate limit exceeded), 20404 (service/resource not found).
+- **Periodic state validation**: Use `validate_sync_document`, `validate_sync_list`, or `validate_sync_map` MCP tools to verify expected state exists. Schedule validation checks after batch operations.
+- **Rate limit awareness**: Sync enforces 1 write/second per Document, 20 operations/second per Service. If you observe 54007 errors, redesign the data model — use multiple Map items instead of a single Document with frequent updates.
+- **Credential rotation**: After rotating `TWILIO_SYNC_SERVICE_SID` or auth credentials, redeploy all Functions that reference Sync. Deployed Functions cache environment variables at deploy time — changing `.env` without redeploying leaves Functions using stale SIDs, producing silent 20404 errors.
 
 ## Related Resources
 

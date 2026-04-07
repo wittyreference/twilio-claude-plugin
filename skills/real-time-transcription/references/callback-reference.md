@@ -20,7 +20,7 @@ Fires when the transcription engine initializes. One per transcription session.
 |-------|------|---------|-------|
 | `TranscriptionSid` | string | `GT63c89e12a03eb7...` | GT-prefixed SID identifying this transcription |
 | `CallSid` | string | `CAfc052e3cb39d95...` | Associated call |
-| `AccountSid` | string | `ACb4de277f6d5544...` | Account |
+| `AccountSid` | string | `ACxxxxxxxxxxxx...` | Account |
 | `TranscriptionEvent` | string | `transcription-started` | Event type |
 | `TranscriptionEngine` | string | `google` or `deepgram` | Confirms which engine is active |
 | `ProviderConfiguration` | JSON string | `{"profanityFilter":"true","speechModel":"telephony","enableAutomaticPunctuation":"true"}` | Engine config confirmation |
@@ -42,7 +42,7 @@ Fires for each utterance (partial or final). Multiple per transcription session.
 |-------|------|---------|-------|
 | `TranscriptionSid` | string | `GT63c89e12a03eb7...` | Same SID as started event |
 | `CallSid` | string | `CAfc052e3cb39d95...` | Associated call |
-| `AccountSid` | string | `ACb4de277f6d5544...` | Account |
+| `AccountSid` | string | `ACxxxxxxxxxxxx...` | Account |
 | `TranscriptionEvent` | string | `transcription-content` | Event type |
 | `TranscriptionData` | JSON string | `{"transcript":"Hello","confidence":0.99}` | **The transcript payload** — see parsing section below |
 | `Final` | string | `true` or `false` | `true` = final utterance, `false` = partial/interim |
@@ -86,7 +86,7 @@ Fires when transcription ends. One per transcription session.
 |-------|------|---------|-------|
 | `TranscriptionSid` | string | `GT63c89e12a03eb7...` | Same SID |
 | `CallSid` | string | `CAfc052e3cb39d95...` | Associated call |
-| `AccountSid` | string | `ACb4de277f6d5544...` | Account |
+| `AccountSid` | string | `ACxxxxxxxxxxxx...` | Account |
 | `TranscriptionEvent` | string | `transcription-stopped` | Event type |
 | `SequenceId` | string | `5` | Final sequence number |
 | `Timestamp` | string | `2026-03-24T18:23:57.468Z` | ISO 8601 |

@@ -8,7 +8,7 @@ description: "Twilio development skill: references"
 
 # SIP Interface Skill — Live Test Results
 
-Evidence date: 2026-03-28 | Account: ACb4de2...
+Evidence date: 2026-03-28 | Account: ACxx...xx
 
 ## Test Environment
 
@@ -197,7 +197,7 @@ SIP Domain: SDf3f5fa51086812b5e4a8310093bdd883 (sip-lab-iface-0006e0.sip.twilio.
 
 ### T14: Outbound SIP — `<Dial><Sip>` to PBX
 
-**Action**: API call to `+12069666002` with TwiML URL `/sip/dial-sip`, which returns `<Dial><Sip>sip:100@45.55.35.107:5060?x-test-header=skill-validation</Sip></Dial>`.
+**Action**: API call to `+15551234567` with TwiML URL `/sip/dial-sip`, which returns `<Dial><Sip>sip:100@45.55.35.107:5060?x-test-header=skill-validation</Sip></Dial>`.
 
 **Result**:
 - Parent call: `CAe8da88b6b2086724ae70cf50b89a0523` (completed, 15s)
@@ -227,7 +227,7 @@ SIP Domain: SDf3f5fa51086812b5e4a8310093bdd883 (sip-lab-iface-0006e0.sip.twilio.
 
 ### T16: ACL IP Mismatch — Error 32201
 
-**Action**: Initial test with stale IP (68.183.158.165) in ACL while PBX was at 45.55.35.107.
+**Action**: Initial test with stale IP (203.0.113.10) in ACL while PBX was at 45.55.35.107.
 
 **Result**:
 - SIP exchange: INVITE → 100 Trying → 403 Forbidden
@@ -276,7 +276,7 @@ Tool: baresip v4.6.0 (arm64/Darwin) — local SIP UA behind NAT
 - Twilio sent INVITE from `54.172.60.0:5060` to baresip's registered contact
 - baresip sent `180 Ringing`, then `200 OK` (auto-answer)
 - Call status: `completed`, duration: `5s`
-- From header in INVITE: `sip:+12069666002@ff-regtest.sip.twilio.com`
+- From header in INVITE: `sip:+15551234567@ff-regtest.sip.twilio.com`
 
 **Confirms**: Twilio routes INVITE to registered endpoint's contact address (works through NAT). Softphone on dynamic IP receives inbound calls. Registration without static IP validated.
 

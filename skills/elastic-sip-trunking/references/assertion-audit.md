@@ -140,7 +140,7 @@ Audit date: 2026-03-28. Account prefix: `AC1cb3`.
 | 59 | Trunk-level dual-channel recording works | Behavioral | CONFIRMED | `REd57bb7...` source=Trunking, channels=2 |
 | 60 | Trunk recording is on trunk-leg call SID, not parent | Behavioral | CONFIRMED | Recording on `CA1ec6f0...` (trunk leg), not `CAea6521...` (API call) |
 | 61 | Trunk leg has direction `trunking-originating` | Behavioral | CONFIRMED | Calls API: `direction: "trunking-originating"` |
-| 62 | Trunk leg To is SIP URI | Behavioral | CONFIRMED | `to: "sip:+12293635283@68.183.158.165:5060"` |
+| 62 | Trunk leg To is SIP URI | Behavioral | CONFIRMED | `to: "sip:+15550100005@203.0.113.10:5060"` |
 | 63 | validate_sip passes on correctly configured trunk | Behavioral | CONFIRMED | 7/7 checks passed, 0 SIP errors |
 | 64 | Voice Insights Events available for trunk calls | Behavioral | CONFIRMED | 3 events (initiated/answered/completed) on carrier_edge |
 | 65 | Voice Insights Summaries require `ProcessingState=all` for trunking | Behavioral | CONFIRMED | Default filter returns 0; `ProcessingState=all` returns 10 trunking summaries including `CA1ec6f0...` (completed, 9s) |

@@ -5,6 +5,8 @@ description: "Twilio development skill: callbacks"
 
 # Callbacks Functions
 
+**Service:** `prototype-core` (`CORE_BASE_URL`). Deploy: `./scripts/deploy-services.sh dev`
+
 This directory contains Twilio Functions that handle status callbacks from various Twilio services. All callbacks are logged to Twilio Sync for deep validation during testing.
 
 ## Purpose
@@ -91,7 +93,7 @@ npx twilio-feature-factory setup
 Or manually:
 
 ```bash
-twilio serverless:deploy --functions-folder functions/callbacks
+./scripts/deploy-services.sh dev
 ```
 
 ## Deep Validation Usage
@@ -168,3 +170,16 @@ All functions use `.protected.js` suffix, requiring valid Twilio request signatu
 - Spoofed callback data
 - External access to callback endpoints
 - Invalid test data pollution
+
+## Idempotency
+
+Twilio delivers status callbacks at-least-once. On timeout or error, callbacks are retried, which can cause duplicate processing (e.g., sending the same follow-up SMS twice, logging the same recording twice).
+
+**Deduplication pattern**: Use the resource SID + status as a composite idempotency key:
+- Voice callbacks: `{CallSid}-{CallStatus}` (e.g., `CA123-completed`)
+- Recording callbacks: `{RecordingSid}-{RecordingStatus}` (e.g., `RE456-completed`)
+- Transcription callbacks: `{TranscriptionSid}-{TranscriptionStatus}`
+
+Check for the key's existence before processing. A Sync Map with a short TTL (300s) works well for deduplication without requiring cleanup.
+
+See `operational-reference.md` → "Status Callback Resilience" for scaling patterns, traffic math, and the thin-receiver architecture.

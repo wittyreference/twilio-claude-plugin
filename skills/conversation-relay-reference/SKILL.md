@@ -15,10 +15,15 @@ For essential patterns and quick reference, see [CLAUDE.md](./CLAUDE.md).
 ```javascript
 connect.conversationRelay({
   url: 'wss://your-server.com/relay',        // WebSocket endpoint
-  voice: 'Google.en-US-Neural2-F',                        // TTS voice
+  // TTS: ElevenLabs
+  ttsProvider: 'ElevenLabs',                 // 'ElevenLabs', 'Google', or 'Amazon'
+  voice: 'cgSgspJ2msm6clMCkdW9',            // ElevenLabs Jessica
+  elevenlabsTextNormalization: 'on',         // Natural number/date/currency speech
+  // STT: Deepgram Flux
+  transcriptionProvider: 'deepgram',         // 'deepgram' or 'google'
+  speechModel: 'flux-general-en',            // Deepgram Flux (optimized for voice agents)
+  // General
   language: 'en-US',                         // Language code
-  transcriptionProvider: 'google',           // 'google' or 'deepgram'
-  speechModel: 'telephony',                  // Speech recognition model
   profanityFilter: 'true',                   // Filter profanity
   dtmfDetection: 'true',                     // Detect DTMF tones
   interruptible: 'true',                     // Allow interruptions
@@ -38,7 +43,7 @@ connect.conversationRelay({
 {
   "type": "setup",
   "callSid": "CA...",
-  "streamSid": "MZ...",
+  "sessionId": "KX...",
   "from": "+1234567890",
   "to": "+0987654321"
 }
@@ -49,7 +54,6 @@ connect.conversationRelay({
 {
   "type": "prompt",
   "voicePrompt": "Hello, I need help with my account",
-  "confidence": 0.95,
   "last": true
 }
 ```
@@ -265,38 +269,30 @@ For consistent URL, use a custom domain (requires paid ngrok):
 ngrok http 8080 --domain=your-domain.ngrok.dev
 ```
 
+### ngrok Domain & Port Registry
+
+Configure ngrok domains in your `.env` for local WebSocket development. Port assignments are in your local setup docs.
+
+
 ### Agent-to-Agent Testing (Dual Tunnel Setup)
 
 Agent-to-agent testing requires **two separate ngrok tunnels** — one per agent:
 
 ```bash
 # Terminal A: Agent A (questioner) on port 8080
-ngrok http 8080 --domain=zembla.ngrok.dev
+ngrok http 8080 --domain=$NGROK_DOMAIN_A
 
 # Terminal B: Agent B (answerer) on port 8081
-ngrok http 8081 --domain=submariner.ngrok.io
+ngrok http 8081 --domain=$NGROK_DOMAIN_B
 ```
 
-Then set relay URLs on the deployed Twilio service:
-```bash
-twilio serverless:env:set --key AGENT_A_RELAY_URL \
-  --value "wss://zembla.ngrok.dev" \
-  --environment dev-environment \
-  --service-sid ZS93c4fa9720063ebf10a70ffca19d8f8a
-
-twilio serverless:env:set --key AGENT_B_RELAY_URL \
-  --value "wss://submariner.ngrok.io" \
-  --environment dev-environment \
-  --service-sid ZS93c4fa9720063ebf10a70ffca19d8f8a
-```
-
-The ngrok domains and auth token are stored in `.env` as `NGROK_DOMAIN_A`, `NGROK_DOMAIN_B`, and `NGROK_AUTHTOKEN`.
+The relay URLs (`AGENT_A_RELAY_URL`, `AGENT_B_RELAY_URL`) in `.env` are already wired to these domains.
 
 ### Development Workflow
 
-1. Start WebSocket server locally (port 8080)
-2. Start ngrok tunnel: `ngrok http 8080 --domain=your-domain.ngrok.dev`
-3. Update `CONVERSATION_RELAY_URL` in `.env` with ngrok URL
+1. Start WebSocket server locally (port 8082)
+2. Start ngrok tunnel: `ngrok http 8082 --domain=$NGROK_DOMAIN_RELAY`
+3. `CONVERSATION_RELAY_URL` in `.env` already points to this domain
 4. Start Twilio serverless: `npm run start:ngrok`
 5. Call your Twilio number to test
 

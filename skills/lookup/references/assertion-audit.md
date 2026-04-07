@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Skill**: lookup
 **Audit date**: 2026-03-29
-**Account**: ACb4de2...
+**Account**: ACxx...xx
 **Auditor**: Claude + MC
 
 ## Summary
@@ -79,7 +79,7 @@ description: "Twilio development skill: references"
 | # | Assertion | Category | Verdict | Evidence | Notes |
 |---|-----------|----------|---------|----------|-------|
 | 35 | SMS pumping score 0-60 is low risk | behavioral | QUALIFIED | Test 6: score=34 on a Twilio VoIP number (expected low risk). Risk thresholds from Twilio docs, not independently validated across a statistically significant sample | Qualified: "thresholds per Twilio documentation" |
-| 36 | nonFixedVoip "usually" receives SMS | compatibility | CONFIRMED | Twilio VoIP numbers (+12069666002, +12062021014) receive SMS in production | |
+| 36 | nonFixedVoip "usually" receives SMS | compatibility | CONFIRMED | Twilio VoIP numbers (+15551234567, +15559876543) receive SMS in production | |
 
 ### Error Codes
 
@@ -98,7 +98,7 @@ description: "Twilio development skill: references"
 |---|-----------|----------|---------|----------|-------|
 | 43 | Basic validation returns valid, validationErrors, countryCode, nationalFormat | behavioral | CONFIRMED | Test 1: all four fields returned | |
 | 44 | Multiple fields can be combined with comma-separated string | behavioral | CONFIRMED | Tests 5, 17: multi-field requests work | |
-| 45 | Non-E.164 input with countryCode parameter resolves correctly | behavioral | CONFIRMED | Test 14: "2069666002" + US → "+12069666002" | |
+| 45 | Non-E.164 input with countryCode parameter resolves correctly | behavioral | CONFIRMED | Test 14: "5551234567" + US → "+15551234567" | |
 
 ## Corrections Applied
 

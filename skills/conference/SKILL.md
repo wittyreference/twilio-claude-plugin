@@ -15,7 +15,7 @@ Comprehensive decision-making guide for Twilio Conference. Load this skill when 
 
 > **WARNING: Conference REST API state can be misleading.** The REST API may report a conference as `in-progress` with participants `muted: false` when audio is actually muted (all participants have `startConferenceOnEnter=false`). Do not trust API state alone for audio-level verification. Use Conference Insights for authoritative post-call state. See Gotcha #2.
 
-**Evidence date**: 2026-03-24 | **Account**: ACb4de2... | **Intelligence Service**: GA7d01ec... (conference-validation)
+**Evidence date**: 2026-03-24 | **Account**: ACxx...xx | **Intelligence Service**: GA7d01ec... (conference-validation)
 
 ## What Conference Cannot Do
 
@@ -184,6 +184,45 @@ Conference recording captures hold music — be aware when transcribing.
 21. **Speaker events fire too frequently**: Conference speaker status callback events fire at very high frequency — nearly useless for application logic. Don't build state machines on them.
 22. **Conference recording does NOT capture coaching audio**: The coach's voice is routed only to the coached participant and never enters the conference mixer output. Conference-level recordings are blind to coaching. Use REST API state and Insights events to verify coaching behavior. [Evidence: GT6e8b15..., Intelligence analysis detected only 2 voices in 3-party coaching conference]
 
+### Parallel Dial Rate Limits
+
+The Calls API has a default rate of 1 call per second (CPS). When implementing parallel dialing (e.g., calling 3 prospects simultaneously per rep):
+- `Promise.all()` with 3+ `calls.create()` may be throttled at default CPS
+- Use `batchWithRateLimit()` from `helpers/resilience-patterns.private.js` or stagger calls by 1s
+- Request CPS increase via Twilio support for production dialers
+
+### Excess Call Cancellation in Parallel Dial
+
+When multiple prospects are called in parallel and the first answers:
+- The application MUST cancel remaining in-flight calls via `calls(callSid).update({ status: 'canceled' })`
+- Calls in `ringing` or `queued` status can be canceled; `in-progress` calls need `status: 'completed'`
+- Use the AMD callback to trigger cancellation: when one prospect is confirmed human, cancel the rest
+- Without cancellation, abandoned calls ring to voicemail, wasting resources and potentially triggering spam flags
+
+- **Consistent authentication across Functions**: If some Functions in your deployment use Account SID + Auth Token (`new Twilio(accountSid, authToken)`) while others use API Key auth (`new Twilio(apiKey, apiSecret, { accountSid })`), verify that all credential pairs belong to the same account. Mixing main-account auth tokens with sub-account API keys (or vice versa) causes 401 errors on some operations while others succeed — creating confusing partial failures. Standardize on one authentication method across all Functions in a deployment.
+
+## Cascade Chains
+
+### Outbound Campaign: AMD + Agent Partition
+
+```
+Outbound call initiated with AMD
+  → AMD detects human (async callback)
+    → System creates conference, adds customer
+      → System attempts to bridge agent
+        → Agent's browser/network is down
+          → Customer in conference alone (silence)
+            → No endConferenceOnExit on agent (never joined) → conference persists
+              → Customer hears silence until they hang up
+```
+
+**Detection**: After adding customer to conference, poll `list_conference_participants`. If participant count is 1 after N seconds (agent join timeout), the agent failed to connect.
+
+**Mitigation**:
+1. **Agent connectivity pre-check**: Before dialing the customer, verify agent's WebSocket/browser session is active. If agent went offline between campaign start and AMD callback, skip the bridge.
+2. **Conference participant timeout**: After adding the customer, start a timer. If the agent hasn't joined within 10 seconds, play an apology message to the customer and disconnect them gracefully. Use `update_conference_participant` to play a `announceUrl` before removing.
+3. **Fallback TwiML**: Set the customer's `endConferenceOnExit=true` so if they hang up, the empty conference cleans up. Set the agent's `endConferenceOnExit=false` so if the agent drops, the customer isn't immediately disconnected (giving time for the failover to engage).
+
 ## Related Resources
 
 - **Voice skill** — Conference vs Dial decision framework, broader voice context
@@ -202,3 +241,4 @@ Conference recording captures hold music — be aware when transcribing.
 | Insights & validation | `references/insights-and-validation.md` | Conference Insights, quality thresholds, debugging, validation checklists |
 | Test results | `references/test-results.md` | Live test evidence with SID matrix, Intelligence analysis |
 | Assertion audit | `references/assertion-audit.md` | Adversarial audit of every factual claim with verdicts |
+| RTT interaction | `references/rtt-interaction.md` | Using Real-Time Transcription on conference calls — track semantics, hold behavior, capture conflicts |

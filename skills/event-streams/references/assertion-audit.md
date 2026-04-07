@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Auditor**: Claude (Phase 4, skill-builder methodology)  
 **Date**: 2026-03-29  
-**Account**: ACb4de2...
+**Account**: ACxx...xx
 
 ## Summary
 

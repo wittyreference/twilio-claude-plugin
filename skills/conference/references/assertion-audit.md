@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Skill**: conference
 **Audit date**: 2026-03-24
-**Account**: ACb4de2…(redacted)
+**Account**: ACxx...xx (redacted)
 **Intelligence Service**: GA7d01ec96bcecc500d42d19f07e54f102
 **Auditor**: Claude + MC
 
@@ -103,7 +103,7 @@ description: "Twilio development skill: references"
 
 ### #124/#125: Insights timing
 **Claim**: Insights records took 15-30+ minutes to appear; "within minutes" is aspirational.
-**Caveat**: Based on our single test session observation. Timing may vary by load, region, or account. The claim reflects our experience on ACb4de... on 2026-03-24.
+**Caveat**: Based on our single test session observation. Timing may vary by load, region, or account. The claim reflects our experience on ACxx...xx on 2026-03-24.
 
 ### #155: processing_state naming inconsistency
 **Claim**: Insights uses "in_progress" and "complete" for processing_state.

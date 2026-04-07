@@ -12,7 +12,7 @@ description: Twilio Real-Time Transcription development guide. Use when adding l
 
 Decision-making guide for Twilio Real-Time Transcription (RTT). Load this skill when adding live transcription to voice calls, choosing between transcription approaches, configuring callback handlers, or integrating with Voice Intelligence.
 
-All claims backed by live testing (2026-03-24, account ACb4de2...). See [references/test-results.md](references/test-results.md) for the evidence matrix with call SIDs.
+All claims backed by live testing (2026-03-24, account ACxx...xx). See [references/test-results.md](references/test-results.md) for the evidence matrix with call SIDs.
 
 ---
 
@@ -95,6 +95,14 @@ For full Deepgram model compatibility across products (ConversationRelay, Gather
 | `both_tracks` (default) | Both sides, as separate callbacks per track | Full conversation transcript |
 
 **How `both_tracks` works**: Callbacks arrive with `Track: "inbound_track"` or `Track: "outbound_track"` on each `transcription-content` event. They are NOT interleaved into a single stream — each utterance is labeled with its source track. Use `SequenceId` for global ordering across tracks.
+
+### Speaker Diarization via Dual-Track
+
+For compliance use cases requiring WHO said WHAT:
+- Set `track='both_tracks'` on `<Start><Transcription>`
+- Use `inboundTrackLabel='customer'` and `outboundTrackLabel='agent'`
+- Callbacks include the track label, enabling per-speaker analysis
+- Combined with Voice Intelligence, this enables automated speaker-attributed compliance checks
 
 ---
 
@@ -286,7 +294,17 @@ transcription-started  →  transcription-content (repeated)  →  transcription
 
 18. **`enableAutomaticPunctuation=false` may not remove punctuation with Deepgram**: Testing with Deepgram Nova-3 showed punctuation (periods, commas) still appearing in transcripts even with `enableAutomaticPunctuation="false"`. The flag is confirmed in `ProviderConfiguration` but Deepgram's model may emit punctuation regardless. Test with your specific engine before relying on this flag.
 
-19. **RTT and `<Gather>` run independently**: `<Start><Transcription>` and `<Gather input="speech">` can coexist on the same call. RTT continues transcribing through and after a Gather timeout. Gather's STT session is separate from RTT's — they use independent engines and produce independent results. No errors or interference observed.
+19. **Transcription has the same consent requirements as recording**: Real-time transcription captures call content. The same one-party/two-party consent laws that apply to call recording apply to transcription. Always notify callers when transcription is active.
+
+20. **RTT and `<Gather>` run independently**: `<Start><Transcription>` and `<Gather input="speech">` can coexist on the same call. RTT continues transcribing through and after a Gather timeout. Gather's STT session is separate from RTT's — they use independent engines and produce independent results. No errors or interference observed.
+
+### Voice Intelligence Concurrent Processing
+
+21. **Two Intelligence Services on the same recording produce undefined behavior**: If two `<Start><Transcription>` blocks target the same call with different `intelligenceService` SIDs, or if a recording is submitted to multiple Intelligence Services via REST API, the result is unpredictable. Twilio does not enforce idempotency — you may get duplicate transcripts, conflicting operator results, or race conditions on transcript storage. **Pattern**: Use exactly one Intelligence Service per call. If you need multiple operator pipelines, configure multiple Language Operators on a single service rather than running multiple services.
+
+22. **No idempotency on `source_sid`**: Submitting the same recording SID to an Intelligence Service twice creates two separate transcripts. There is no deduplication. **Pattern**: Track processed recording SIDs in a Sync Map (key = recording SID, value = transcript SID). Before submitting, check the map. This prevents duplicate processing from webhook retries or concurrent handlers.
+
+23. **Intelligence Service creation is Console-only**: There is no REST API to create Intelligence Services (GA-prefixed SIDs). If your credential rotation process involves recreating resources programmatically, Intelligence Services are a manual step that can be missed.
 
 ---
 
@@ -311,6 +329,19 @@ start.transcription({
 
 **Intelligence Services** (v2) must be created in the Twilio Console — there is no creation API. For the v3 Voice Intelligence API (Language Operators, real-time analysis, cross-channel), see [Voice Intelligence Skill](/skills/voice-intelligence/SKILL.md).
 
+### Compliance Detection via Language Operators
+
+For automated compliance monitoring (UDAAP violations, unauthorized commitments, disclosure omission):
+
+1. **Real-time** (in-call): Pattern match in transcription callback handler against keyword lists. Limited to text matching — no semantic analysis.
+2. **Post-call** (batch): Use Voice Intelligence with Language Operators:
+   - `text-generation` operator: Summarize calls for compliance review
+   - `classification` operator: Flag calls by compliance risk category
+   - `extraction` operator: Pull specific regulatory phrases (disclosures, commitments)
+3. **Hybrid**: Real-time flags trigger immediate alerts; post-call operators produce structured compliance reports.
+
+Language Operators require an Intelligence Service SID (created in Console — no API for creation).
+
 ---
 
 ## Related Resources
@@ -318,7 +349,7 @@ start.transcription({
 - [Deepgram STT Skill](/skills/deepgram/SKILL.md) — Cross-product model naming, Deepgram-specific config, tested model matrix
 - [Voice Skill](/skills/voice/SKILL.md) — Transcription Method Selection framework, broader voice context
 - [Voice Use Case Map](/skills/voice-use-case-map/SKILL.md) — Per-use-case product recommendations
-- [Media Streams Skill](/skills/media-streams.md) — Alternative: raw audio WebSocket with custom STT
+- [Media Streams Skill](/skills/media-streams/SKILL.md) — Alternative: raw audio WebSocket with custom STT
 - [Voice CLAUDE.md](/CLAUDE.md) — TwiML control model, background operations
 - **MCP Tools**: `validate_transcript`, `get_transcript`, `list_transcripts`, `delete_transcript`, `create_transcript`, `list_sentences`, `list_operator_results`, `get_transcript_media`, `list_recording_transcriptions`, `get_transcription`
 - [Voice Intelligence Skill](/skills/voice-intelligence/SKILL.md) — v3 API: Language Operators, real-time/post-call analysis, cross-channel
@@ -330,3 +361,4 @@ start.transcription({
 |-------|------|-------------|
 | Callback fields | [references/callback-reference.md](references/callback-reference.md) | Parsing callbacks, building handlers, field-level details per event type |
 | Test evidence | [references/test-results.md](references/test-results.md) | Full test matrix with call SIDs, callback payloads, and discovery narratives |
+| Conference + RTT | [/skills/conference/references/rtt-interaction.md](/skills/conference/references/rtt-interaction.md) | Track semantics in conference, hold behavior, speaker labeling limits |

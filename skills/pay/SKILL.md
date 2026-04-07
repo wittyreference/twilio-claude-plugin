@@ -5,13 +5,15 @@ description: "Twilio development skill: pay"
 
 # Pay Functions Context
 
+**Service:** `prototype-labs` (`LABS_BASE_URL`). Deploy: `./scripts/deploy-services.sh dev`
+
 This directory contains Twilio Pay functions for PCI-compliant payment collection during voice calls.
 
 ## Files
 
 | File | Access | Description |
 |------|--------|-------------|
-| `collect-payment.js` | Public | Voice webhook returning `<Pay>` TwiML to collect credit card via DTMF |
+| `collect-payment.protected.js` | Protected | Voice webhook returning `<Pay>` TwiML to collect credit card via DTMF |
 | `payment-complete.protected.js` | Protected | `<Pay>` action URL — receives tokenized card result, returns confirmation TwiML |
 | `payment-status.protected.js` | Protected | `<Pay>` statusCallback — logs payment progress events |
 
@@ -24,7 +26,7 @@ This directory contains Twilio Pay functions for PCI-compliant payment collectio
 ```
 Caller dials in
     ↓
-collect-payment.js → <Say> greeting → <Pay> verb
+collect-payment.protected.js → <Say> greeting → <Pay> verb
     ↓
 Twilio prompts for: card number → expiry → CVV → zip (DTMF)
     ↓
@@ -77,7 +79,6 @@ The `action` URL receives these parameters:
 |------|--------|-------------|
 | `pay-simulator.js` | Public | Test payment processor for Generic Pay Connector (simple/robust modes) |
 | `payment-status-sync.protected.js` | Protected | `<Pay>` statusCallback → writes to Sync for real-time observability |
-| `dtmf-inject.js` | Public | Returns `<Play digits>` TwiML for conference DTMF injection (unused — see gotchas) |
 
 ## Agent-Assisted Payment Flow (REST API)
 
@@ -131,6 +132,23 @@ The connector sends POST with lowercase fields: `method`, `cardnumber`, `expiry_
 9. **Generic Pay Connector uses lowercase field names** — `method`, `cardnumber`, `expiry_month`, `expiry_year`, `cvv`. NOT `Method`, `CardNumber`, `ExpirationDate`.
 
 10. **`create_payment` rejects `ChargeAmount` and `TokenType` params** — Despite being documented, passing these on the REST API returns error 64020. Use minimal params: `IdempotencyKey`, `StatusCallback`, `PaymentConnector` only.
+
+## Operational Failure Modes
+
+### Connector Credential Lifecycle
+
+Pay Connectors authenticate with Twilio via tokens configured in Console. These tokens can expire or be revoked without warning.
+
+**Detection**: `payment-connector-error` in the `Result` field of status callbacks. No specific error code distinguishes credential failure from other connector errors — you must infer from timing (works one day, fails the next without code changes).
+
+**Mid-collection failure**: If a connector token expires while a customer is actively entering card data, the `<Pay>` session continues collecting DTMF digits but tokenization fails on submission. The customer has entered their full card number into a system that cannot process it. Combined with gotcha #4 (maxAttempts forces full re-entry), this creates a frustrating experience where the customer must re-enter all fields.
+
+**Recovery patterns**:
+1. **Pre-call health check**: Before initiating payment flows, call the connector's tokenization endpoint with a test payload. If it fails, route the caller to a human agent instead of entering `<Pay>`.
+2. **Timeout detection**: If `<Pay>` status callbacks stop arriving for >10 seconds during active collection, the connector may be unresponsive. Use the `update_payment` API to cancel and route to fallback.
+3. **Credential rotation**: Connectors configured in Console have no rotation API. Set calendar reminders for token expiration. When rotating, update the connector in Console and test immediately — there is no staging environment for Pay Connectors.
+
+**Cascade**: Connector failure → customer data entered but not tokenized → no PCI-compliant record of the attempt → compliance gap in payment audit trail.
 
 ## File Naming Conventions
 

@@ -8,14 +8,14 @@ description: "Twilio development skill: references"
 
 # ConversationRelay Test Results
 
-All tests run 2026-03-28 on account ACb4de2... using a diagnostic WebSocket server at `wss://zembla.ngrok.dev` with calls to a voicemail endpoint (+12068990235).
+All tests run 2026-03-28 on account ACxx...xx using a diagnostic WebSocket server at `wss://example.ngrok-free.app` with calls to a voicemail endpoint (+15550100004).
 
 ## Test Infrastructure
 
 - **Diagnostic WS server**: Node.js WebSocket server logging all messages to JSON
-- **ngrok tunnel**: `wss://zembla.ngrok.dev` → localhost:8080
+- **ngrok tunnel**: `wss://example.ngrok-free.app` → localhost:8080
 - **Call method**: MCP `make_call` with inline TwiML
-- **Target**: Business voicemail (+12068990235) — provides consistent spoken audio for STT testing
+- **Target**: Business voicemail (+15550100004) — provides consistent spoken audio for STT testing
 
 ## Test Results
 
@@ -163,7 +163,7 @@ Attribute accepted. Preemptible allows subsequent talk cycle text tokens to inte
 - Sentences: 12
 - Source: `"ConversationRelay"` (not "Recording")
 - Source SID: `VXd54574ad255303f0b57d7fcb1b1e16ff` (session SID)
-- Participants: "Virtual Agent" (ch 1) + "+12069666002" as "Customer" (ch 2)
+- Participants: "Virtual Agent" (ch 1) + "+15551234567" as "Customer" (ch 2)
 
 No recording was needed — transcript created directly from the CR session.
 
@@ -174,7 +174,7 @@ No recording was needed — transcript created directly from the CR session.
 | Field | Value |
 |-------|-------|
 | **Call SID** | `CA92eb48b15298d2d6db5e69bcab526b24` |
-| **Config** | `action="https://zembla.ngrok.dev/action-callback"` + server sends `end` with `handoffData` |
+| **Config** | `action="https://example.ngrok-free.app/action-callback"` + server sends `end` with `handoffData` |
 | **Result** | PASS |
 
 **Server sent**:

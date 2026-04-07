@@ -8,6 +8,8 @@ description: "Twilio development skill: conversation-relay"
 
 # Conversation Relay Functions Context
 
+**Service:** `prototype-ai` (`AI_BASE_URL`). Deploy: `./scripts/deploy-services.sh dev`
+
 For LLM integration code, ngrok setup, full configuration, and code patterns, see [REFERENCE.md](./REFERENCE.md).
 
 ## Files
@@ -17,7 +19,11 @@ For LLM integration code, ngrok setup, full configuration, and code patterns, se
 |------|--------|-------------|
 | `ai-assistant-inbound.js` | Public | Connects incoming calls to ConversationRelay AI agent |
 | `relay-handler.js` | Public | Entry point for connecting phone calls to LLM-powered voice agents |
-| `transcript-complete.js` | Public | Handles Voice Intelligence transcript completion callback; sends SMS summary |
+
+### Callbacks
+| File | Access | Description |
+|------|--------|-------------|
+| `transcript-complete.protected.js` | Protected | Handles Voice Intelligence transcript completion callback; sends SMS summary |
 
 ### Demo Flow
 | File | Access | Description |
@@ -67,9 +73,11 @@ const twiml = new Twilio.twiml.VoiceResponse();
 const connect = twiml.connect();
 connect.conversationRelay({
   url: 'wss://your-server.ngrok.dev/ws',
-  voice: 'Google.en-US-Neural2-F',
-  transcriptionProvider: 'google',
-  ttsProvider: 'google'
+  ttsProvider: 'ElevenLabs',
+  voice: 'cgSgspJ2msm6clMCkdW9',           // ElevenLabs Jessica
+  elevenlabsTextNormalization: 'on',
+  transcriptionProvider: 'deepgram',
+  speechModel: 'flux-general-en',
 });
 return callback(null, twiml);
 ```
@@ -95,8 +103,12 @@ const twiml = new Twilio.twiml.VoiceResponse();
 const connect = twiml.connect();
 connect.conversationRelay({
   url: 'wss://your-server.com/relay',
-  voice: 'Google.en-US-Neural2-F',
-  language: 'en-US'
+  ttsProvider: 'ElevenLabs',
+  voice: 'cgSgspJ2msm6clMCkdW9',           // ElevenLabs Jessica
+  elevenlabsTextNormalization: 'on',
+  transcriptionProvider: 'deepgram',
+  speechModel: 'flux-general-en',
+  language: 'en-US',
 });
 return callback(null, twiml);
 ```
@@ -107,8 +119,8 @@ return callback(null, twiml);
 
 | Type | Key Fields | Description |
 |------|-----------|-------------|
-| `setup` | `callSid`, `streamSid`, `from`, `to` | Connection established |
-| `prompt` | `voicePrompt`, `confidence`, `last` | User speech (process when `last: true`) |
+| `setup` | `callSid`, `sessionId`, `from`, `to` | Connection established |
+| `prompt` | `voicePrompt`, `last` | User speech (process when `last: true`) |
 | `dtmf` | `digit` | DTMF tone detected |
 | `interrupt` | — | User interrupted AI response |
 
@@ -121,14 +133,17 @@ return callback(null, twiml);
 
 ## Voice & Transcription Options
 
-**Important**: Some voice/provider combos cause error 64101. Google Neural voices are recommended. Polly voices may be blocked.
+**Important**: Some voice/provider combos cause error 64101. ElevenLabs requires account enablement (error 64101 with `block_elevenlabs` if not enabled). Google Neural2 is the fallback if ElevenLabs is unavailable.
 
 | Setting | Options | Recommended |
 |---------|---------|-------------|
-| Voice | `Google.en-US-Neural2-F`, `-J`, `-A`, `Google.en-GB-Neural2-B` | Google Neural |
-| Transcription | `google`, `deepgram` (case-insensitive) | `deepgram` (default for new accounts post-Sept 2025) |
+| TTS Provider | `ElevenLabs`, `Google`, `Amazon` | `ElevenLabs` |
+| Voice (ElevenLabs) | Voice IDs: `cgSgspJ2msm6clMCkdW9` (Jessica), `cjVigY5qzO86Huf0OWal` (Eric), `EXAVITQu4vr4xnSDxMaL` (Sarah) | Jessica (`cgSgspJ2msm6clMCkdW9`) |
+| Voice (Google fallback) | `Google.en-US-Neural2-F`, `-J`, `-A` | `Google.en-US-Neural2-F` |
+| Transcription | `google`, `deepgram` (case-insensitive) | `deepgram` |
+| Speech Model (Deepgram) | `flux-general-en`, `nova-3-general`, `nova-2-general` | `flux-general-en` |
 | Speech Model (Google) | `telephony`, `default` | `telephony` (phone-optimized) |
-| Speech Model (Deepgram) | `nova-3-general`, `nova-3`, `nova-2-general`, `nova-2` | `nova-3-general` |
+| Text Normalization | `elevenlabsTextNormalization: 'on'` | Always set with ElevenLabs |
 
 For the full Deepgram attribute reference, model compatibility matrix, and per-product syntax differences, see the [Deepgram skill](/skills/deepgram/SKILL.md).
 

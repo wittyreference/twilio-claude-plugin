@@ -15,7 +15,10 @@ fi
 COMMAND=""
 _POST_BASH_SESSION_ID=""
 if [ -n "$_POST_BASH_HOOK_INPUT" ] && ! command -v jq &> /dev/null; then
-    echo "WARNING: jq not installed — post-bash hooks disabled (deployment tracking). Run: brew install jq" >&2
+    echo "WARNING: jq not installed — post-bash hooks disabled (deployment tracking)." >&2
+    if command -v brew &>/dev/null; then echo "  Install: brew install jq" >&2
+    elif command -v apt-get &>/dev/null; then echo "  Install: sudo apt-get install -y jq" >&2
+    else echo "  Install jq: https://jqlang.github.io/jq/download/" >&2; fi
 fi
 if [ -n "$_POST_BASH_HOOK_INPUT" ] && command -v jq &> /dev/null; then
     COMMAND="$(echo "$_POST_BASH_HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)"
@@ -31,6 +34,8 @@ fi
 # ENVIRONMENT SETUP
 # ============================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Cross-platform helpers (portable notifications, etc.)
+source "$SCRIPT_DIR/_platform.sh"
 
 # ============================================
 # TOOL-CALL COUNTER (context pressure awareness)
@@ -60,12 +65,8 @@ if echo "$COMMAND" | grep -qE "(twilio\s+serverless:deploy|npm\s+run\s+deploy)";
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
-    # Send desktop notification on macOS
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        osascript -e 'display notification "Deployment complete - check terminal for URLs" with title "Claude Code" sound name "Hero"' 2>/dev/null || true
-    elif command -v notify-send &> /dev/null; then
-        notify-send "Claude Code" "Deployment complete" 2>/dev/null || true
-    fi
+    # Send desktop notification (cross-platform)
+    notify_desktop "Claude Code" "Deployment complete - check terminal for URLs"
 fi
 
 # ============================================

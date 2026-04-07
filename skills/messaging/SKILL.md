@@ -5,6 +5,8 @@ description: "Twilio development skill: messaging"
 
 # Messaging Functions Context
 
+**Service:** `prototype-core` (`CORE_BASE_URL`). Deploy: `./scripts/deploy-services.sh dev`
+
 This directory contains Twilio Messaging API functions for SMS and MMS handling.
 
 ## Files

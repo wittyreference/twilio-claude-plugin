@@ -13,7 +13,7 @@ allowed-tools: mcp__twilio__*, Read, Grep, Glob
 
 Decision-making guide for the Twilio call trust stack: Branded Calling (Basic and Enhanced), SHAKEN/STIR attestation, Voice Integrity spam remediation, and CNAM caller ID. Load this skill when a developer wants to improve outbound call answer rates, display a business name or logo on the recipient's phone, remediate spam/scam labels, or configure caller identity.
 
-**Evidence date**: 2026-03-28 | **Account**: ACb4de2... | **Trust Hub policies verified via live API**
+**Evidence date**: 2026-03-28 | **Account**: ACxx...xx | **Trust Hub policies verified via live API**
 
 ---
 

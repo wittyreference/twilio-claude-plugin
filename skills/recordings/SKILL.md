@@ -13,7 +13,7 @@ allowed-tools: mcp__twilio__*, Read, Grep, Glob
 
 Decision-making guide for Twilio voice call recording across all products. Load this skill when choosing a recording method, implementing recording callbacks, setting up Voice Intelligence transcription, or debugging recording issues.
 
-All behavioral claims validated by live testing (2026-03-24, account ACb4de2...) with 47 tests across 14 recording methods. See [references/test-results.md](references/test-results.md) for the full evidence matrix with call SIDs.
+All behavioral claims validated by live testing (2026-03-24, account ACxx...xx) with 47 tests across 14 recording methods. See [references/test-results.md](references/test-results.md) for the full evidence matrix with call SIDs.
 
 ---
 
@@ -37,8 +37,21 @@ All behavioral claims validated by live testing (2026-03-24, account ACb4de2...)
 **Out of scope** (covered by other skills):
 - Video recording → [video skill](/skills/video/SKILL.md)
 - Real-time transcription during calls → [real-time-transcription skill](/skills/real-time-transcription/SKILL.md)
-- Media Streams raw audio → [media-streams skill](/skills/media-streams.md)
+- Media Streams raw audio → [media-streams skill](/skills/media-streams/SKILL.md)
 - Deepgram STT engine selection → [deepgram skill](/skills/deepgram/SKILL.md)
+
+---
+
+## Legal & Consent Requirements
+
+Recording laws vary by jurisdiction. Key requirements:
+
+- **US Federal**: One-party consent (18 U.S.C. § 2511) — at least one party must consent
+- **US State (two-party)**: California, Florida, Illinois, Pennsylvania, and 8 other states require ALL parties to consent. When calls cross state lines, the stricter standard applies.
+- **GDPR (EU)**: Requires explicit consent (Art. 6) and clear notice of recording purpose and retention
+- **Best practice**: Always announce recording at call start (e.g., "This call may be recorded for quality assurance")
+
+For payment capture during recording, use `<Pay>` with `<Record>` pause/resume or `<Pause>` the recording during sensitive input to avoid PCI DSS scope issues.
 
 ---
 

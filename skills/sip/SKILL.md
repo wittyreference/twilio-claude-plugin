@@ -12,7 +12,7 @@ description: Twilio Programmable SIP (SIP Interface / SIP Domains) development g
 
 Twilio SIP Interface connects SIP infrastructure (IP-PBX, softphones, SBCs) to Twilio Programmable Voice via SIP Domains. Inbound SIP INVITEs trigger TwiML webhooks; outbound calls reach SIP endpoints via `<Dial><Sip>`. This is the programmable layer — every call hits your webhook for dynamic routing, unlike Elastic SIP Trunking which provides a static PSTN pipe.
 
-Evidence date: 2026-03-28 | Account: ACb4de2... | Test domain: SD88afbff... (cleaned up)
+Evidence date: 2026-03-28 | Account: ACxx...xx | Test domain: SD88afbff... (cleaned up)
 
 ## Scope
 
@@ -90,6 +90,20 @@ SIP Domains support two auth mechanisms. If both are configured, **both are enfo
 | TCP | `transport=tcp` | 5060 | Large SIP messages, reliable delivery |
 | TLS | `transport=tls` | 5061 | Encrypted signaling (combine with `secure: true` for SRTP) |
 
+### Codecs
+
+SIP Interface supports the same codecs as Elastic SIP Trunking:
+
+| Codec | Availability | Sample Rate |
+|-------|-------------|-------------|
+| G.711 μ-law (PCMU) | GA | 8 kHz |
+| G.711 A-law (PCMA) | GA | 8 kHz |
+| G.729 | Limited Availability | 8 kHz |
+| Opus | Limited Availability | 8-48 kHz |
+| AMR-NB | Limited Availability | 8 kHz |
+
+Default negotiation uses PCMU/PCMA. If your PBX only supports G.729 or other non-G.711 codecs, you must enroll in Limited Availability through Twilio. Calls to endpoints offering only unsupported codecs receive SIP 488 Not Acceptable Here.
+
 ### Edge/Region Selection (Outbound)
 
 Controls where Twilio's SIP-out traffic originates. Append to the SIP URI: `sip:user@host;region=us1`.
@@ -97,7 +111,7 @@ Controls where Twilio's SIP-out traffic originates. Append to the SIP URI: `sip:
 | Region | Edge | Location |
 |--------|------|----------|
 | `us1` | `ashburn` | Virginia (default) |
-| `us2` | `san-jose` | Oregon |
+| `us2` | `umatilla` | Oregon |
 | `ie1` | `dublin` | Ireland |
 | `de1` | `frankfurt` | Germany |
 | `sg1` | `singapore` | Singapore |
@@ -177,6 +191,16 @@ sip:user@host[:port][;uri-params][?headers]
 - Max 1024 characters total for custom headers
 - XML-encode `&` as `&amp;` in TwiML
 
+### DNS Resolution for Outbound SIP URIs
+
+Twilio resolves hostname-based SIP URIs (`sip:sbc.example.com:5060`) via A/AAAA DNS records only. RFC 3263 NAPTR/SRV resolution is **not** performed on the target hostname. This means:
+
+- SRV records advertising ports, transports, or weights for your SIP domain are ignored by Twilio's outbound SIP stack
+- The port and transport must be specified explicitly in the URI (e.g., `sip:sbc.example.com:5060;transport=tls`)
+- If no port is specified, Twilio uses the default for the scheme (5060 for `sip:`, 5061 for `sips:`)
+
+If your infrastructure relies on DNS SRV for failover or load distribution, use Twilio-side mechanisms instead: Elastic SIP Trunking origination URL priority/weight routing, or multiple `<Sip>` nouns in TwiML.
+
 ### Outbound Caller ID
 
 - Does not require a validated Twilio phone number
@@ -252,19 +276,41 @@ See [registration reference](references/registration.md) for lifecycle, limits, 
 
 15. **E.164 required for PSTN from registered endpoints**: Calls from registered endpoints to PSTN must use E.164 format and the number must be verified in the Twilio Console.
 
+16. **Twilio sends E.164 with `+` prefix to your PBX**: Inbound calls via SIP domains arrive with full E.164 formatting (e.g., `+15551234567`). PBXes configured for 10-digit or 11-digit dialing patterns will fail to match. Your dialplan must handle the `+` prefix — in Asterisk, use `_+.` pattern alongside `_X.` patterns.
+
+### DTMF
+
+17. **DTMF mode must be RFC 2833/4733**: Twilio uses RFC 2833 (telephone-event) for DTMF relay. PBXes configured for SIP INFO DTMF (e.g., Cisco CUCM default) or inband DTMF detection will lose all touchtone capability — no `<Gather>` digits, no payment entry, no conference controls. No error appears in the debugger; the call works but DTMF is silently lost. Configure your PBX for RFC 2833/4733 DTMF.
+
 ### Security
 
-16. **TLS ≠ authentication**: Enabling `secure: true` enforces TLS signaling + SRTP media, but Twilio does not validate remote certificates. Self-signed certs are accepted. TLS prevents eavesdropping but not spoofing — always pair with IP ACL or credential auth.
+18. **TLS ≠ authentication**: Enabling `secure: true` enforces TLS signaling + SRTP media, but Twilio does not validate remote certificates. Self-signed certs are accepted. TLS prevents eavesdropping but not spoofing — always pair with IP ACL or credential auth.
 
-17. **Secure mode applies to the entire domain**: You cannot selectively enforce TLS for some endpoints and not others on the same domain. If you need mixed security levels, use separate SIP Domains.
+19. **Secure mode applies to the entire domain**: You cannot selectively enforce TLS for some endpoints and not others on the same domain. If you need mixed security levels, use separate SIP Domains.
+
+20. **SIP session timers (RFC 4028) can drop long calls**: Twilio uses session timers on SIP legs. If your PBX does not respond to session refresh re-INVITEs, the call is torn down after the session timer expires (typically 1800s / 30 minutes). This manifests as clean BYEs with no Twilio-side error. Contact center hold scenarios, conference bridges, and IVR parking are most affected. Ensure your PBX supports RFC 4028 session timer refreshes.
+
+21. **Validate Twilio's TLS certificate on your PBX**: While Twilio accepts self-signed certs from your infrastructure, your PBX SHOULD validate Twilio's certificate (issued by DigiCert). Configure `verify_server=yes` (Asterisk) or equivalent. One-way validation prevents MITM on the Twilio→PBX leg. The SIP Lab's Asterisk config demonstrates this pattern.
+
+22. **SRTP requires SDES key exchange (RFC 4568)**: Twilio uses SDES (Session Description Protocol Security Descriptions) for SRTP key negotiation. PBXes configured for DTLS-SRTP (common in WebRTC) or ZRTP will fail media negotiation — TLS handshake succeeds but audio fails. Configure your PBX for `media_encryption=sdes` (Asterisk) or equivalent SDES mode.
+
+### TLS Version Compatibility
+
+23. **TLS version negotiation failure is silent**: When `secure: true` is set on a SIP Domain, Twilio enforces TLS for signaling. If the remote endpoint only supports TLS 1.3 and Twilio's edge negotiates TLS 1.2, the handshake fails silently — no debugger error specifically indicates TLS version mismatch. **Diagnostic path**: (1) Verify calls work without `secure: true`, (2) Check remote endpoint's TLS version with `openssl s_client -connect <pbx>:5061 -tls1_2`, (3) If TLS 1.2 fails, the endpoint needs reconfiguration or use a separate unsecured domain with IP ACL auth.
+
+24. **Mixed TLS environments**: Use separate SIP Domains for endpoints with different TLS capabilities — one `secure: true` (TLS 1.2-compatible) and one without (IP ACL-only security for incompatible endpoints).
+
+### DNS
+
+25. **No DNS SRV resolution on outbound targets**: When Twilio sends an outbound SIP INVITE via `<Dial><Sip>` to a hostname-based URI, it resolves the hostname via A/AAAA records only. RFC 3263 NAPTR/SRV lookups are not performed. If your PBX relies on SRV records for port/transport/weight discovery, those records are ignored. Use explicit port and transport in the URI, and handle failover via Twilio-side mechanisms (EST origination URL priority/weight, or multiple `<Sip>` nouns).
 
 ### Observability
 
-18. **Inbound status callback: completed only**: Unlike outbound SIP (which supports `initiated`, `ringing`, `answered`, `completed`), inbound SIP to a domain only delivers the `completed` status event.
+26. **Inbound status callback: completed only**: Unlike outbound SIP (which supports `initiated`, `ringing`, `answered`, `completed`), inbound SIP to a domain only delivers the `completed` status event.
 
-19. **Debugger SIP errors are account-wide**: The `validate_sip` tool checks debugger for SIP errors (13xxx, 64xxx) account-wide, not filtered to the specific domain. Noisy accounts may show errors from other SIP resources.
+27. **Debugger SIP errors are account-wide**: The `validate_sip` tool checks debugger for SIP errors (13xxx, 64xxx) account-wide, not filtered to the specific domain. Noisy accounts may show errors from other SIP resources.
 
-20. **SIP response codes are in DialSipResponseCode**: When an outbound SIP call fails, the SIP response code (486 Busy, 408 Timeout, 503 Unavailable, etc.) is available in the `<Dial action="">` callback as `DialSipResponseCode`. This is the primary diagnostic for outbound SIP failures.
+28. **SIP response codes are in DialSipResponseCode**: When an outbound SIP call fails, the SIP response code (486 Busy, 408 Timeout, 503 Unavailable, etc.) is available in the `<Dial action="">` callback as `DialSipResponseCode`. This is the primary diagnostic for outbound SIP failures.
 
 ## Resource Limits
 
@@ -408,3 +454,4 @@ exports.handler = function (context, event, callback) {
 | SIP Registration (lifecycle, edges) | [references/registration.md](references/registration.md) | Registering softphones, desk phones, or SIP endpoints |
 | Live test results (evidence) | [references/test-results.md](references/test-results.md) | Verifying specific claims or checking evidence SIDs |
 | Assertion audit | [references/assertion-audit.md](references/assertion-audit.md) | Reviewing provenance chain for skill claims |
+| Voice SDK ↔ SIP bridge | [references/sdk-sip-bridge.md](references/sdk-sip-bridge.md) | Bridging Voice SDK (WebRTC) calls to SIP endpoints, decision matrix |

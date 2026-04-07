@@ -16,8 +16,8 @@ This project uses Claude Code hooks (configured in `.claude/settings.json`) to e
 
 | Hook | Event | Purpose |
 |------|-------|---------|
-| `pre-write-validate.sh` | PreToolUse (Write/Edit) | Blocks credentials, magic test numbers, learnings bulk-clear; warns on naming |
-| `pre-bash-validate.sh` | PreToolUse (Bash) | Blocks --no-verify, pending-actions, validates deploy |
+| `pre-write-validate.sh` | PreToolUse (Write/Edit) | Blocks credentials, magic test numbers, learnings bulk-clear, worktree isolation; warns on naming |
+| `pre-bash-validate.sh` | PreToolUse (Bash) | Blocks --no-verify, worktree commits, pending-actions, validates deploy |
 | `post-write.sh` | PostToolUse (Write/Edit) | Auto-lints JS/TS files, tracks files to .session-files, increments tool-call counter |
 | `flywheel-doc-check.sh` | PostToolUse (Write/Edit) | Suggests doc updates based on 4 sources (git status, commits, session-files, pattern-db) |
 | `post-bash.sh` | PostToolUse (Bash) | Logs deploy/test completions, increments tool-call counter |
@@ -37,7 +37,7 @@ This project uses Claude Code hooks (configured in `.claude/settings.json`) to e
 
 **Fix the hook, don't bypass the system.** If a hook is blocking legitimate work:
 - Open a separate Claude window and fix the hook behavior
-- Use `CLAUDE_ALLOW_PRODUCTION_WRITE=true` for one-off overrides
+- Check the bypass tier in `.claude/rules/bypass-governance.md` — Tier 1 bypasses require user approval
 - **NEVER rename `.meta/`** to disable meta mode — this breaks all session routing
 
 ## What Gets Blocked (Exit Code 2)
@@ -46,6 +46,8 @@ This project uses Claude Code hooks (configured in `.claude/settings.json`) to e
 - `git commit --no-verify` or `git commit -n`
 - `git commit` with unaddressed pending-actions.json (override: `SKIP_PENDING_ACTIONS=true`)
 - `git commit` with TypeScript compilation errors in staged `.ts/.tsx` files (override: `SKIP_TSC_CHECK=true`)
+- File writes to repo paths when not in a worktree (override: `CLAUDE_ALLOW_MAIN_WRITE=true`)
+- `git commit` when not in a worktree (override: `CLAUDE_ALLOW_MAIN_WRITE=true`)
 - `git push --force` to main/master
 - Deployment when tests fail
 - Deployment when coverage < 80% (statements or branches)
@@ -66,6 +68,21 @@ On every `git commit`, the hook displays a reminder checklist:
 - Updated `.meta/todo.md`?
 - Captured learnings in `.claude/learnings.md`?
 - Design decision documented if architectural?
+
+## Bypass Governance
+
+Hook bypasses are tiered by risk. See `.claude/rules/bypass-governance.md` for the full reference.
+
+**Tier 1 — Require user confirmation before use:**
+- `CLAUDE_ALLOW_MAIN_WRITE` — Worktree isolation (pre-write + pre-bash)
+- `CLAUDE_ALLOW_PRODUCTION_WRITE` — Meta-mode isolation (pre-write)
+- `SKIP_PIPELINE_GATE` — TDD requirement for new functions (pre-write)
+- `SKIP_COVERAGE_CHECK` — Coverage regression + test deletion (pre-bash)
+
+**Tier 2 — Autonomous, logged to events.jsonl:**
+- `SKIP_TSC_CHECK`, `SKIP_PENDING_ACTIONS`, `SKIP_META_HOOK_CHECK`, `SKIP_PATH_CHECK`, `SKIP_LEARNINGS_GUARD`
+
+All bypass invocations emit `bypass_used` events for audit.
 
 ## Hook Scripts Location
 

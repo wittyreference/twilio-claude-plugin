@@ -74,3 +74,13 @@ See [SKILL.md](../SKILL.md) for the cross-cutting gotchas summary.
 - **Three attestation levels**: A (full — you own the number and chose the caller), B (partial — you originated the call but didn't assign the number), C (gateway — you're just passing the call through). Only A attestation produces the green checkmark on mobile.
 - **PASSporT timestamp**: The cryptographic token has a 1-minute validity window. Clock skew between your systems and Twilio can cause attestation failures.
 - **E.164 formatting required**: Phone numbers in SHAKEN/STIR must be in E.164 format (`+1XXXXXXXXXX`). Non-E.164 numbers cannot receive attestation.
+
+## Status Callback Resilience
+
+Status callbacks (`statusCallback`, `statusCallbackEvent`, `recordingStatusCallback`, etc.) are delivered at-least-once. Twilio retries callbacks that time out (15s for Functions, configurable for external URLs) or return 4xx/5xx.
+
+- **Idempotency**: Callbacks for the same event may arrive more than once. Deduplicate using `{CallSid}-{CallStatus}` as a composite key (or `{RecordingSid}-{RecordingStatus}` for recording callbacks). Use a Sync Map or database upsert to detect duplicates before processing.
+- **Traffic math**: Each call generates up to 6 status callbacks (initiated, queued, ringing, in-progress, completed, plus optional recording callbacks). At 50 concurrent calls, expect up to 300 callback invocations in rapid succession. Twilio Functions' 30-concurrent-execution limit means queuing starts at ~30 simultaneous callbacks.
+- **Thundering herd**: When callbacks time out, Twilio retries them — doubling or tripling the callback volume. If your handler is already slow (processing recordings, calling external APIs), retries compound the overload. Design for the retry storm, not just the initial volume.
+- **Thin-receiver pattern**: For high-volume deployments, separate the callback receiver from the processor. The receiver validates the Twilio request signature, writes the payload to a queue (Sync List, SQS, Redis), and returns 200 immediately. A separate worker processes the queue asynchronously. This prevents callback timeouts from cascading into retries.
+- **Timeout budget**: Twilio Functions have a 10-second execution timeout. If your callback handler calls external APIs (NLP, database writes, Slack notifications) synchronously, budget the total time. Multiple sequential API calls easily exceed 10 seconds. Either use the thin-receiver pattern or limit callback handlers to a single fast operation.

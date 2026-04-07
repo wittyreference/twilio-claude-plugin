@@ -36,7 +36,7 @@ To disable the plugin entirely: set `"twilio-claude-plugin@twilio-claude-plugin"
 
 ## The Golden Rules
 
-1. **MCP = Data Operations**: Query, send, create records. Never deploy or delete infrastructure.
+1. **MCP = Data Operations**: Query, send, create, and modify records. Includes destructive operations (delete, release) that require user confirmation. Never deploy infrastructure.
 2. **CLI = Infrastructure Operations**: Deploy, configure environments, purchase numbers.
 3. **Functions = Real-Time Webhooks**: Handle calls/messages, return TwiML.
 4. **Never Cross Layers**: MCP does not invoke CLI. Functions do not use MCP.
@@ -56,7 +56,7 @@ Read-only operations agents can perform freely via MCP tools.
 | Query message history | `get_message_logs` | Filtered by date, phone, status |
 | Query call history | `get_call_logs` | Filtered by date, phone, status |
 | Get debugger alerts | `get_debugger_logs` | Error analysis, monitoring |
-| Get usage records | `get_usage_records` | Billing, cost analysis |
+| Get usage records | `list_usage_records` | Billing, cost analysis |
 | List phone numbers | `list_phone_numbers` | Inventory check |
 | Search available numbers | `search_available_numbers` | Research only, no purchase |
 | Get Sync document | `get_document` | State retrieval |
@@ -192,7 +192,8 @@ Operations requiring explicit human approval before execution.
 |-----------|------|----------------|
 | Configure webhook URLs | MCP: `configure_webhook` | Changes production routing |
 | Deploy to production | CLI: `serverless:deploy --environment production` | Production infrastructure change |
-| Purchase phone number | CLI: `phone-numbers:buy:*` | Financial commitment |
+| Purchase phone number | MCP: `purchase_phone_number` | Financial commitment — always confirm with user |
+| Release phone number | MCP: `release_phone_number` | Releases number back to Twilio pool |
 | Rollback deployment | CLI: `serverless:activate` | Production impact |
 | Delete Sync documents | MCP: `delete_document` | Data loss potential |
 
@@ -202,7 +203,7 @@ Operations agents should NEVER perform autonomously.
 
 | Operation | Why Prohibited |
 |-----------|----------------|
-| Delete phone numbers | Irreversible, financial impact |
+| Close/delete Twilio account | Permanent account-level destruction |
 | Close/suspend account | Catastrophic |
 | Force push to git | Data loss potential |
 | Deploy without tests passing | Quality gate bypass |

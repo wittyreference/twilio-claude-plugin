@@ -8,7 +8,7 @@ description: "Twilio development skill: references"
 
 # Proxy Skill — Live Test Results
 
-Evidence date: 2026-03-25. Account: ACb4de. All tests via direct REST API (`curl`). Resources cleaned up after testing.
+Evidence date: 2026-03-25. Account: ACxx...xx. All tests via direct REST API (`curl`). Resources cleaned up after testing.
 
 ## Test Resources
 
@@ -19,9 +19,9 @@ Evidence date: 2026-03-25. Account: ACb4de. All tests via direct REST API (`curl
 | Session 1 | KC3dce86d092f6353666e5ba2ba65085d5 | Lifecycle test (close/reopen) |
 | Session 2 | KC264a8191dca0c19bf68345dced366e7d | dateExpiry test |
 | Session 3 | KCec4577f8e948df0a25bc92902de98196 | Empty pool test |
-| Participant (Rider) | KP6aef10ec5b1fb4c8f5b0db64049f6e46 | +12069666002 → proxy +12067597288 |
-| Participant (Driver) | KPbe9b838fb207733a0b5379b0a5131e84 | +12065586395 → proxy +12067597288 |
-| Pool Number | PNe9f78a15f8bda8406244a1636d7c5663 | +12067597288 (DTMF Injector) |
+| Participant (Rider) | KP6aef10ec5b1fb4c8f5b0db64049f6e46 | +15551234567 → proxy +15550100001 |
+| Participant (Driver) | KPbe9b838fb207733a0b5379b0a5131e84 | +15550100002 → proxy +15550100001 |
+| Pool Number | PNe9f78a15f8bda8406244a1636d7c5663 | +15550100001 (DTMF Injector) |
 
 ## Test 1: Service CRUD
 

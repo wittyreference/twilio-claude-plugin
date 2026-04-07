@@ -223,6 +223,6 @@ ACH collects:
 
 ## Function Patterns Available
 
-`collect-payment.js` — TwiML webhook with `<Pay>` verb
+`collect-payment.protected.js` — TwiML webhook with `<Pay>` verb
 `payment-complete.protected.js` — Action URL handler
 `payment-status.protected.js` — Status callback handler

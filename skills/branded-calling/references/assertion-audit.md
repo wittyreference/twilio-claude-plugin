@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Skill**: branded-calling
 **Audit date**: 2026-03-28
-**Account**: ACb4de2...
+**Account**: ACxx...xx
 **Auditor**: Claude + MC
 
 ## Summary
@@ -155,14 +155,14 @@ Policies queried via `GET /v1/Policies?PageSize=50` (pages 1-2) with API key aut
 
 ## Evidence Group 10: Reports API & Voice Insights Settings (Live-Verified)
 
-All tested 2026-03-28 on ACb4de2... with API key auth.
+All tested 2026-03-28 on ACxx...xx with API key auth.
 
 | # | Assertion | Verdict | Evidence |
 |---|-----------|---------|----------|
 | 52 | Voice Insights Settings API returns `advanced_features` and `voice_trace` fields | CONFIRMED | `GET /v1/Voice/Settings` returned `{"advanced_features": true, "voice_trace": false}`. MCP tool `get_insights_settings` confirmed. |
 | 53 | Advanced Features is required for Reports API | CONFIRMED | Doc-sourced: "available exclusively to Voice Insights Advanced Features customers." |
 | 54 | Phone Number Reports API is async (POST to create, GET to retrieve) | CONFIRMED | POST `/v2/Voice/Reports/PhoneNumbers/Outbound` returned `{"status": "created", "report_id": "voiceinsights_report_01kmvtdc5nfcfacysn5vq8ma92"}`. GET by report_id returned full data. |
-| 55 | Outbound report includes `call_answer_score` field | CONFIRMED | Live response: `"call_answer_score": 100.0` for +12069666002. |
+| 55 | Outbound report includes `call_answer_score` field | CONFIRMED | Live response: `"call_answer_score": 100.0` for +15551234567. |
 | 56 | Outbound report includes `blocked_calls_by_carrier` with per-carrier data | CONFIRMED | Live response: array with `att`, `tmobile`, `verizon` entries, each with `blocked_calls`, `blocked_calls_percentage`, `total_calls`. |
 | 57 | Outbound report includes `potential_robocalls_percentage` | CONFIRMED | Live response: `"potential_robocalls_percentage": 0.0`. |
 | 58 | Outbound report includes `answering_machine_detection` | CONFIRMED | Live response: `{"answered_by_human_percentage": 0.0, "answered_by_machine_percentage": 0.0, "total_calls": 0}`. |
@@ -171,5 +171,5 @@ All tested 2026-03-28 on ACb4de2... with API key auth.
 | 61 | Account Report endpoint returns 405 on POST | CONFIRMED | `POST /v2/Voice/Reports/Account` → 405 (method not allowed). |
 | 62 | MCP tools `get_outbound_number_report` and `get_inbound_number_report` use incorrect HTTP method | CORRECTED | **Original**: MCP tools should work. **Correction**: Tools use GET but API requires POST to create + GET by report_id. Tools return 405. Documented as MCP tool gap. |
 | 63 | Reports API accepts JSON content type on POST | CONFIRMED | POST with `Content-Type: application/json` and JSON body returned `status: "created"`. Form-encoded returned 415 (unsupported payload). |
-| 64 | Branded calling specific fields (`branded_calling.*`, `voice_integrity.*`) appear in reports | QUALIFIED | Doc-sourced from Twilio Reports API documentation. Not visible in live data because no branded calling is configured on ACb4de2.... **Qualification**: Field names should be verified on an account with active branded calling. |
+| 64 | Branded calling specific fields (`branded_calling.*`, `voice_integrity.*`) appear in reports | QUALIFIED | Doc-sourced from Twilio Reports API documentation. Not visible in live data because no branded calling is configured on ACxx...xx. **Qualification**: Field names should be verified on an account with active branded calling. |
 | 65 | Advanced Features billing rounds up to next minute | QUALIFIED | Doc-sourced from MCP tool description and Twilio pricing docs. **Qualification**: Not independently verified; billing behavior may vary by account agreement. |

@@ -14,7 +14,7 @@ description: Twilio CLI decision guide. Use when choosing between CLI, MCP tools
 
 When to use the Twilio CLI vs MCP tools vs Console vs SDK. Covers CLI-only operations, profile management, serverless deployment, and the operational boundaries between tooling layers.
 
-Evidence date: 2026-03-25. CLI version: 6.2.4. Node: v22.22.1. Account prefix: ACb4de.
+Evidence date: 2026-03-25. CLI version: 6.2.4. Node: v22.22.1. Account prefix: AC...
 
 **This skill is a decision guide, not a command reference.** For command syntax, see `references/twilio-cli.md`. For the full MCP vs CLI vs Functions boundary framework, see `references/tool-boundaries.md`.
 

@@ -5,7 +5,7 @@ argument-hint: [environment]
 
 # Deployment Helper
 
-Deploy this Twilio serverless project to the specified environment.
+Deploy Twilio serverless functions across 3 services (core, ai, labs) via `scripts/deploy-services.sh`.
 
 ## Pre-Deployment Checklist
 
@@ -22,9 +22,10 @@ Before deploying, verify:
    npm run lint
    ```
 
-3. **Environment Variables Set**
-   - Check `.env` has all required values
-   - For production: verify GitHub Secrets are configured
+3. **CLI Profile** — Verify active profile matches target account:
+   ```bash
+   twilio profiles:list
+   ```
 
 4. **No Uncommitted Changes**
    ```bash
@@ -33,55 +34,50 @@ Before deploying, verify:
 
 ## Deployment Commands
 
-### Deploy to Development
+### Deploy All Services (Recommended)
 ```bash
-twilio serverless:deploy --environment dev
+./scripts/deploy-services.sh dev    # Deploy core + ai + labs to dev
+./scripts/deploy-services.sh prod   # Deploy to production
 ```
 
-### Deploy to Production
+### Deploy Single Service
 ```bash
-twilio serverless:deploy --environment production
+./scripts/deploy-services.sh --only core dev
+./scripts/deploy-services.sh --only ai dev
+./scripts/deploy-services.sh --only labs dev
 ```
 
-### Deploy with Specific Profile
+### Deploy Ephemeral Validation Service
 ```bash
-twilio serverless:deploy --environment production --profile my-profile
+./scripts/deploy-services.sh --only validation dev   # Deploy fresh
+./scripts/deploy-services.sh --teardown validation    # Remove after testing
 ```
 
-## Post-Deployment Verification
+## Service Architecture
 
-After deployment:
+| Service | Directories | Env Var |
+|---------|-------------|---------|
+| `prototype-core` | voice, callbacks, helpers, messaging, messaging-services, taskrouter, verify, phone-numbers, proxy, sync, video | `CORE_BASE_URL` |
+| `prototype-ai` | conversation-relay, webinar, helpers | `AI_BASE_URL` |
+| `prototype-labs` | pay, sip, helpers | `LABS_BASE_URL` |
+| `prototype-validation` | conversation-relay, callbacks, helpers, messaging (ephemeral) | `VALIDATION_BASE_URL` |
 
-1. **Check Deployment Output**
-   - Note the deployed URLs
-   - Verify all functions are listed
+Manifest: `services.json`
 
-2. **Test Endpoints**
-   - Make test calls/messages using MCP `make_call` / `send_sms`
-   - Validate each test with SID-targeted tools: `validate_call(callSid)`, `validate_message(messageSid)`
-   - Check for deployment errors: `validate_debugger(lookbackSeconds: 300)`
+## Post-Deployment
 
-3. **Update Webhook URLs**
-   If needed, update phone number webhooks:
-   ```bash
-   twilio phone-numbers:update +1234567890 \
-     --voice-url https://prototype-xxxx.twil.io/voice/incoming-call \
-     --sms-url https://prototype-xxxx.twil.io/messaging/incoming-sms
-   ```
+1. **Update `.env`** with domains from deploy output (CORE_BASE_URL, AI_BASE_URL, LABS_BASE_URL)
+2. **Wire phone numbers**: `./scripts/wire-phone-numbers.sh`
+3. **Verify endpoints** — make test calls using MCP `make_call` / `send_sms`, validate with `validate_call(callSid)`
+4. **Check debugger**: `validate_debugger(lookbackSeconds: 300)`
 
 ## Rollback
 
-If issues are found after deployment:
-
-1. **Identify Previous Build**
-   ```bash
-   twilio serverless:list builds --service-name prototype
-   ```
-
-2. **Activate Previous Build**
-   ```bash
-   twilio serverless:activate --build-sid BU_PREVIOUS_BUILD_SID
-   ```
+Each service can be rolled back independently:
+```bash
+twilio serverless:list builds --service-name prototype-core
+twilio serverless:activate --build-sid BU_PREVIOUS_BUILD_SID --service-name prototype-core
+```
 
 ## Environment Target
 

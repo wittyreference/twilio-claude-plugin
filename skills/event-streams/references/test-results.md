@@ -9,7 +9,7 @@ description: "Twilio development skill: references"
 # Event Streams — Live Test Results
 
 **Date**: 2026-03-29  
-**Account**: ACb4de2...  
+**Account**: ACxx...xx  
 **Webhook**: https://prototype-1483-dev.twil.io/callbacks/event-stream
 
 ## Test Infrastructure
@@ -27,7 +27,7 @@ description: "Twilio development skill: references"
 | POST to `/Test` | `{ result: "submitted" }` | — |
 | Test event received | CloudEvents envelope with `data.test_id` | test_id: ac09e217-c034-4e44-a981-9ee421e3ff6b |
 | Test event type | `com.twilio.eventstreams.test-event` | — |
-| Test event `id` | Account SID (not EZ format) | ACb4de2... |
+| Test event `id` | Account SID (not EZ format) | ACxx...xx |
 | Test event schema | `EventStreams.TestSink/1.json` | — |
 | Test event latency | ~1.5s (time: 03:59:04, received: 03:59:05) | — |
 | POST to `/Validate` with test_id | `{ result: "valid" }` | — |

@@ -12,7 +12,7 @@ description: Crawl and map IVR phone trees autonomously. Use when mapping an exi
 
 Autonomously maps any IVR phone system by calling it, navigating every branch via DTMF, and producing a structured tree. The output feeds `/ivr-migrator` to rebuild the IVR on Twilio.
 
-**Evidence**: Live-tested 2026-03-25 against GlobalTech Solutions test IVR. 22 calls, 22 nodes, 10m 44s, 100% completion. Account ACb4de...
+**Evidence**: Live-tested 2026-03-25 against GlobalTech Solutions test IVR. 22 calls, 22 nodes, 10m 44s, 100% completion. Account ACxx...xx
 
 ## Scope
 
@@ -44,7 +44,7 @@ Autonomously maps any IVR phone system by calling it, navigating every branch vi
 | Migrate IVR to Twilio | Run `/ivr-crawler` first, then `/ivr-migrator` on the output |
 | Customer has VXML docs | Parse VXML → IvrTree IR → generate TwiML handlers directly |
 | Generate VXML from crawl | Use `generateVxml(tree)` to create VoiceXML for customer review |
-| Test our own IVR | Call `+12066664151` (GlobalTech test IVR) or crawl it |
+| Test our own IVR | Call `+15550100009` (GlobalTech test IVR) or crawl it |
 | Debug a failed crawl | Check `validate_call(callSid)` for the failing call |
 
 ## Prerequisites
@@ -96,12 +96,73 @@ node dist/index.js crawl <TARGET_NUMBER> \
 | Complex corporate (20-50 nodes) | `--max-calls 50 --silence-timeout 5000 --call-delay 2000` |
 | Slow/long-greeting IVR | `--silence-timeout 8000 --prompt-timeout 30000` |
 
-## How It Works
+## Two Crawling Architectures
 
-1. **WebSocket server starts** on localhost, exposed via ngrok
-2. **Outbound call** placed to target IVR with inline ConversationRelay TwiML
+The crawler evolved through four attempts (documented in `analysis/ivr-crawler-showcase.md`). Two architectures survived, each suited to different IVR types.
+
+### Architecture 1: BFS Multi-Call (`--mode cr` or `--mode transcription`)
+
+**How it works**: One outbound call per tree node. `sendDigits` on `calls.create()` replays the full digit path from root to reach each menu position. ConversationRelay or Media Streams captures the prompt. BFS explores all branches.
+
+**Strength**: Stateless and deterministic — each call is independent, no mid-call state to manage. Handles menu-style IVRs with fixed digit paths.
+
+**Limitation**: Cannot handle sequential-input IVRs (payment flows, account verification) where each step depends on the previous response. `sendDigits` on `calls.create()` fires once at call start; there's no way to send DTMF mid-call in response to what the IVR says.
+
+**Audio capture options** (all validated 15/15 via `diagnose-audio.mjs`):
+
+| Method | Flag | Needs | When to use |
+|--------|------|-------|-------------|
+| **ConversationRelay** | `--mode cr` | WS + ngrok | Default. Built-in STT, bidirectional (can speak back for speech IVRs, apologize to humans) |
+| **Media Streams + Deepgram** | `--mode transcription` | WS + ngrok + `DEEPGRAM_API_KEY` | Per-track control, custom STT, no CR access needed |
+
+### Architecture 2: RTT Ping-Pong (single call)
+
+**How it works**: One call navigates the entire IVR. `<Start><Transcription>` begins at call start and **persists as a background operation across TwiML changes**. The call ping-pongs between three TwiML states:
+
+```
+<Start><Transcription> → listen for prompt via RTT callbacks
+  → <Play digits="w1"> → send DTMF to IVR (in-band audio tones)
+  → <Redirect> back to handler → listen for next prompt
+  → <Play digits="ww2"> → next DTMF
+  → <Redirect> → listen...
+```
+
+**Strength**: Can handle sequential-input IVRs (enter account number → confirm → enter ZIP → etc.) because it sends DTMF mid-call in response to each prompt. Single call = lower cost and faster.
+
+**Limitation**: `<Play digits>` generates in-band audio tones, not RFC 2833 signaling. Most IVRs detect them, but some don't. Long digit sequences (16-digit card numbers) may drop a digit. Needs an HTTP server for RTT callbacks + a deployed function to serve the ping-pong TwiML.
+
+**Implementation**: `explore-rtt.mjs` (DTMF) and `explore-rtt-voice.mjs` (speech + DTMF). These are standalone exploration scripts, not integrated into the BFS crawler CLI.
+
+### Which architecture to use
+
+| IVR Type | Architecture | Why |
+|----------|-------------|-----|
+| Menu tree ("press 1 for sales") | **BFS Multi-Call** | Fixed digit paths, stateless, full tree mapping |
+| Sequential input (account#, ZIP, card) | **RTT Ping-Pong** | Mid-call DTMF needed, each step depends on prior response |
+| Speech-only ("say your name") | **BFS + CR** | ConversationRelay can speak back via TTS |
+| Mixed (menus + payment flow) | **Both** | BFS maps the menu tree, RTT handles the payment subflow |
+| Unknown IVR type | **BFS first** | Map what you can, switch to RTT if sequential input detected |
+
+### Critical: ngrok tunnel hygiene
+
+All real-time methods require a clean ngrok tunnel. **Duplicate tunnels on the same domain cause silent, intermittent failures** — requests route unpredictably between ports. Before any crawl:
+
+```bash
+# Verify exactly ONE tunnel for your domain
+curl -s http://localhost:4040/api/tunnels | python3 -c "
+import json, sys
+for t in json.load(sys.stdin).get('tunnels', []):
+    if 'crawler' in t['name']: print(f\"{t['name']}: {t['public_url']} -> {t['config']['addr']}\")
+"
+# Must show exactly 1 line. If >1, delete extras via ngrok API.
+```
+
+## How BFS Multi-Call Works
+
+1. **Server starts** on localhost, exposed via ngrok (WS for CR/Streams)
+2. **Outbound call** placed to target IVR with inline TwiML
 3. **`sendDigits`** on `calls.create()` sends RFC 2833 DTMF to navigate the IVR to a specific menu position
-4. **ConversationRelay** transcribes the IVR prompt → WebSocket → text
+4. **Audio capture** transcribes the IVR prompt via the configured method
 5. **Claude API** analyzes the prompt: identifies node type, menu options, language
 6. **TreeBuilder** records the node, queues unexplored branches
 7. **BFS loop** repeats until all branches explored or limits hit
@@ -124,12 +185,15 @@ Key node types: `root`, `menu`, `information`, `transfer`, `dead_end`, `callback
 
 ## Gotchas
 
-1. **sendDigits timing varies per IVR**: If digits arrive before a `<Gather>` is active, they're ignored. Increase `--silence-timeout` and the initial delay in `buildSendDigits()` for slow IVRs.
-2. **ConversationRelay needs Deepgram**: The crawler uses `transcriptionProvider="deepgram"` with `speechModel="nova-3-general"`. Google STT also works but Deepgram is the project standard.
-3. **Agent transfers fail without CR WebSocket server**: If the target IVR transfers to a ConversationRelay agent, it needs a running WebSocket server. Without `CONVERSATION_RELAY_URL`, transfers show as errors.
-4. **ngrok URL changes on restart**: Each ngrok session gets a new URL. The `--ws-url` must match the current ngrok tunnel.
-5. **Cost**: ~$0.02/call + ~$0.01/Claude analysis. A 30-node IVR costs ~$1.00-$1.50 total.
-6. **Root prompt accumulation**: The silence timer must be long enough for the IVR to play both the greeting and the menu prompt. Default 3s works for most IVRs; use 5-8s for IVRs with long greetings.
+1. **Duplicate ngrok tunnels cause silent failures**: If two tunnels exist for the same domain (e.g., one on port 8080, another on 8089), requests route unpredictably. CR connects (setup message arrives) but prompts silently don't flow. Always verify exactly one tunnel before crawling. This cost 3+ hours of debugging in the 2026-04-06 session.
+2. **ngrok 404 looks like your server's 404**: When the ngrok endpoint is offline, it returns HTTP 404 with an HTML error page — not a connection error. Check the response BODY, not just the status code.
+3. **sendDigits timing varies per IVR**: If digits arrive before a `<Gather>` is active, they're ignored. Increase `--silence-timeout` and the initial delay in `buildSendDigits()` for slow IVRs.
+4. **ConversationRelay needs Deepgram**: The crawler uses `transcriptionProvider="deepgram"` with `speechModel="nova-3-general"`. Google STT also works but Deepgram is the project standard.
+5. **Media Streams mode needs DEEPGRAM_API_KEY**: The `--mode transcription` path requires a Deepgram API key in `.env` for streaming STT.
+6. **Agent transfers fail without CR WebSocket server**: If the target IVR transfers to a ConversationRelay agent, it needs a running WebSocket server. Without `CONVERSATION_RELAY_URL`, transfers show as errors.
+7. **Cost**: ~$0.02/call + ~$0.01/Claude analysis. A 30-node IVR costs ~$1.00-$1.50 total.
+8. **Root prompt accumulation**: The silence timer must be long enough for the IVR to play both the greeting and the menu prompt. Default 3s works for most IVRs; use 5-8s for IVRs with long greetings.
+9. **When multiple products fail simultaneously, check infrastructure first**: If CR, RTT, and Streams all fail at once, the problem is ngrok/DNS/firewall — not the Twilio platform.
 
 ## VXML Pipeline
 

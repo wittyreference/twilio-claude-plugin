@@ -49,7 +49,7 @@ Evidence date: 2026-03-28. Tested against account prefix `AC1cb3`.
 - Route based on caller ID, time of day, or any call attribute — routing is trunk-level, not per-call
 - Port numbers between trunks without removing and re-associating them
 - Use Answering Machine Detection (AMD) — AMD does not work with SIP Trunking
-- Use wideband codecs (G.729, Opus, AMR-NB) without Limited Availability enrollment
+- Use non-G.711 codecs (G.729, Opus, AMR-NB) without Limited Availability enrollment
 
 ---
 
@@ -62,7 +62,7 @@ Evidence date: 2026-03-28. Tested against account prefix `AC1cb3`.
 | PSTN pipe + keep carrier numbers | BYOC (SIP Interface subtype) | No porting required |
 | Record specific calls only | SIP Interface + per-call recording | Trunk recording is all-or-nothing |
 | Real-time speech/AI on calls | SIP Interface + ConversationRelay | CRelay requires PV |
-| Multiple PBX failover | Elastic SIP Trunking with priority/weight origination URLs | Built-in SRV-style failover |
+| Multiple PBX failover | Elastic SIP Trunking with priority/weight origination URLs | Built-in priority/weight failover + DisasterRecoveryUrl as last resort |
 | Regulatory compliance recording | Elastic SIP Trunking + trunk recording | Records every call, sends to VI for transcription |
 
 ---
@@ -142,7 +142,7 @@ Origination URLs define where inbound PSTN calls are routed — your PBX/SBC end
 
 ### Priority and Weight
 
-Routing follows DNS SRV-style selection:
+Routing follows a DNS SRV-inspired selection algorithm (priority then weighted distribution), applied at the Twilio platform layer — not via actual DNS SRV lookups:
 
 1. Sort origination URLs by `priority` (ascending — lower number = higher priority)
 2. Among URLs with equal priority, distribute by `weight` (higher = more traffic, proportional)
@@ -189,6 +189,38 @@ Both `sip:` and `sips:` schemes are accepted:
 - `sip:sbc.example.com:5060` — hostname-based
 
 Invalid schemes (e.g., `http://`) are rejected.
+
+### Disaster Recovery URL
+
+The `DisasterRecoveryUrl` is a trunk-level webhook fallback invoked when all origination URLs fail for an inbound PSTN call.
+
+**Trigger conditions** — the DR URL is invoked when:
+- All origination URLs are unreachable (connection timeout, connection refused, DNS resolution failure)
+- All origination URLs return SIP 5xx server errors
+- No origination URLs are configured on the trunk
+- All origination URLs are disabled (`enabled: false`)
+
+**Not triggered by:**
+- Individual SIP 4xx responses from reachable endpoints (486 Busy, 404 Not Found) — these indicate the endpoint answered the INVITE but rejected it
+- A single origination URL failing when others at a lower priority are still available
+
+**Scope:** Per-trunk, not per-call. One DR URL applies to all inbound calls on the trunk. You cannot customize failover behavior per-call at the trunk level. For per-call control, use SIP Interface with TwiML routing instead.
+
+**Configuration:**
+```javascript
+await client.trunking.v1.trunks(trunkSid).update({
+  disasterRecoveryUrl: 'https://your-fallback.example.com/dr-handler',
+  disasterRecoveryMethod: 'POST',
+});
+```
+
+**Response format and parameters:** [UNVERIFIED] Twilio documentation does not fully specify the parameters sent to the DR URL or the expected response format. Test your DR URL behavior in a staging environment by disabling all origination URLs and inspecting the incoming webhook with a request inspection tool.
+
+**Relationship to origination URL routing:**
+1. Twilio attempts origination URLs in priority order (lower number first)
+2. Within same priority, URLs are load-balanced by weight
+3. If all URLs at all priority tiers fail → DR URL is invoked
+4. If no DR URL is configured → call is rejected
 
 ---
 
@@ -332,7 +364,7 @@ Query trunking calls via MCP:
 mcp__twilio__list_call_summaries(callType: "trunking", processingState: "all")
 ```
 
-The trunk-leg `To` field is a SIP URI (e.g., `sip:+12293635283@68.183.158.165:5060`), not E.164. The `From` field is the original caller's E.164 number.
+The trunk-leg `To` field is a SIP URI (e.g., `sip:+15550100005@203.0.113.10:5060`), not E.164. The `From` field is the original caller's E.164 number.
 
 **Processing delay**: Trunking call summaries take longer to process than carrier calls (~5-15 minutes vs ~2-4 minutes). Always use `processingState: "all"` when querying recent trunk calls.
 
@@ -349,11 +381,13 @@ Voice Insights Advanced Features must be enabled at the account level (Console �
 | SIP Trunks | 100 per account | 1 |
 | Origination phone numbers | Unlimited | 1 |
 | Termination CPS (calls per second) | 1 default, self-serve to 5 via Console | 1 |
-| Origination CPS | Unlimited | Unlimited |
+| Origination CPS | No explicit limit (subject to your infrastructure capacity and Twilio account concurrency limits) | No explicit limit |
 | Concurrent calls | Unlimited (carrier-dependent) | 4 |
 | Max call duration | 24 hours | 24 hours |
 
 Higher CPS limits require contacting Twilio Sales. An approved Business Profile is required for full concurrent call capacity.
+
+**Platform SLA**: Twilio's published voice services SLA is **99.95%** uptime (~4.4 hours downtime/year). Requests for 99.99% or 99.999% availability exceed the standard platform guarantee and require a custom enterprise agreement negotiated through Twilio Sales. When planning HA architecture, calculate effective availability as the product of Twilio's SLA and your own infrastructure availability (PBX, SBC, network path).
 
 ---
 
@@ -381,6 +415,40 @@ Trunk recordings have different channel assignment than API-initiated recordings
 | Channel 2 | SIP/terminating side (PBX) | FROM (caller) |
 
 This matters when sending recordings to Voice Intelligence — getting channels wrong swaps speaker labels in transcripts. The recording SID for trunk calls is on the **trunk leg's call SID**, not the parent API call SID. You must find the trunk-direction call to list its recordings.
+
+---
+
+## Disaster Recovery / Failover
+
+### Trunk Failover
+
+Twilio does NOT auto-failover between trunks. If your primary trunk's origination URIs become unreachable:
+- Inbound calls to numbers on the trunk return SIP 503
+- No automatic rerouting to a backup trunk
+
+Three failover patterns exist, each at a different layer:
+
+**1. Within-trunk failover (automatic — recommended)**
+
+Add multiple origination URIs to a single trunk with priority tiers. Twilio fails over automatically:
+1. Add origination URIs pointing to different PBX/SBC endpoints on the same trunk
+2. Set priority: primary PBX = 10, secondary PBX = 20 (lower number = tried first)
+3. If the primary URI is unreachable, Twilio tries the next priority tier automatically
+4. For geographic redundancy, origination URIs can point to PBX instances in different regions
+5. Monitor trunk health via Voice Insights and configure alerting on SIP 503 spikes
+
+**2. Cross-trunk failover (scripted — not automatic)**
+
+A phone number can only be associated with ONE trunk at a time (see Gotcha #17). Cross-trunk failover requires scripted number reassociation via the REST API — it is not instant and not automatic. Build automation to detect trunk failure and move numbers from the failed trunk to a pre-configured backup trunk:
+1. Pre-provision a backup trunk with origination URIs, ACLs, and credentials ready
+2. Monitor the primary trunk for sustained SIP 503 or origination failures
+3. On failure detection, call `POST /v1/Trunks/{BackupTrunkSid}/PhoneNumbers` to reassociate numbers
+4. Numbers must first be removed from the failed trunk (`DELETE /v1/Trunks/{FailedTrunkSid}/PhoneNumbers/{PhoneNumberSid}`)
+5. Reassociation is not instant — expect seconds to low tens of seconds of downtime per number during the move
+
+**3. DisasterRecoveryUrl (trunk-level last resort — inbound only)**
+
+The `DisasterRecoveryUrl` is a trunk-level fallback webhook invoked when ALL origination URLs fail for an inbound call. It returns TwiML for emergency routing (e.g., forward to a cell phone, play a message, enqueue to a different system). See the Disaster Recovery URL section above for trigger conditions, configuration, and scope. This does not help with outbound calls.
 
 ---
 
@@ -446,9 +514,33 @@ This matters when sending recordings to Voice Intelligence — getting channels 
 
 22. **AMD does not work with SIP Trunking**: Answering Machine Detection is incompatible with Elastic SIP Trunking, `<Dial><Client>`, `<Dial><Conference>`, and `<Dial><Queue>`. If you need AMD, use SIP Interface.
 
-23. **Recording channel assignment differs from API recordings**: Trunk recordings use Channel 1 = Twilio/originating, Channel 2 = PBX/terminating. This is the inverse of API recording conventions. Getting it wrong swaps Voice Intelligence speaker labels.
+23. **DTMF mode must be RFC 2833/4733**: Twilio uses RFC 2833 (telephone-event) for DTMF relay on trunking calls. PBXes configured for SIP INFO DTMF (e.g., Cisco CUCM default) or inband DTMF detection will lose all touchtone capability. Since trunk calls bypass Programmable Voice, there is no `<Gather>` to fail — but DTMF-dependent IVR flows on the PBX side will be affected if the PBX expects a different DTMF method from Twilio's media relay. Configure your PBX for RFC 2833/4733 DTMF. No error appears in Twilio's debugger; DTMF is silently lost.
 
-24. **Trunk recording SID is on the trunk leg's call SID**: Not the parent API call. Query recordings from the trunk-direction call SID. The parent call shows 0 recordings.
+24. **Recording channel assignment differs from API recordings**: Trunk recordings use Channel 1 = Twilio/originating, Channel 2 = PBX/terminating. This is the inverse of API recording conventions. Getting it wrong swaps Voice Intelligence speaker labels.
+
+25. **Trunk recording SID is on the trunk leg's call SID**: Not the parent API call. Query recordings from the trunk-direction call SID. The parent call shows 0 recordings.
+
+### Signaling & Media
+
+26. **SIP session timers (RFC 4028) can drop long calls**: Twilio uses session timers on trunking SIP legs. If your PBX/SBC does not respond to session refresh re-INVITEs, the call is torn down after the session timer expires (typically 1800s / 30 minutes). This manifests as clean BYEs with no Twilio-side error. Contact center hold queues, IVR parking, and long conference bridges are most affected. Ensure your PBX supports RFC 4028 session timer refreshes.
+
+27. **SRTP requires SDES key exchange (RFC 4568)**: When `Secure=true`, Twilio uses SDES (Session Description Protocol Security Descriptions) for SRTP key negotiation. PBXes configured for DTLS-SRTP (common in WebRTC) or ZRTP will fail media negotiation — TLS handshake succeeds but audio fails. Configure your SBC for SDES-based SRTP (e.g., `media_encryption=sdes` in Asterisk PJSIP).
+
+### Disaster Recovery
+
+28. **DR URL is trunk-level, not per-call**: `DisasterRecoveryUrl` is configured once on the trunk and applies to all inbound calls. You cannot customize DR behavior per-call. For per-call failover logic, use SIP Interface with TwiML routing instead.
+
+29. **DR URL trigger conditions are not fully documented**: Twilio docs do not exhaustively specify which SIP response codes or network errors trigger the DR URL invocation. Test your DR path by disabling all origination URLs and confirming the webhook fires. 4xx responses (486 Busy) from a reachable endpoint typically do not trigger DR — only wholesale origination failure does.
+
+- **Pre-validate failover endpoint ACLs**: When configuring multiple origination URLs for failover, ensure ALL endpoint IPs (primary and backup) are included in the trunk's IP Access Control List BEFORE a DR event. A SIP 403 Forbidden from a reachable but misconfigured backup endpoint does NOT trigger the DisasterRecoveryUrl — Twilio only triggers DR when ALL origination URLs are unreachable, not when they reject with 4xx. Pre-validation checklist: (1) list all origination URL IPs across all data centers, (2) verify each IP appears in at least one associated IP ACL, (3) periodically test failover by temporarily disabling the primary endpoint.
+
+30. **"SRV-style" routing is an analogy, not DNS**: Origination URL priority/weight routing uses an algorithm inspired by DNS SRV semantics, but it is applied at the Twilio platform layer. Your PBX hostname DNS resolution is separate — see the SIP Interface skill for DNS resolution details.
+
+### TLS Version Compatibility
+
+31. **TLS version mismatch produces silent SIP 503**: If your trunk is configured for TLS (`secure: true`) and the carrier/PBX only supports a TLS version that Twilio's edge doesn't negotiate, all calls fail with SIP 503 Service Unavailable. No Twilio debugger alert explains the root cause — you see 503s with no indication of TLS handshake failure. **Detection**: If all calls to a trunk fail with 503 and the trunk was recently configured (or a carrier recently upgraded), suspect TLS version mismatch. **Diagnostic**: Check your PBX/carrier's supported TLS versions. Twilio's SIP edge supports TLS 1.2. Some carriers have moved to TLS 1.3-only — Twilio may not negotiate TLS 1.3 on all edges. **Workaround**: If TLS 1.3-only is required, contact Twilio support to verify edge compatibility for your region. As a temporary measure, disable `secure` on the trunk to use unencrypted SIP (not recommended for production).
+
+32. **Carrier compatibility checklist**: Before provisioning a trunk for a new carrier, verify: (1) TLS version support (1.2 minimum), (2) SRTP key exchange method (SDES required, not DTLS), (3) DTMF mode (RFC 2833 required), (4) codec support (G.711 µ-law/A-law, Opus if available), (5) session timer support (RFC 4028), (6) E.164 number format acceptance. A mismatch on any of these produces hard-to-diagnose failures because SIP signaling succeeds but media or features fail silently.
 
 ---
 

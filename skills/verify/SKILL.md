@@ -15,7 +15,7 @@ allowed-tools: mcp__twilio__*, Read, Grep, Glob
 
 OTP verification across SMS, voice, email, and WhatsApp channels. Covers channel selection, service configuration, verification lifecycle, error handling, and fraud prevention.
 
-Evidence date: 2026-03-25. Account prefix: ACb4de. Service: VA9e7e80.
+Evidence date: 2026-03-25. Account prefix: AC... Service: VA9e7e80.
 
 ## Scope
 
@@ -196,7 +196,7 @@ try {
 
 2. **Email channel requires Mailer integration**: Passing `channel: 'email'` without first configuring a Mailer (SendGrid or custom SMTP) on the Verify Service returns error 60217 with no hint about what to configure. [Evidence: error 60217 "A Mailer must be associated with the service"]
 
-3. **`auto` channel is not universally available**: Returns 60200 "Invalid parameter: Channel" on accounts without Fraud Guard. Do not use in production without confirming account eligibility. [Evidence: 60200 on ACb4de account]
+3. **`auto` channel is not universally available**: Returns 60200 "Invalid parameter: Channel" on accounts without Fraud Guard. Do not use in production without confirming account eligibility. [Evidence: 60200 on test account]
 
 ### Verification Lifecycle
 

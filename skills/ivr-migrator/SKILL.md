@@ -32,7 +32,6 @@ This is NOT a template engine. Claude Code writes all functions using the full t
 - Replicate authentication flows (account number entry, PIN verification)
 - Reproduce exact hold music (uses generic Twilio hold music URL)
 - Clone agent transfer destinations (generates placeholder `<Dial>` or CR TwiML)
-- Handle IVR nodes marked as `error` or `unknown` in the crawl
 - Generate code without going through the pipeline (architect → spec → test-gen → dev)
 
 ## Workflow

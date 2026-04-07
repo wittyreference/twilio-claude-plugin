@@ -29,10 +29,10 @@ curl -s -u "$TWILIO_API_KEY:$TWILIO_API_SECRET" \
   "https://insights.twilio.com/v1/Voice/Settings" | jq .
 ```
 
-**Response** (live-verified, ACb4de2..., 2026-03-28):
+**Response** (live-verified, ACxx...xx, 2026-03-28):
 ```json
 {
-  "account_sid": "ACb4de2...",
+  "account_sid": "ACxx...xx",
   "advanced_features": true,
   "voice_trace": false
 }
@@ -92,7 +92,7 @@ curl -s -X POST \
 **Creation response** (live-verified):
 ```json
 {
-  "account_sid": "ACb4de2...",
+  "account_sid": "ACxx...xx",
   "report_id": "voiceinsights_report_01kmvtdc5nfcfacysn5vq8ma92",
   "request_meta": {
     "end_datetime": "2026-03-29T03:32:43Z",
@@ -202,7 +202,7 @@ Per Twilio documentation, accounts with active branded calling should see additi
 | `voice_integrity.answer_rate` | Answer rate for Voice Integrity calls |
 | `voice_integrity.bundle_sid` | Associated Trust Product SID |
 
-**Note**: These fields were not observed in live testing (no branded calling configured on ACb4de2...). Field names are doc-sourced and should be verified when branded calling is active on the account.
+**Note**: These fields were not observed in live testing (no branded calling configured on ACxx...xx). Field names are doc-sourced and should be verified when branded calling is active on the account.
 
 ---
 

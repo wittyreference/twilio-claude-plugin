@@ -12,7 +12,7 @@ description: Twilio iOS SDK development guide (Voice + Video). Use when building
 
 iOS-specific platform guide for building native apps with Twilio Voice SDK 6.x and Video SDK 5.x. Load this skill when working on Swift/Objective-C code that integrates Twilio SDKs, or when debugging iOS-specific issues like CallKit, PushKit, background modes, or audio session conflicts. Medium degree of freedom — preferred patterns exist but vary by app architecture.
 
-Evidence date: 2026-03-29. Account: ACb4de2... SDK versions: Voice 6.13.6, Video 5.11.2.
+Evidence date: 2026-03-29. Account: ACxx...xx SDK versions: Voice 6.13.6, Video 5.11.2.
 
 ---
 
@@ -192,41 +192,47 @@ Read [references/callkit-pushkit.md](references/callkit-pushkit.md) for the comp
 
 6. **Video SDK needs `NSLocalNetworkUsageDescription` on iOS 14+**: Only required if using peer-to-peer rooms with `TVILocalNetworkPrivacyPolicyAllowAll`. Group rooms don't need this.
 
+7. **Xcode 26 requires separate iOS platform download**: Run `xcodebuild -downloadPlatform iOS` or Xcode > Settings > Components. Without this, `xcodebuild` can't find any iOS Simulator destinations even though runtimes exist.
+
+8. **SPM can't build iOS app targets directly**: `swift build --sdk iphonesimulator` doesn't work for app targets. Use `xcodegen` to generate `.xcodeproj` from `project.yml`, then `xcodebuild` with the generated project.
+
 ### Runtime
 
-7. **CallKit audio session activation timing**: Do NOT play or record audio before CallKit calls `provider(_:didActivate:)`. The SDK's `audioDevice.isEnabled` must be set to `true` only in the `didActivate` callback. Setting it too early produces silence or crashes.
+9. **CallKit audio session activation timing**: Do NOT play or record audio before CallKit calls `provider(_:didActivate:)`. The SDK's `audioDevice.isEnabled` must be set to `true` only in the `didActivate` callback. Setting it too early produces silence or crashes.
 
-8. **`TVOCallInvite` must be retained until call completes**: If the invite object is deallocated while the call is active, the SDK crashes (fixed partially in 6.13.5, but retain the object as best practice). Store it in a property, not a local variable.
+10. **`TVOCallInvite` must be retained until call completes**: If the invite object is deallocated while the call is active, the SDK crashes (fixed partially in 6.13.5, but retain the object as best practice). Store it in a property, not a local variable.
 
-9. **`AVAudioSessionCategoryOptionAllowBluetooth` is deprecated**: Use `.allowBluetoothHFP` instead. The old option triggers a deprecation warning in Xcode 26+ builds (Voice SDK 6.13.3+).
+11. **`AVAudioSessionCategoryOptionAllowBluetooth` is deprecated**: Use `.allowBluetoothHFP` instead. The old option triggers a deprecation warning in Xcode 26+ builds (Voice SDK 6.13.3+).
 
-10. **Token refresh must happen before expiry**: If the token expires mid-session, existing calls continue but new calls and registrations fail silently. Implement a timer at 75% of TTL to fetch a fresh token and re-register.
+12. **Token refresh must happen before expiry**: If the token expires mid-session, existing calls continue but new calls and registrations fail silently. Implement a timer at 75% of TTL to fetch a fresh token and re-register.
 
-11. **Identity is case-sensitive across the system**: `<Dial><Client>agent-Alice</Client></Dial>` will NOT ring a client registered as `agent-alice`. This applies to push registration, token generation, and TwiML routing.
+13. **Identity is case-sensitive across the system**: `<Dial><Client>agent-Alice</Client></Dial>` will NOT ring a client registered as `agent-alice`. This applies to push registration, token generation, and TwiML routing.
 
-12. **Video SDK simulator has no camera**: `TVICameraSource` returns nil on simulator. Test video with a physical device. Audio works on some simulators but is unreliable.
+14. **Video SDK simulator has no camera**: `TVICameraSource` returns nil on simulator. Test video with a physical device. Audio works on some simulators but is unreliable.
 
-13. **`TVOCallMessageBuilder.contentType` has no effect in 6.11.x**: Defaults to `application/json` regardless of what you set. Fixed tracking but not resolved as of 6.13.x. Use JSON format for call messages.
+15. **`TVOCallMessageBuilder.contentType` has no effect in 6.11.x**: Defaults to `application/json` regardless of what you set. Fixed tracking but not resolved as of 6.13.x. Use JSON format for call messages.
+
+16. **Voice SDK `getStats` returns array, not flat object**: `call.getStats { reports in }` returns `[StatsReport]`, each with `remoteAudioTrackStats` containing jitter/MOS/packetsLost. Not `getStatsReport` and not a single callback with a flat stats object.
 
 ### Network
 
-14. **Reconnection is automatic but app must handle UI**: Voice SDK fires `call(_:isReconnectingWithError:)` and `callDidReconnect(_:)` on network changes. Show a "Reconnecting..." indicator — the call may survive if the interruption is brief (cellular handoff, Wi-Fi switch).
+17. **Reconnection is automatic but app must handle UI**: Voice SDK fires `call(_:isReconnectingWithError:)` and `callDidReconnect(_:)` on network changes. Show a "Reconnecting..." indicator — the call may survive if the interruption is brief (cellular handoff, Wi-Fi switch).
 
-15. **ICE gathering issue on iOS 18**: Fixed in Voice SDK 6.12.0 and Video SDK 5.8.3. If stuck on older versions, network handover during calls may fail silently. Update the SDK.
+18. **ICE gathering issue on iOS 18**: Fixed in Voice SDK 6.12.0 and Video SDK 5.8.3. If stuck on older versions, network handover during calls may fail silently. Update the SDK.
 
-16. **Edge selection matters for mobile**: Default `roaming` works globally but adds a negotiation round-trip. For latency-sensitive apps targeting a specific region, pin the edge (e.g., `TwilioVoiceSDK.edge = "ashburn"`).
+19. **Edge selection matters for mobile**: Default `roaming` works globally but adds a negotiation round-trip. For latency-sensitive apps targeting a specific region, pin the edge (e.g., `TwilioVoiceSDK.edge = "ashburn"`).
 
 ### Video-Specific
 
-17. **Only `group` room type on new accounts**: Accounts created after specific date only support Group rooms. Attempting `peer-to-peer` or `small-group` returns error 53126. Check your account's room type support.
+20. **Only `group` room type on new accounts**: Accounts created after specific date only support Group rooms. Attempting `peer-to-peer` or `small-group` returns error 53126. Check your account's room type support.
 
-18. **Virtual backgrounds require iOS 17+**: The `TwilioVirtualBackgroundProcessors` framework (private beta, Video 5.11.0+) only works on iOS 17 and later.
+21. **Virtual backgrounds require iOS 17+**: The `TwilioVirtualBackgroundProcessors` framework (private beta, Video 5.11.0+) only works on iOS 17 and later.
 
-19. **H.264 hardware encoder limit**: iOS devices support max 3 simultaneous H.264 hardware encoders. In multi-participant rooms with screen share, some tracks may fall back to VP8 software encoding.
+22. **H.264 hardware encoder limit**: iOS devices support max 3 simultaneous H.264 hardware encoders. In multi-participant rooms with screen share, some tracks may fall back to VP8 software encoding.
 
-20. **Screen share requires Broadcast Upload Extension**: iOS does not allow apps to capture the screen directly (except via ReplayKit). You must create a separate Broadcast Upload Extension target in Xcode and use `TVIReplayKitVideoSource`.
+23. **Screen share requires Broadcast Upload Extension**: iOS does not allow apps to capture the screen directly (except via ReplayKit). You must create a separate Broadcast Upload Extension target in Xcode and use `TVIReplayKitVideoSource`.
 
-21. **`TVITrackPriority` APIs are deprecated in 5.10.x**: Priority-based bandwidth allocation methods are deprecated. Remove usage to avoid warnings.
+24. **`TVITrackPriority` APIs are deprecated in 5.10.x**: Priority-based bandwidth allocation methods are deprecated. Remove usage to avoid warnings.
 
 ---
 
@@ -252,3 +258,4 @@ Read [references/callkit-pushkit.md](references/callkit-pushkit.md) for the comp
 | SDK versions and requirements | [references/sdk-versions.md](references/sdk-versions.md) | Checking compatibility, minimum iOS versions, Xcode requirements |
 | Test evidence | [references/test-results.md](references/test-results.md) | Verifying claims about token generation and SDK behavior |
 | Assertion audit | [references/assertion-audit.md](references/assertion-audit.md) | Reviewing provenance of all factual claims |
+| Voice SDK ↔ SIP bridge | [/skills/sip/references/sdk-sip-bridge.md](/skills/sip/references/sdk-sip-bridge.md) | Bridging SDK calls to SIP endpoints, codec negotiation, decision matrix |

@@ -4,7 +4,7 @@ description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Live test results for iOS skill assertions — server-side token generation and SDK behavior. -->
-<!-- ABOUTME: Evidence gathered on 2026-03-29 against account ACb4de2... -->
+<!-- ABOUTME: Evidence gathered on 2026-03-29 against account ACxx...xx -->
 
 # Test Results
 
@@ -84,7 +84,7 @@ description: "Twilio development skill: references"
 **Test**: `validate_environment` MCP tool confirmed:
 - Account: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - Auth: API Key (SK...)
-- Default number: +12069666002
+- Default number: +15551234567
 - Services: Verify, Sync, TaskRouter all reachable
 
 ## Tests Not Possible in This Environment

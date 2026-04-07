@@ -114,3 +114,45 @@ Cross-cutting gotchas discovered through real debugging sessions. Domain-specifi
 - **Flywheel has 4 sources** — git status (uncommitted), recent commits (since session start), session-tracked files (.session-files), validation failure patterns (pattern-db.json). Source 3 was broken until the stdin fix.
 
 - **Meta-mode hook blocks writes outside project root** — `pre-write-validate.sh` prefix-strips `PROJECT_ROOT/` from `FILE_PATH`. When path is outside the project (e.g., `~/plans/`), the strip is a no-op, leaving an absolute path that matches no allowed patterns. Fixed: wrapped case block in `if [[ "$RELATIVE_PATH" != "$FILE_PATH" ]]`.
+
+## Hooks & Worktrees
+
+- **Merge conflicts in hook scripts create a deadlock** — If both `pre-bash-validate.sh` and `pre-write-validate.sh` have conflict markers simultaneously, ALL Claude Code tools (Bash, Edit, Write) are blocked because the hooks themselves fail to parse. The only escape is the user running a manual command via `!` or `git checkout --theirs/--ours`. Prevention: when merging branches that touch hook scripts, resolve hook conflicts first. Hooks resolve from the main repo path even when working in a worktree.
+
+- **Worktree cleanup race with background agents** — Background agents can remove the worktree directory while the main session is still using it. Recovery: `git fsck --unreachable --no-reflogs` to find dangling commits, recreate branch from tip, merge.
+
+- **CC settings.json hook type names are schema-validated at edit time only** — The settings.json schema rejects unknown hook type names when the Edit tool writes to it. An invalid type name (e.g., `PermissionDenied` instead of `PermissionRequest`) is silently ignored at runtime — schema validation during editing is your only safety net.
+
+## Twilio API Quirks
+
+- **Geographic Permissions API booleans must be strings** — `client.voice.v1.dialingPermissions.bulkCountryUpdates.create()` accepts a JSON string of update objects where boolean values must be `"true"`/`"false"` (strings), not actual booleans. Passing native booleans silently fails.
+
+- **GitHub branch protection requires prior CI runs** — The "Add checks" search in GitHub rulesets only shows status checks that have previously run against the default branch via a PR. If you've only pushed directly to main, the check names won't appear. Push via PR first, then add the check.
+
+## Voice AI Stack (Pre-GA)
+
+- **IP-based auth restrictions on pre-GA APIs** — Conversations, , and Voice Intelligence APIs reject requests from cloud VM IPs (DigitalOcean, AWS, etc.) with 401 "invalid username". Same credentials work from local machines. Pre-GA demos must run from a trusted/registered IP. (Discovered 2026-04-03)
+
+- **ENVIRONMENT=dev routes to non-existent regional endpoints** — TAC SDK reads `ENVIRONMENT` env var and constructs URLs like `conversations.dev-us1.twilio.com`. These don't resolve → `ENOTFOUND` → "fetch failed". Always use `ENVIRONMENT=prod` or omit (defaults to prod). (Discovered 2026-04-03)
+
+- **Voice Intelligence operator PUT creates an inactive version with no activation API** — Updating a pre-GA operator via PUT creates a new version but does not activate it. The operator silently stops producing results. No REST API to activate a version. Must delete and POST to recreate. (Discovered 2026-04-03)
+
+- **Voice Intelligence API response shapes differ from v2 and from docs** — List endpoints return `items[]` not `operatorResults[]` or `conversations[]`. Operator results use `result.label` not `output.label`. Dates are `dateCreated` not `createdAt`. Channels are `channels[]` array not `channel` string. Pagination uses `meta.nextToken` not `nextPageUrl`. Operator results don't include `displayName` — only `operator.id`; resolve names via separate `GET /v3/ControlPlane/Operators`. (Discovered 2026-04-06)
+
+## ngrok
+
+- **Dead ngrok tunnel returns 404 HTML, not connection refused** — When an ngrok tunnel is offline, requests to the domain return HTTP 404 with an ngrok-branded HTML error page. `curl -s -o /dev/null -w "%{http_code}"` shows 404, which looks identical to a missing route on your server. Always check the response body or verify via `curl -s https://DOMAIN/health | head -1` to distinguish ngrok error page from your server's 404.
+
+- **`localhost:4040/api/tunnels` can show tunnel as "active" when forwarding is dead** — The ngrok agent API reports tunnel entries that are no longer forwarding traffic. The only reliable check is an end-to-end request through the tunnel to your server's health endpoint.
+
+- **Twilio produces ZERO diagnostics when callback URLs are unreachable** — `<Start><Recording>`, `<Start><Transcription>`, `<Start><Stream>`, and ConversationRelay WebSocket connections all fail silently when the target URL/domain is unreachable. No debugger alerts, no call notifications, no error events. The call continues but no data flows. When ConversationRelay + Real-Time Transcription + Media Streams all fail simultaneously, suspect ngrok/infrastructure before platform. (Discovered 2026-04-06)
+
+## Cross-Account SID Mismatch
+
+**Scenario**: Deploy to a new subaccount but env vars (TWILIO_TASKROUTER_WORKSPACE_SID, TWILIO_SYNC_SERVICE_SID, TWILIO_VERIFY_SERVICE_SID) still reference the old account. Resources return 404.
+
+**Detection**: Use `validate_environment()` MCP tool at session start. It verifies all SID env vars resolve against the current account.
+
+**Prevention**: After switching accounts (`twilio profiles:use`), re-run `npm run setup` or `./scripts/bootstrap.sh` to re-provision resources. The MCP server inherits env at launch, not runtime — restart Claude Code after .env changes.
+
+**Gotcha**: CLI profile and .env are independent. `twilio profiles:list` shows one account; `.env` may point to another. Always check both.

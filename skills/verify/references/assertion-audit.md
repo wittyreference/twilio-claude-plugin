@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Skill**: verify
 **Audit date**: 2026-03-25
-**Account**: ACb4de2...
+**Account**: ACxx...xx
 **Auditor**: Claude + MC
 
 ## Summary
@@ -38,7 +38,7 @@ description: "Twilio development skill: references"
 | 9 | Locale override for message language | behavioral | CONFIRMED | VEc148ee18 with locale=es succeeded; locale=xx → 60200 | |
 | 10 | Lookup integration adds carrier data | behavioral | CONFIRMED | lookup returned type=voip, name=Twilio, MCC/MNC on lookupEnabled service | |
 | 11 | Cancel pending verifications | behavioral | CONFIRMED | VEbc83fbec update status=canceled succeeded | |
-| 12 | Check by phone/email (to) | behavioral | CONFIRMED | VE5d276ab1 checked via to=+12069666002 | |
+| 12 | Check by phone/email (to) | behavioral | CONFIRMED | VE5d276ab1 checked via to=+15551234567 | |
 | 13 | Check by VerificationSid | behavioral | CONFIRMED | VE07cb3eac checked via verificationSid, approved | |
 | 14 | Tags metadata accepted | behavioral | CONFIRMED | VEc148ee18 with tags={purpose:signup} succeeded | |
 | 15 | riskCheck per-attempt disable | behavioral | CONFIRMED | VE5d276ab1 with riskCheck=disable accepted | |
@@ -52,7 +52,7 @@ description: "Twilio development skill: references"
 | 23 | VE SID deleted after approval | behavioral | CONFIRMED | VEe9a0bd66 → 404 after approval | |
 | 24 | Canceled verification SID persists | behavioral | CONFIRMED | VEbc83fbec fetchable after cancel, status=canceled | |
 | 25 | Max attempts verification SID persists | behavioral | CONFIRMED | VEf635fd47 fetchable after max_attempts_reached | |
-| 26 | auto channel returns 60200 | behavioral | QUALIFIED | 60200 on ACb4de account | Qualified: may work on accounts with Fraud Guard enabled |
+| 26 | auto channel returns 60200 | behavioral | QUALIFIED | 60200 on test account | Qualified: may work on accounts with Fraud Guard enabled |
 | 27 | Email requires Mailer, error 60217 | behavioral | CONFIRMED | Error 60217 "A Mailer must be associated with the service" | |
 | 28 | SNA returns 60001 without carrier setup | behavioral | CONFIRMED | Error 60001 "Downstream Authentication Failed" | |
 | 29 | Status polling rate-limited: 60/min, 180/hr, 250/day | architectural | CONFIRMED | Twilio docs: rate-limits-and-timeouts page | Not live-tested (would require >60 calls/min) |
@@ -85,4 +85,4 @@ Note: Assertions #33 and #34 are listed as CORRECTED because the domain CLAUDE.m
 
 - **#26 — auto channel**: "`auto` channel not universally available"
   - **Qualified text**: "Returns 60200 on accounts without Fraud Guard or specific configuration"
-  - **Condition**: May work on accounts with Fraud Guard enabled. Our test account (ACb4de) does not have it. The skill already notes "Do not assume it works" which is the appropriate guidance.
+  - **Condition**: May work on accounts with Fraud Guard enabled. Our test account (ACxx...xx) does not have it. The skill already notes "Do not assume it works" which is the appropriate guidance.

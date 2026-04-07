@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Date**: 2026-03-27
 **Auditor**: Claude (skill-builder Phase 4)
-**Account**: ACb4de2...
+**Account**: ACxx...xx
 
 ## Summary
 
@@ -54,7 +54,7 @@ description: "Twilio development skill: references"
 | 19 | No MCP tools for restricted key creation | Behavioral | CONFIRMED | Source: iam.ts line 39 shows `client.newKeys.create()` with no keyType param |
 | 20 | No MCP tools for auth token rotation | Behavioral | CONFIRMED | REFERENCE.md search: no auth token tools in any module |
 | 21 | No MCP tools for PKCV | Behavioral | CONFIRMED | REFERENCE.md search: no PublicKey/Credential tools |
-| 22 | Subaccounts cannot create sub-subaccounts | Behavioral | CONFIRMED | Test 10: error 21101 from ACb4de |
+| 22 | Subaccounts cannot create sub-subaccounts | Behavioral | CONFIRMED | Test 10: error 21101 from test account |
 | 23 | Subaccount creds cannot access parent/sibling | Architectural | CONFIRMED | Docs confirm. Consistent with Test 3 (only own account in list) |
 | 24 | PKCV incompatible with Flex, Studio, TaskRouter | Compatibility | QUALIFIED | Not live-tested (Enterprise-only). Docs state explicitly. |
 | 25 | PKCV enforcement kills Auth Token auth | Behavioral | CONFIRMED | Docs: "Auth Token requests stop working" after enforcement |
@@ -104,7 +104,7 @@ description: "Twilio development skill: references"
 
 | # | Assertion | Category | Verdict | Evidence |
 |---|-----------|----------|---------|----------|
-| 52 | Main creds access subaccount v2010 resources | Behavioral | CONFIRMED | Test 3: main account owns ACb4de |
+| 52 | Main creds access subaccount v2010 resources | Behavioral | CONFIRMED | Test 3: main account owns ACxx...xx |
 | 53 | Main creds cannot access subdomain APIs | Behavioral | CONFIRMED | Docs: must use subaccount-specific creds |
 | 54 | Subaccount creds can create own API keys | Behavioral | CONFIRMED | Implied by Auth Token access to /Keys (main account behavior) |
 

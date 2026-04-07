@@ -9,7 +9,7 @@ description: "Twilio development skill: references"
 # IAM Live Test Results
 
 **Date**: 2026-03-27
-**Account**: ACb4de2... (subaccount of ACf30a17)
+**Account**: ACxx...xx (subaccount of ACf30a17)
 **Auth method**: API Key SK1e9a284b + Auth Token (both available)
 
 ## Test Summary
@@ -54,7 +54,7 @@ Evidence: SK...
 GET /2010-04-01/Accounts.json?PageSize=5
 ```
 
-**Result**: 1 account returned — ACb4de itself. Shows `owner_account_sid: ACf30a1...`, confirming ACb4de is a subaccount.
+**Result**: 1 account returned — the test account itself. Shows `owner_account_sid: ACf30a1...`, confirming the test account is a subaccount.
 
 ### Test 4: Create Secondary Auth Token
 
@@ -109,7 +109,7 @@ GET /2010-04-01/Accounts/{SID}.json (auth: SID + secondary token)
 ### Test 10: Subaccount Cannot Create Sub-Subaccount
 
 ```
-POST /2010-04-01/Accounts.json (from subaccount ACb4de)
+POST /2010-04-01/Accounts.json (from subaccount ACxx...xx)
 ```
 
 **Result**: `{ code: 21101, message: "Subaccounts cannot contain subaccounts", status: 400 }`
@@ -129,7 +129,7 @@ FriendlyName=iam-skill-test-key-renamed
 GET /2010-04-01/Accounts/{SID}/IncomingPhoneNumbers.json (auth: SK5d87b5ae)
 ```
 
-**Result**: Success. Returned phone number +12069666002. Standard keys work for non-Accounts/Keys endpoints.
+**Result**: Success. Returned phone number +15551234567. Standard keys work for non-Accounts/Keys endpoints.
 
 ### Test 13: Standard Key for /Accounts Endpoint
 

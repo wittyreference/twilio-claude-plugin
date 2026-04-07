@@ -123,6 +123,19 @@ Twilio provides the dialing infrastructure (CPS, AMD, Conference, Branded Callin
 - **Number rotation**: Monitoring spam flags via Trust & Engagement Insights and rotating proactively
 - **Recording retention**: Storing recordings per your retention policy (Twilio keeps recordings until manually deleted by default)
 
+### Lead-Level Locking
+
+In power and predictive dialers with multiple agents, two agents can simultaneously dial the same lead if the lead list is not locked per-record. This creates a race condition where the prospect receives two overlapping calls.
+
+**Pattern using Sync Map**: Use a Sync Map with the lead's phone number (E.164) as the key and a short TTL (60-120 seconds):
+1. Before dialing, attempt `add_sync_map_item` with key = lead phone number and TTL = 60s
+2. If the add succeeds, proceed with the dial
+3. If error 54208 (unique key conflict), another agent is already calling this lead — skip to the next lead
+4. On call completion (connected or failed), delete the Map item to release the lock early
+5. If the calling agent crashes without releasing, the TTL auto-cleans the stale lock
+
+This is your application's responsibility — Twilio's Calls API has no built-in lead deduplication.
+
 ---
 
 ## Use Case 8: Call Tracking
@@ -191,6 +204,44 @@ Twilio provides the dialing infrastructure (CPS, AMD, Conference, Branded Callin
 | **Example** | "Campaign X is active, 47 calls today" | "Call CA123 completed, 3m 22s, from tracking number +1555..." |
 
 Use Sync when your dashboard needs to display live campaign state. Use Event Streams when call events feed into a downstream analytics or CRM pipeline. Many implementations use both: Sync for operational state, Event Streams for the analytics firehose.
+
+**Sync data structure choice matters**: A single Sync Document with an array of call entries has a race condition under concurrent calls — two simultaneous calls both fetch-then-update the same document, and the second write silently overwrites the first call's entry. Use a **Sync List** (one item per call) for append-only call logs — List item creation is atomic and race-free. Reserve Documents for single-value state like "Campaign X is active" toggles.
+
+### Reference Implementation
+
+See `functions/voice/call-tracking-inbound.js` — campaign lookup from tracking number, agent whisper, and dual-channel recording with preserved caller ID.
+
+### Number Pool Management
+
+Call tracking relies on mapping unique phone numbers to campaigns. Without explicit exclusivity enforcement, two campaigns can be assigned overlapping numbers — producing ambiguous routing and corrupted attribution.
+
+**Pattern — Sync Map for pool exclusivity**:
+
+```javascript
+// Before assigning a number to a campaign, check the pool map
+// Sync Map: key = phone number E.164, value = { campaignId, assignedAt }
+const mapItem = await syncService.syncMaps('number-pool').syncMapItems(phoneNumber).fetch();
+if (mapItem) {
+  throw new Error(`Number ${phoneNumber} already assigned to campaign ${mapItem.data.campaignId}`);
+}
+// Assign
+await syncService.syncMaps('number-pool').syncMapItems.create({
+  key: phoneNumber,
+  data: { campaignId, assignedAt: new Date().toISOString() }
+});
+```
+
+**Why Sync Map**: Map item creation with a duplicate key returns 54301 (Unique name already exists), providing atomic uniqueness enforcement. A Sync Document or List has no built-in uniqueness check.
+
+**Overlap detection**: Periodically query the number-pool Sync Map and cross-reference against active campaigns. Numbers assigned to campaigns that no longer exist should be released. Numbers not in the map but assigned to campaigns via webhook configuration represent untracked assignments — reconcile by adding them to the map.
+
+**Analytics corruption recovery**: If overlapping numbers are discovered after the fact, the affected call records can be disambiguated by checking which campaign's webhook URL the call was routed to (available in call logs via `url` field), though this is imperfect if both campaigns share the same webhook.
+
+### Gotchas
+
+- **CallToken for preserved caller ID**: When forwarding tracked calls with preserved caller ID, you must pass the `CallToken` from the inbound webhook to the outbound Calls/Participants API call. `<Dial>` preserves caller ID automatically, but the Participants API requires explicit `CallToken` for SHAKEN/STIR attestation to carry through.
+- **`<Record>` vs `<Dial record>`**: A standalone `<Record>` verb captures the caller's audio before any connection — not the conversation. For call tracking, use `record` attribute on `<Dial>` (e.g., `record="record-from-answer-dual"`) to capture both sides of the forwarded call.
+- **`configure_webhook` takes SID, not phone number**: The MCP tool requires `phoneNumberSid` (PN-prefixed). Use `list_phone_numbers` first to find the SID, or use `purchase_phone_number` which accepts `voiceUrl`/`smsUrl` at purchase time to skip the separate configure step.
 
 ---
 

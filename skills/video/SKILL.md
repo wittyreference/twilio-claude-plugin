@@ -12,7 +12,7 @@ description: Twilio Video development guide. Use when building video application
 
 Comprehensive decision-making guide for Twilio Video development. Load this skill when building video applications, telehealth platforms, or remote collaboration tools.
 
-**Validated**: 2026-03-28 against account ACb4de2... with live API tests. All assertions backed by SID evidence in `references/assertion-audit.md`.
+**Validated**: 2026-03-28 against account ACxx...xx with live API tests. All assertions backed by SID evidence in `references/assertion-audit.md`.
 
 ## Scope
 

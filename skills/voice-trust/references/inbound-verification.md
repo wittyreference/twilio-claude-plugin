@@ -133,13 +133,19 @@ exports.handler = function(context, event, callback) {
       endConferenceOnExit: true
     }, confName);
   } else {
-    // Unverified — conference with coaching enabled
+    // Unverified — conference that supports coaching/monitoring.
+    // NOTE: Coaching is NOT a TwiML Conference attribute. To enable coaching,
+    // add a supervisor via the Conference Participants REST API with the
+    // `coach` parameter set to the CallSid of the participant being coached:
+    //   client.conferences(confSid).participants.create({
+    //     from: supervisorNumber, to: supervisorNumber,
+    //     coach: participantCallSid
+    //   });
     const dial = twiml.dial();
     dial.conference({
       startConferenceOnEnter: true,
       endConferenceOnExit: true,
       record: 'record-from-start',
-      coaching: true,              // allow supervisor to listen
       statusCallback: `${context.BASE_URL}/callbacks/conference-status`,
       statusCallbackEvent: 'start end join leave'
     }, `coached-${confName}`);

@@ -4,11 +4,11 @@ description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Complete Deepgram ASR test results across all Twilio voice products. -->
-<!-- ABOUTME: 19 live tests with call SIDs as evidence. Tested 2026-03-23 on account ACb4de2... -->
+<!-- ABOUTME: 19 live tests with call SIDs as evidence. Tested 2026-03-23 on account ACxx...xx -->
 
 # Deepgram ASR Test Results
 
-Comprehensive live testing of every Deepgram STT permutation across ConversationRelay, `<Gather>`, and `<Start><Transcription>`. All tests executed 2026-03-23 on account ACb4de2....
+Comprehensive live testing of every Deepgram STT permutation across ConversationRelay, `<Gather>`, and `<Start><Transcription>`. All tests executed 2026-03-23 on account ACxx...xx.
 
 ## Test Methodology
 

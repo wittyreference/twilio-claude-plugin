@@ -107,7 +107,7 @@ The `callType=trunking` filter is accepted by the Voice Insights API but returns
 
 ## SIP Lab Live Tests (2026-03-29)
 
-Droplet restored from snapshot 220969006 → new IP 68.183.158.165. Asterisk rebuilt with correct `external_media_address`.
+Droplet restored from snapshot 220969006 → new IP 203.0.113.10. Asterisk rebuilt with correct `external_media_address`.
 
 ### Termination Call 1 (API → Trunk → Asterisk)
 
@@ -134,7 +134,7 @@ Droplet restored from snapshot 220969006 → new IP 68.183.158.165. Asterisk reb
 | Recording source | `Trunking` |
 | Recording channels | **2** (dual-channel confirmed) |
 | Trunk leg direction | `trunking-originating` |
-| Trunk leg To | `sip:+12293635283@68.183.158.165:5060` |
+| Trunk leg To | `sip:+15550100005@203.0.113.10:5060` |
 | Recording mode | `record-from-answer-dual` |
 
 **Key finding**: The trunk recording (`REd57bb7...`) is on the trunk-leg call SID (`CA1ec6f0...`), NOT on the API-initiated call SID (`CAea6521...`). The API call's recording list is empty. This confirms gotcha #24.
@@ -143,10 +143,10 @@ Droplet restored from snapshot 220969006 → new IP 68.183.158.165. Asterisk reb
 
 All 7 checks passed:
 - Trunk exists (domain: sip-lab-e7f2a9.pstn.twilio.com, secure: false)
-- 1 IP ACL associated, PBX IP 68.183.158.165 found
+- 1 IP ACL associated, PBX IP 203.0.113.10 found
 - 1 credential list associated
-- 1 origination URL enabled (sip:68.183.158.165:5060, priority 10)
-- 1 phone number associated (+12293635283)
+- 1 origination URL enabled (sip:203.0.113.10:5060, priority 10)
+- 1 phone number associated (+15550100005)
 - 0 SIP errors in debugger (300s lookback)
 
 ### Voice Insights Findings

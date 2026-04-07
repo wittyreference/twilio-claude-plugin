@@ -131,5 +131,5 @@ Standard Programmable Voice TwiML verbs work with WhatsApp calls:
 
 - [Voice Skill](/.claude/skills/voice/SKILL.md) — Core voice decision frameworks
 - [Conference Skill](/.claude/skills/conference/SKILL.md) — If routing WhatsApp calls into conferences
-- [Media Streams Skill](/.claude/skills/media-streams.md) — If streaming WhatsApp call audio to WebSocket
+- [Media Streams Skill](/.claude/skills/media-streams/SKILL.md) — If streaming WhatsApp call audio to WebSocket
 - [Twilio WhatsApp Business Calling Docs](https://www.twilio.com/docs/voice/whatsapp-business-calling)

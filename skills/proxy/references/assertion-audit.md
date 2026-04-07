@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Skill**: proxy
 **Audit date**: 2026-03-25
-**Account**: ACb4de2...
+**Account**: ACxx...xx
 **Auditor**: Claude + MC
 
 ## Summary
@@ -29,7 +29,7 @@ description: "Twilio development skill: references"
 
 | # | Assertion | Category | Verdict | Evidence | Notes |
 |---|-----------|----------|---------|----------|-------|
-| A1 | Max 2 participants per session, both share 1 proxy number | Behavioral | CONFIRMED | KP6aef10ec + KPbe9b838f both got +12067597288 | Live-verified |
+| A1 | Max 2 participants per session, both share 1 proxy number | Behavioral | CONFIRMED | KP6aef10ec + KPbe9b838f both got +15550100001 | Live-verified |
 | A2 | Three session modes: voice-and-message, voice-only, message-only | Scope | CONFIRMED | KC3dce86d0 mode=voice-and-message | One mode live-tested; others from docs |
 | A3 | Auto-assign proxy numbers from pool based on geo + stickiness | Behavioral | CONFIRMED | KP6aef10ec auto-assigned from pool | Live-verified |
 | A4 | TTL-based session expiry with reset on interaction | Behavioral | QUALIFIED | twilio.com/docs/proxy/api/session | TTL reset on interaction not live-tested (would need actual call/SMS). Docs confirm. |
@@ -78,7 +78,7 @@ description: "Twilio development skill: references"
 | A37 | G10: Both participants share same proxy number | Behavioral | CONFIRMED | KP6aef10ec + KPbe9b838f | Same as A1 |
 | A38 | G11: Reserved numbers excluded from auto AND explicit | Behavioral | CONFIRMED | KCec4577f8, 80207 | Same as A20-21 |
 | A39 | G12: Max 2 not configurable | Scope | CONFIRMED | 80609 | Same as A17 |
-| A40 | G13: Duplicate identifier rejected 80103 | Error | CONFIRMED | Duplicate +12069666002 | Live-verified |
+| A40 | G13: Duplicate identifier rejected 80103 | Error | CONFIRMED | Duplicate +15551234567 | Live-verified |
 | A41 | G14: 5000 reserved + 500 unreserved per service | Scope | QUALIFIED | twilio.com/docs/proxy/reserved-phone-numbers | Not live-tested (would need 500+ numbers) |
 | A42 | G15: inUse counter on pool numbers | Behavioral | CONFIRMED | PNe9f78a15 inUse=0 | Live-verified |
 | A43 | G16: 17 proxy tools exist in source but not loaded | Scope | CONFIRMED | proxy.ts exists, ToolSearch empty | File + runtime verified |

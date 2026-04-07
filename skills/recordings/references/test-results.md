@@ -4,11 +4,11 @@ description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Validation matrix results for Twilio recording methods. -->
-<!-- ABOUTME: Live-tested 2026-03-24 on account ACb4de2... with call SIDs for evidence. -->
+<!-- ABOUTME: Live-tested 2026-03-24 on account ACxx...xx with call SIDs for evidence. -->
 
 # Recording Validation Matrix — Test Results
 
-All tests run 2026-03-24 on account ACb4de2... Domain: prototype-1483-dev.twil.io.
+All tests run 2026-03-24 on account ACxx...xx Domain: prototype-1483-dev.twil.io.
 Deterministic agents (NATO phonetic phrases, no LLM) used for all tests.
 
 ## Summary
@@ -108,7 +108,7 @@ All callback payloads confirmed to include:
 
 | Field | Present | Example Value |
 |-------|---------|---------------|
-| `AccountSid` | Yes | ACb4de2... |
+| `AccountSid` | Yes | ACxx...xx |
 | `CallSid` | Yes | CA... |
 | `RecordingSid` | Yes | RE... |
 | `RecordingUrl` | Yes | Without extension |

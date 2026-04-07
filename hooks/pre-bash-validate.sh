@@ -10,7 +10,11 @@ fi
 
 COMMAND=""
 if [ -n "$HOOK_INPUT" ] && ! command -v jq &> /dev/null; then
-    echo "BLOCKED: jq not installed — safety hooks cannot run (--no-verify blocking, deploy gates). Install: brew install jq" >&2
+    echo "BLOCKED: jq not installed — safety hooks cannot run (--no-verify blocking, deploy gates)." >&2
+    if command -v brew &>/dev/null; then echo "  Install: brew install jq" >&2
+    elif command -v apt-get &>/dev/null; then echo "  Install: sudo apt-get install -y jq" >&2
+    else echo "  Install jq: https://jqlang.github.io/jq/download/" >&2; fi
+    echo "  See .claude/references/hook-troubleshooting.md for details." >&2
     exit 2
 fi
 if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
@@ -22,11 +26,31 @@ if [ -z "$COMMAND" ]; then
     exit 0
 fi
 
+# Hook directory for sourcing helpers
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Lazy bypass event logger — sources _emit-event.sh on first call only
+_log_bypass() {
+    local var_name="$1" tier="$2" context="$3"
+    if [ -z "${_BYPASS_LOGGER_INIT:-}" ]; then
+        if [ -f "$HOOK_DIR/_emit-event.sh" ]; then
+            source "$HOOK_DIR/_emit-event.sh"
+            EMIT_SESSION_ID="$(echo "$HOOK_INPUT" | jq -r '.session_id // empty' 2>/dev/null)"
+        fi
+        _BYPASS_LOGGER_INIT=1
+    fi
+    emit_event "bypass_used" "$(jq -nc \
+        --arg var "$var_name" \
+        --arg tier "$tier" \
+        --arg ctx "$context" \
+        '{bypass_var:$var, tier:$tier, context:$ctx}' 2>/dev/null)" 2>/dev/null || true
+}
+
 # ============================================
 # GIT COMMIT VALIDATION (No --no-verify)
 # ============================================
 
-if echo "$COMMAND" | grep -qE "git\s+commit.*--no-verify"; then
+if echo "$COMMAND" | grep -qE "git\s+(\S+\s+)*commit.*--no-verify"; then
     echo "BLOCKED: git commit --no-verify is not allowed!" >&2
     echo "" >&2
     echo "The --no-verify flag bypasses pre-commit hooks which enforce code quality." >&2
@@ -39,13 +63,50 @@ if echo "$COMMAND" | grep -qE "git\s+commit.*--no-verify"; then
     exit 2
 fi
 
-# Also catch the short form -n
-if echo "$COMMAND" | grep -qE "git\s+commit.*\s-n(\s|$)"; then
+# Also catch the short form -n (standalone or combined with other short flags like -nm, -anm)
+if echo "$COMMAND" | grep -qE "git\s+(\S+\s+)*commit.*\s-n(\s|$)"; then
     echo "BLOCKED: git commit -n (--no-verify) is not allowed!" >&2
     echo "" >&2
     echo "Pre-commit hooks must run to ensure code quality." >&2
     echo "" >&2
     exit 2
+fi
+if echo "$COMMAND" | grep -qE "git\s+(\S+\s+)*commit.*\s-[a-mo-z]*n[a-mo-z]*(\s|$)"; then
+    echo "BLOCKED: git commit with -n (--no-verify) in combined flags is not allowed!" >&2
+    echo "" >&2
+    echo "Pre-commit hooks must run to ensure code quality." >&2
+    echo "" >&2
+    exit 2
+fi
+
+# ============================================
+# WORKTREE ISOLATION CHECK (BLOCKING)
+# ============================================
+# Sessions that commit code MUST use a worktree. Concurrent sessions on the main
+# tree cause merge conflicts and silent overwrites.
+# Bypass: CLAUDE_ALLOW_MAIN_WRITE=true
+
+if echo "$COMMAND" | grep -qE "^git\s+commit" && [ "${CLAUDE_ALLOW_MAIN_WRITE:-}" != "true" ] && [ "${CI:-}" != "true" ]; then
+    _GIT_COMMON="$(git rev-parse --git-dir 2>/dev/null || echo "")"
+    if [ -n "$_GIT_COMMON" ] && ! echo "$_GIT_COMMON" | grep -q '/worktrees/'; then
+        echo "" >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "BLOCKED: git commit on main tree without worktree isolation" >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "" >&2
+        echo "  Concurrent sessions sharing the main tree cause merge conflicts" >&2
+        echo "  and silent overwrites. Use a worktree for all commit work." >&2
+        echo "" >&2
+        echo "  Run /worktree-start or call EnterWorktree() first." >&2
+        echo "" >&2
+        echo "  Override: CLAUDE_ALLOW_MAIN_WRITE=true git commit ..." >&2
+        echo "" >&2
+        exit 2
+    fi
+fi
+# Log if worktree commit check was bypassed
+if echo "$COMMAND" | grep -qE "^git\s+commit" && [ "${CLAUDE_ALLOW_MAIN_WRITE:-}" = "true" ]; then
+    _log_bypass "CLAUDE_ALLOW_MAIN_WRITE" "1" "worktree commit isolation bypassed"
 fi
 
 # ============================================
@@ -125,7 +186,9 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
     # Prevents agents from deleting tests or reducing coverage.
     # Two checks: (1) test file deletion detection (instant, always runs),
     # (2) coverage baseline comparison (instant, runs if baseline exists).
-    if [ "${SKIP_COVERAGE_CHECK:-}" != "true" ]; then
+    if [ "${SKIP_COVERAGE_CHECK:-}" = "true" ]; then
+        _log_bypass "SKIP_COVERAGE_CHECK" "2" "coverage regression + test deletion guard bypassed"
+    else
         # Check 1: Detect test file deletions in staged changes
         DELETED_TESTS=$(git diff --staged --name-only --diff-filter=D 2>/dev/null \
             | grep -E '\.(test|spec)\.(js|ts)$' || true)
@@ -220,6 +283,8 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
         echo "" >&2
         if [ "${SKIP_PATH_CHECK:-}" != "true" ]; then
             exit 2
+        else
+            _log_bypass "SKIP_PATH_CHECK" "2" "local path leakage check bypassed"
         fi
     fi
 
@@ -267,6 +332,8 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
                 echo "" >&2
                 if [ "${SKIP_META_HOOK_CHECK:-}" != "true" ]; then
                     exit 2
+                else
+                    _log_bypass "SKIP_META_HOOK_CHECK" "2" "meta-only hook registration check bypassed"
                 fi
             fi
         fi
@@ -314,6 +381,8 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
             echo "" >&2
             if [ "${SKIP_TSC_CHECK:-}" != "true" ]; then
                 exit 2
+            else
+                _log_bypass "SKIP_TSC_CHECK" "2" "TypeScript compilation check bypassed"
             fi
         fi
     fi
@@ -414,6 +483,7 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
 
             # Check for escape hatch (environment variable)
             if [ "$SKIP_PENDING_ACTIONS" = "true" ] || [ "$SKIP_PENDING_ACTIONS" = "1" ]; then
+                _log_bypass "SKIP_PENDING_ACTIONS" "2" "pending documentation actions check bypassed"
                 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
                 echo "" >&2
             else
@@ -437,11 +507,26 @@ fi
 # FORCE PUSH PROTECTION
 # ============================================
 
-if echo "$COMMAND" | grep -qE "git\s+push.*--force"; then
+# Detect --force, --force-with-lease, and -f shorthand (but not -f in filenames).
+# The -f\b pattern uses word boundary to avoid matching e.g. "config-file".
+if echo "$COMMAND" | grep -qE "git\s+push.*(--force|--force-with-lease|\s-f\b)"; then
     if echo "$COMMAND" | grep -qE "\s(main|master)(\s|$)"; then
         echo "BLOCKED: Force push to main/master is not allowed!" >&2
         echo "" >&2
         echo "Force pushing to protected branches can cause data loss." >&2
+        echo "If you need to revert changes, use 'git revert' instead." >&2
+        echo "" >&2
+        exit 2
+    fi
+fi
+
+# Detect force push via + refspec (e.g., "git push origin +main", "git push origin +feature:main").
+# The + prefix on a refspec is equivalent to --force for that ref.
+if echo "$COMMAND" | grep -qE "git\s+push\s+\S+\s+\+[a-zA-Z]"; then
+    if echo "$COMMAND" | grep -qE "\+(main|master)(:|$|\s)" || echo "$COMMAND" | grep -qE ":\s*(main|master)(\s|$)"; then
+        echo "BLOCKED: Force push to main/master via + refspec is not allowed!" >&2
+        echo "" >&2
+        echo "The + prefix in a refspec (e.g., +main) forces a non-fast-forward update." >&2
         echo "If you need to revert changes, use 'git revert' instead." >&2
         echo "" >&2
         exit 2

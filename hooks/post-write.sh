@@ -15,7 +15,10 @@ fi
 FILE_PATH=""
 HOOK_SESSION_ID=""
 if [ -n "$HOOK_INPUT" ] && ! command -v jq &> /dev/null; then
-    echo "WARNING: jq not installed — post-write hooks disabled (auto-lint, session tracking). Run: brew install jq" >&2
+    echo "WARNING: jq not installed — post-write hooks disabled (auto-lint, session tracking)." >&2
+    if command -v brew &>/dev/null; then echo "  Install: brew install jq" >&2
+    elif command -v apt-get &>/dev/null; then echo "  Install: sudo apt-get install -y jq" >&2
+    else echo "  Install jq: https://jqlang.github.io/jq/download/" >&2; fi
 fi
 if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
     FILE_PATH="$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)"
@@ -57,7 +60,8 @@ if [ ! -f "$SESSION_START" ]; then
 fi
 
 # Track this file (append if not already present)
-# Make path relative to project root for consistency
+# Make path relative to project root for consistency.
+# FILE_PATH is guaranteed absolute (CC v2.1.88+), so this strip is reliable.
 REL_PATH="${FILE_PATH#$PROJECT_ROOT/}"
 if [ -n "$REL_PATH" ]; then
     # Create session file if it doesn't exist

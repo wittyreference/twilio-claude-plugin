@@ -14,7 +14,7 @@ description: Twilio IAM development guide. Use when choosing authentication meth
 
 Authentication, authorization, and account hierarchy for Twilio APIs. Covers API key types (Standard, Main, Restricted), Access Tokens for client SDKs, auth token rotation, subaccount isolation, test credentials, and Public Key Client Validation (PKCV).
 
-Evidence date: 2026-03-27. Account prefix: ACb4de.
+Evidence date: 2026-03-27. Account prefix: AC...
 
 ## Scope
 
@@ -46,7 +46,7 @@ Evidence date: 2026-03-27. Account prefix: ACb4de.
 - **No MCP tools for restricted key creation** — MCP `create_api_key` uses v2010 under the hood; it cannot set `keyType` or `policy`. Use REST API directly for restricted keys. <!-- verified: iam.ts source code shows client.newKeys.create() with no keyType param -->
 - **No MCP tools for auth token rotation** — No `create_secondary_auth_token` or `promote_auth_token` tools. Use REST API against `accounts.twilio.com/v1/AuthTokens/`. <!-- verified: REFERENCE.md tool inventory -->
 - **No MCP tools for PKCV credential management** — PublicKey CRUD on the Credentials API has no MCP tool equivalents.
-- **Subaccounts cannot create sub-subaccounts** — Error 21101 "Subaccounts cannot contain subaccounts". The hierarchy is flat: one main account with up to 1000 direct subaccounts. <!-- verified: POST /Accounts.json from ACb4de (subaccount) returned 21101 -->
+- **Subaccounts cannot create sub-subaccounts** — Error 21101 "Subaccounts cannot contain subaccounts". The hierarchy is flat: one main account with up to 1000 direct subaccounts. <!-- verified: POST /Accounts.json from test account (subaccount) returned 21101 -->
 - **Subaccount credentials cannot access parent or sibling subaccounts** — Each subaccount's auth token is scoped to its own resources only.
 - **PKCV incompatible with Flex, Studio, and TaskRouter** — Cannot enforce PKCV if you use these products. <!-- verified: docs -->
 - **PKCV enforcement kills Auth Token authentication** — Once enabled, all requests must use API Key + PKCV JWT. Auth Token requests stop working. <!-- verified: docs -->
@@ -200,7 +200,7 @@ See `references/test-results.md` for the full magic phone number table.
 
 ### Subaccounts
 
-11. **Subaccount cannot create subaccounts**: Error 21101 "Subaccounts cannot contain subaccounts". The hierarchy is strictly one level deep. [Evidence: POST /Accounts.json from ACb4de returned 21101]
+11. **Subaccount cannot create subaccounts**: Error 21101 "Subaccounts cannot contain subaccounts". The hierarchy is strictly one level deep. [Evidence: POST /Accounts.json from test account returned 21101]
 
 12. **Subaccount limit is 1000 per main account by default**: Contact Twilio support to increase.
 

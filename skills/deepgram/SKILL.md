@@ -13,7 +13,7 @@ allowed-tools: Read, Grep, Glob
 
 Decision-making guide for using Deepgram speech-to-text within Twilio Voice products. Load this skill when choosing or configuring Deepgram as the STT provider for ConversationRelay, `<Gather>`, or `<Start><Transcription>`.
 
-All claims in this skill are backed by live testing (2026-03-24, account ACb4de2...). See [references/test-results.md](references/test-results.md) for the full evidence matrix with call SIDs.
+All claims in this skill are backed by live testing (2026-03-24, account ACxx...xx). See [references/test-results.md](references/test-results.md) for the full evidence matrix with call SIDs.
 
 ---
 
@@ -152,7 +152,7 @@ See [references/gather-and-transcription.md](references/gather-and-transcription
 - [ConversationRelay CLAUDE.md](/CLAUDE.md) — Protocol, streaming, WebSocket handler patterns
 - [Voice Skill](/skills/voice/SKILL.md) — Transcription Method Selection framework, TTS Voice Tier guidance
 - [Voice Use Case Map](/skills/voice-use-case-map/SKILL.md) — Per-use-case product recommendations
-- [Media Streams Skill](/skills/media-streams.md) — Raw audio alternative (no native Deepgram, bring-your-own STT)
+- [Media Streams Skill](/skills/media-streams/SKILL.md) — Raw audio alternative (no native Deepgram, bring-your-own STT)
 
 ---
 

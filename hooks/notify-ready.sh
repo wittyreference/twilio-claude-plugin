@@ -6,22 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source environment detection helper
 source "$SCRIPT_DIR/_meta-mode.sh"
-
-notify_user() {
-    local title="$1"
-    local message="$2"
-
-    # macOS native notification (AppleScript)
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        osascript -e "display notification \"$message\" with title \"$title\" sound name \"Glass\"" 2>/dev/null || true
-    # Linux with notify-send
-    elif command -v notify-send &> /dev/null; then
-        notify-send "$title" "$message" 2>/dev/null || true
-    # Fallback: terminal bell
-    else
-        echo -e "\a"
-    fi
-}
+# Cross-platform helpers (portable notifications, etc.)
+source "$SCRIPT_DIR/_platform.sh"
 
 # Check for pending documentation actions (environment-aware path)
 PENDING_ACTIONS="$CLAUDE_PENDING_ACTIONS"
@@ -33,7 +19,7 @@ if [ -f "$PENDING_ACTIONS" ]; then
     fi
 fi
 
-# Send notification
-notify_user "Claude Code" "$NOTIFICATION_MSG"
+# Send notification (cross-platform: macOS, Linux, Windows Git Bash)
+notify_desktop "Claude Code" "$NOTIFICATION_MSG"
 
 exit 0

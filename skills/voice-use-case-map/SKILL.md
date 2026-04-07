@@ -13,6 +13,22 @@ allowed-tools: Read, Grep, Glob
 
 Definitive per-use-case product mapping for Twilio Voice. Load this skill when recommending Twilio products for a voice use case.
 
+## Platform vs Application Responsibility
+
+Twilio provides telephony primitives. Compliance frameworks, audit systems, and regulatory artifacts are the application's responsibility.
+
+| Twilio Provides | Application Must Build |
+|----------------|----------------------|
+| Call recording + storage | Retention policies, WORM storage (SEC 17a-4) |
+| Real-time transcription | Compliance keyword detection, audit dashboards |
+| Voice Intelligence (post-call) | Language Operators for custom analysis |
+| PCI-compliant `<Pay>` verb | Sub-account isolation for PCI Mode |
+| Conference recording | Supervisory monitoring audit logs |
+| Call metadata + CDRs | SOX 404 internal control frameworks |
+| SOC 2 Type II (platform) | SOC 2 attestation for your application |
+
+**Scope boundary rule**: If a requirement involves retention policies, regulatory reporting, audit frameworks, or compliance certification — it is beyond-platform. Twilio provides the data; the application provides the governance.
+
 ## Quick Reference
 
 | UC | Name | Core Products | Key Feature | Prototype? |

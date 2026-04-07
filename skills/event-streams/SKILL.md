@@ -12,7 +12,7 @@ description: Twilio Event Streams development guide. Use when building event-dri
 
 Guide for building event-driven integrations with Twilio Event Streams. Load this skill when streaming platform events (calls, messages, recordings, TaskRouter, etc.) to external systems via webhooks, AWS Kinesis, or Segment.
 
-**Evidence date**: 2026-03-29 | **Account**: ACb4de2...
+**Evidence date**: 2026-03-29 | **Account**: ACxx...xx
 
 ## What Event Streams Cannot Do
 
@@ -154,8 +154,8 @@ Every event is wrapped in a CloudEvents v1.0 envelope:
   "data": {
     "messageSid": "SMaf53f755fc01b434d69700511984da79",
     "messageStatus": "SENT",
-    "from": "+12069666002",
-    "to": "+12062021014"
+    "from": "+15551234567",
+    "to": "+15559876543"
   }
 }
 ```

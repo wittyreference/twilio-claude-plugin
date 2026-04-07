@@ -14,7 +14,7 @@ description: Twilio phone number management guide. Use when searching, purchasin
 
 Search, purchase, configure, and release phone numbers. Covers number types, search filters, webhook configuration, capabilities, address requirements, and the purchase/release lifecycle.
 
-Evidence date: 2026-03-25. Account prefix: ACb4de.
+Evidence date: 2026-03-25. Account prefix: AC...
 
 ## Scope
 
@@ -75,7 +75,7 @@ Evidence date: 2026-03-25. Account prefix: ACb4de.
 |------|----------|-----------|
 | Specific area code | Search local with areaCode | `areaCode: 206` (US/CA only) |
 | Vanity number | Search with letter pattern | `contains: 'TEST'` (maps to 8378) |
-| Near existing number | Geographic proximity | `nearNumber: '+12069666002', distance: 10` |
+| Near existing number | Geographic proximity | `nearNumber: '+15551234567', distance: 10` |
 | SMS-capable only | Capability filter | `smsEnabled: true` |
 | No address hassle | Exclude address-required | `excludeAllAddressRequired: true` |
 | International | Specify country code | `countryCode: 'GB'`, check addressRequirements |
@@ -137,7 +137,7 @@ await client.incomingPhoneNumbers(phoneNumberSid).update({
 ```javascript
 // By phone number (exact match, E.164)
 const byNumber = await client.incomingPhoneNumbers.list({
-  phoneNumber: '+12069666002'
+  phoneNumber: '+15551234567'
 });
 
 // By friendly name

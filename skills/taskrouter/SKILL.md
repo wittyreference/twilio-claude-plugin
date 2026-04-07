@@ -14,7 +14,7 @@ description: Twilio TaskRouter skills-based routing guide. Use when building con
 
 Skills-based routing engine distributing tasks to workers based on skills, availability, priority, and workflow rules. Covers the 6-resource architecture (Workspace → Activities → Workers → Task Queues → Workflows → Tasks/Reservations), expression syntax, assignment callbacks, and the 30 MCP tools.
 
-Evidence date: 2026-03-25. Account prefix: ACb4de. Workspace: WS04a6cec1 (deleted after testing).
+Evidence date: 2026-03-25. Account prefix: AC... Workspace: WS04a6cec1 (deleted after testing).
 
 ## Scope
 
@@ -279,6 +279,42 @@ pending → reserved → assigned → wrapping → completed
 21. **100 activities per workspace**: Hard limit. Plan activity states carefully. [Evidence: twilio.com/docs/taskrouter/limits]
 
 22. **Tasks auto-cancel after 1,000 rejections**: If a task cycles through 1,000 reservation reject cycles, it auto-cancels. [Evidence: twilio.com/docs/taskrouter/api/task]
+
+## Cascade Chains
+
+Individual gotchas above interact under load. These are the documented failure cascades:
+
+### High-Concurrency Cascade (Inbound Spike)
+
+```
+Call spike (500+ concurrent)
+  → Reservation creation backlog (rate limited)
+    → Assignment callbacks timeout (5s deadline, gotcha #3)
+      → Reservations auto-timeout
+        → Workers pushed to offline activity (gotcha #4)
+          → Fewer available workers
+            → Deeper reservation backlog (positive feedback loop)
+              → Tasks reach 1000 rejections → auto-cancel (gotcha #22)
+```
+
+**Detection**: Monitor `workspace.realtime` statistics — if `tasks_by_status.pending` grows while `workers_by_activity.available` shrinks, you're in this cascade.
+
+**Mitigation**:
+1. **Overflow queue**: Configure a secondary workflow with a lower-priority catch-all queue. Tasks that exceed N seconds in pending state get reassigned to the overflow queue which plays "estimated wait time" and offers a callback option.
+2. **Worker auto-recovery**: Periodically poll workers in offline state and reset to available if their last reservation was a timeout (not a manual state change). Use `worker.activity.name` and `worker.dateUpdated` to distinguish.
+3. **Capacity planning**: Rough formula — peak concurrent calls ÷ average handle time = minimum agents needed. Add 20% buffer for reservation overhead and timeout recovery.
+
+### Reservation Timeout → Worker Offline Cascade
+
+```
+Reservation assigned to worker
+  → Worker doesn't respond within reservationTimeout
+    → Reservation times out
+      → Worker moved to offline activity (gotcha #4)
+        → Worker receives no further reservations until manually/programmatically restored
+```
+
+**Recovery**: Your application must detect workers stuck in offline state due to timeouts (not intentional logout) and restore them. TaskRouter does not auto-recover — a worker moved offline by timeout stays offline permanently.
 
 ## SID Reference
 

@@ -6,6 +6,9 @@ description: "Twilio development skill: voice"
 # ABOUTME: Context and reference for Twilio Voice API serverless functions.
 # ABOUTME: Covers file inventory, TwiML control model, webhooks, and critical gotchas.
 
+
+**Service:** `prototype-core` (`CORE_BASE_URL`). Deploy: `./scripts/deploy-services.sh dev`
+
 For detailed verb options, code patterns, and conference API examples, see [REFERENCE.md](./REFERENCE.md).
 
 ## Files
@@ -81,7 +84,7 @@ See [`test-ivr/CLAUDE.md`](./test-ivr/CLAUDE.md) for the full tree structure and
 | File | Access | Description |
 |------|--------|-------------|
 | `token.js` | Public* | Generates Twilio Voice SDK access tokens (JWTs) with VoiceGrant |
-| `sdk-handler.js` | Public | Routes browser-originated Voice SDK calls to PSTN or other clients |
+| `sdk-handler.protected.js` | Protected | Routes browser-originated Voice SDK calls to PSTN or other clients |
 
 *`token.js` is intentionally public because browser clients cannot generate Twilio request signatures. For production, add application-level auth (API key, session token, CORS).
 

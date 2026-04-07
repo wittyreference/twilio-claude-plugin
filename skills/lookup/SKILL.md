@@ -13,7 +13,7 @@ allowed-tools: mcp__twilio__lookup_phone_number, mcp__twilio__check_fraud_risk, 
 
 Decision-making guide for Twilio Lookup v2 — phone number intelligence, validation, fraud detection, and identity verification. Load this skill when choosing which data packages to use, interpreting Lookup responses, or integrating number intelligence into voice/messaging workflows.
 
-**Evidence date**: 2026-03-29 | **Account**: ACb4de2...
+**Evidence date**: 2026-03-29 | **Account**: ACxx...xx
 
 ---
 
@@ -192,10 +192,10 @@ console.log(match.lastNameMatch);
 ```javascript
 // Non-E.164 input requires countryCode parameter
 const result = await client.lookups.v2
-  .phoneNumbers('2069666002')
+  .phoneNumbers('5551234567')
   .fetch({ countryCode: 'US' });
 
-console.log(result.phoneNumber); // "+12069666002" (normalized to E.164)
+console.log(result.phoneNumber); // "+15551234567" (normalized to E.164)
 ```
 
 ### Using MCP Tools
@@ -224,7 +224,7 @@ mcp__twilio__check_fraud_risk({ phoneNumber: "+14159929960", checks: ["sim_swap"
 
 3. **Empty phone number input causes HTTP 404**: The only way to get a 404 from Lookup v2 is passing an empty string, which resolves to `/v2/PhoneNumbers` (no number segment). All other invalid inputs return 200. [Evidence: error 20404, live test 2026-03-29]
 
-4. **`callerType` has undocumented value "UNDETERMINED"**: Docs list only `BUSINESS`, `CONSUMER`, and `null`. In practice, Twilio VoIP numbers return `callerType: "UNDETERMINED"`. Handle this value in your code. [Evidence: live test on +12069666002, 2026-03-29]
+4. **`callerType` has undocumented value "UNDETERMINED"**: Docs list only `BUSINESS`, `CONSUMER`, and `null`. In practice, Twilio VoIP numbers return `callerType: "UNDETERMINED"`. Handle this value in your code. [Evidence: live test on +15551234567, 2026-03-29]
 
 5. **`validationErrors` is an empty array for valid numbers, not null**: Despite docs showing `null`, live testing returns `[]`. Check `result.valid` rather than testing `validationErrors` for truthiness. [Evidence: live test 2026-03-29]
 
@@ -234,7 +234,7 @@ mcp__twilio__check_fraud_risk({ phoneNumber: "+14159929960", checks: ["sim_swap"
 
 7. **SMS pumping scores are dynamic**: Consecutive lookups on the same number return different `smsPumpingRiskScore` values (observed: 34, then 41 on the same number seconds apart). Do not cache or compare scores across calls. [Evidence: live tests 6 and 17, 2026-03-29]
 
-8. **Carrier risk and pumping score are independent**: A number can have `smsPumpingRiskScore: 34` (low) but `carrierRiskCategory: "high"`. The carrier category reflects the carrier's overall profile (VoIP carriers are flagged high), while the score is number-specific. [Evidence: live test on +12069666002, 2026-03-29]
+8. **Carrier risk and pumping score are independent**: A number can have `smsPumpingRiskScore: 34` (low) but `carrierRiskCategory: "high"`. The carrier category reflects the carrier's overall profile (VoIP carriers are flagged high), while the score is number-specific. [Evidence: live test on +15551234567, 2026-03-29]
 
 ### Data Package Availability
 

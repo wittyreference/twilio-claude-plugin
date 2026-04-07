@@ -10,7 +10,7 @@ description: "Twilio development skill: references"
 
 **Skill**: phone-numbers
 **Audit date**: 2026-03-25
-**Account**: ACb4de2...
+**Account**: ACxx...xx
 **Auditor**: Claude + MC
 
 ## Summary
@@ -28,11 +28,11 @@ description: "Twilio development skill: references"
 | # | Assertion | Category | Verdict | Evidence | Notes |
 |---|-----------|----------|---------|----------|-------|
 | 1 | Search available numbers by country, area code, capabilities | behavioral | CONFIRMED | Search areaCode=206 returned 3 Seattle numbers | |
-| 2 | Purchase local and toll-free via API | behavioral | CONFIRMED | PNa869b36b purchased toll-free +18889156018 | |
+| 2 | Purchase local and toll-free via API | behavioral | CONFIRMED | PNa869b36b purchased toll-free +18005551234 | |
 | 3 | Configure voice/SMS webhook URLs | behavioral | CONFIRMED | PN32313fb8 updated voiceUrl and smsUrl | |
-| 4 | Filter owned numbers by phoneNumber | behavioral | CONFIRMED | Filter +12069666002 returned 1 result, SID PNfd5828a6 | |
+| 4 | Filter owned numbers by phoneNumber | behavioral | CONFIRMED | Filter +15551234567 returned 1 result, SID PNfd5828a6 | |
 | 5 | Filter owned numbers by friendlyName | behavioral | CONFIRMED | Filter "Payment Agent" returned 1 result | |
-| 6 | Geographic proximity search US/Canada | behavioral | CONFIRMED | nearNumber +12069666002, distance 10mi returned Kent WA numbers | |
+| 6 | Geographic proximity search US/Canada | behavioral | CONFIRMED | nearNumber +15551234567, distance 10mi returned Kent WA numbers | |
 | 7 | Vanity letter patterns work in contains | behavioral | CONFIRMED | "TEST" returned 2 results | |
 | 8 | Release returns number to pool | behavioral | CONFIRMED | PNa869b36b remove() returned true, fetch → 404 | |
 | 9 | Clear webhooks with empty string | behavioral | CONFIRMED | voiceUrl="" and smsUrl="" accepted | |
