@@ -67,7 +67,7 @@ All attributes go on the `<ConversationRelay>` noun inside `<Connect>`. Tested 2
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `intelligenceService` | string | none | Voice Intelligence v2 Service SID (`GA...`) or unique name. Creates post-call transcript with Language Operators. Do NOT pass Voice Intelligence IDs (`intelligence_configuration_*`) — use Voice AI pipeline for v3. |
+| `intelligenceService` | string | none | Voice Intelligence v2 Service SID (`GA...`) or unique name. Creates post-call transcript with Language Operators. |
 | `debug` | string | none | Space-separated debug channels. Values: `debugging` (roundTripDelayMs), `speaker-events` (agentSpeaking/clientSpeaking), `tokens-played` (tokensPlayed). Produces `type: "info"` WebSocket messages. |
 
 ## Child Elements

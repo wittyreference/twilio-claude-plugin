@@ -129,16 +129,6 @@ Cross-cutting gotchas discovered through real debugging sessions. Domain-specifi
 
 - **GitHub branch protection requires prior CI runs** — The "Add checks" search in GitHub rulesets only shows status checks that have previously run against the default branch via a PR. If you've only pushed directly to main, the check names won't appear. Push via PR first, then add the check.
 
-## Voice AI Stack (Pre-GA)
-
-- **IP-based auth restrictions on pre-GA APIs** — Conversations, , and Voice Intelligence APIs reject requests from cloud VM IPs (DigitalOcean, AWS, etc.) with 401 "invalid username". Same credentials work from local machines. Pre-GA demos must run from a trusted/registered IP. (Discovered 2026-04-03)
-
-- **ENVIRONMENT=dev routes to non-existent regional endpoints** — TAC SDK reads `ENVIRONMENT` env var and constructs URLs like `conversations.dev-us1.twilio.com`. These don't resolve → `ENOTFOUND` → "fetch failed". Always use `ENVIRONMENT=prod` or omit (defaults to prod). (Discovered 2026-04-03)
-
-- **Voice Intelligence operator PUT creates an inactive version with no activation API** — Updating a pre-GA operator via PUT creates a new version but does not activate it. The operator silently stops producing results. No REST API to activate a version. Must delete and POST to recreate. (Discovered 2026-04-03)
-
-- **Voice Intelligence API response shapes differ from v2 and from docs** — List endpoints return `items[]` not `operatorResults[]` or `conversations[]`. Operator results use `result.label` not `output.label`. Dates are `dateCreated` not `createdAt`. Channels are `channels[]` array not `channel` string. Pagination uses `meta.nextToken` not `nextPageUrl`. Operator results don't include `displayName` — only `operator.id`; resolve names via separate `GET /v3/ControlPlane/Operators`. (Discovered 2026-04-06)
-
 ## ngrok
 
 - **Dead ngrok tunnel returns 404 HTML, not connection refused** — When an ngrok tunnel is offline, requests to the domain return HTTP 404 with an ngrok-branded HTML error page. `curl -s -o /dev/null -w "%{http_code}"` shows 404, which looks identical to a missing route on your server. Always check the response body or verify via `curl -s https://DOMAIN/health | head -1` to distinguish ngrok error page from your server's 404.

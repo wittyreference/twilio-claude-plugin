@@ -36,7 +36,7 @@ description: "Twilio development skill: references"
 | 7 | Cannot use Node SDK `types` property | Compatibility | CONFIRMED | `client.events.v1.types` returns `undefined` |
 | 8 | Cannot rely on `queued` events for API messages | Behavioral | CONFIRMED | SMaf53f755... sent via API; `queued` subscribed but never received |
 | 9 | Cannot use EventBridge as native sink type | Scope | QUALIFIED | Docs state this; not live-tested (requires AWS+Segment). Caveat: may change if Twilio adds native EventBridge support. |
-| 10 | Cannot receive transcript content via Event Streams | Scope | QUALIFIED | Docs do not list transcript content events. Not live-tested because it requires specific Voice Intelligence setup. |
+| 10 | Cannot receive transcript content via Event Streams | Scope | QUALIFIED | Docs do not list transcript content events. Not live-tested. |
 
 ## Architecture
 

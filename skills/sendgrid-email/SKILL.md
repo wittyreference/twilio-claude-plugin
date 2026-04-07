@@ -374,12 +374,9 @@ SendGrid is Twilio's email delivery engine. Other Twilio products reference emai
 | Product | Role with Email | Sends email? | Skill |
 |---------|----------------|--------------|-------|
 | **SendGrid** (this skill) | Delivers transactional + bulk email, templates, webhooks, Inbound Parse | Yes | this file |
-| **Conversations** (Conversations) | Tracks EMAIL as a channel type — participants, communications, capture rules | No — logs/tracks only | `/skills/conversations/SKILL.md` |
 | **Verify** | Sends OTP codes via `channel: 'email'` | Delegates to SendGrid via Mailer config | `/skills/verify/SKILL.md` |
-| **Voice AI** (unified stack) | EMAIL communications flow through Conversations into Memory + Intelligence pipelines | No — orchestrates only | `/skills/SKILL.md` |
 
 **If you need to send email**: use this skill (SendGrid API).
-**If you need to track email in omnichannel conversations**: use Conversations for tracking, SendGrid for delivery.
 **If you need email OTP verification**: use Verify (which uses SendGrid under the hood — configure a Mailer on the Verify Service).
 
 ---
@@ -389,8 +386,6 @@ SendGrid is Twilio's email delivery engine. Other Twilio products reference emai
 | Resource | Path | When to use |
 |----------|------|-------------|
 | Verify skill | `/skills/verify/SKILL.md` | SendGrid is the email channel provider for Twilio Verify email OTPs |
-| Conversations skill | `/skills/conversations/SKILL.md` | EMAIL channel tracking in omnichannel conversations |
-| Voice AI skill | `/skills/SKILL.md` | Full Conversations + Memory + Intelligence pipeline with email |
 | Twilio CLI guide | `/skills/twilio-cli/SKILL.md` | For deploying functions that use SendGrid |
 | SendGrid Node.js SDK | npm `@sendgrid/mail` (v8.x) | Primary SDK for email operations |
 | SendGrid Client SDK | npm `@sendgrid/client` (v8.x) | For non-mail endpoints (batch IDs, suppressions, templates) |

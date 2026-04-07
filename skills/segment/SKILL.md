@@ -213,9 +213,6 @@ Covers the Segment Connections product: Sources, Destinations, Functions, Revers
 - [Rate Limits](https://www.twilio.com/docs/segment/connections/rate-limits)
 
 ### Related Skills
-- `/` — Segment Profiles can feed  for voice AI personalization
-- `/voice-intelligence` — Segment events can trigger Intelligence analysis
-- `` — Unified stack where Segment data enriches customer profiles
 - `/event-streams` — Twilio Event Streams can deliver events to Segment sinks. See Event Streams skill for sink configuration.
 
 ### MCP Tools (P2 Tier — 50 tools)

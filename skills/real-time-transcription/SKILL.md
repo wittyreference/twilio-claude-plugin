@@ -327,7 +327,7 @@ start.transcription({
 3. Language Operators run on the persisted transcript (summarization, PII detection, sentiment, custom extraction)
 4. Results available via `list_operator_results` MCP tool or REST API
 
-**Intelligence Services** (v2) must be created in the Twilio Console — there is no creation API. For the v3 Voice Intelligence API (Language Operators, real-time analysis, cross-channel), see [Voice Intelligence Skill](/skills/voice-intelligence/SKILL.md).
+**Intelligence Services** (v2) must be created in the Twilio Console — there is no creation API.
 
 ### Compliance Detection via Language Operators
 
@@ -352,7 +352,6 @@ Language Operators require an Intelligence Service SID (created in Console — n
 - [Media Streams Skill](/skills/media-streams/SKILL.md) — Alternative: raw audio WebSocket with custom STT
 - [Voice CLAUDE.md](/CLAUDE.md) — TwiML control model, background operations
 - **MCP Tools**: `validate_transcript`, `get_transcript`, `list_transcripts`, `delete_transcript`, `create_transcript`, `list_sentences`, `list_operator_results`, `get_transcript_media`, `list_recording_transcriptions`, `get_transcription`
-- [Voice Intelligence Skill](/skills/voice-intelligence/SKILL.md) — v3 API: Language Operators, real-time/post-call analysis, cross-channel
 - **Codebase**: `transcription-status.protected.js` — RTT callback handler with Sync logging
 
 ## Reference Files

@@ -42,7 +42,7 @@ All claims backed by live testing (2026-03-28, account ACxx...xx). See [referenc
 2. **No custom STT/TTS engines** — limited to Google + Deepgram (STT) and Google + Amazon + ElevenLabs (TTS)
 3. **No WebSocket auto-reconnection** — if WS drops, call disconnects. Implement recovery via `<Connect action>` URL
 4. **No mid-session voice/provider changes** — voice and provider are set at TwiML time. Only language can be switched mid-session via the `language` WebSocket message
-5. **No SMS/messaging** — voice only. For omnichannel, see Voice API (public beta)
+5. **No SMS/messaging** — voice only
 6. **No built-in memory/context** — BYO conversation history and context management
 7. **Not PCI compliant with Voice Intelligence v2** — do not enable `intelligenceService` in PCI workflows
 8. **No LLM integration** — pure transport layer. You bring your own LLM via the WebSocket server
@@ -59,7 +59,7 @@ All claims backed by live testing (2026-03-28, account ACxx...xx). See [referenc
 | LLM-powered voice agent | **ConversationRelay** | Built-in STT/TTS, JSON protocol, fastest path |
 | Custom STT/TTS engine | **Media Streams** | Raw audio access via `<Connect><Stream>` |
 | Real-time transcription alongside other TwiML | **`<Start><Transcription>`** | Non-blocking, runs in background |
-| Voice + SMS from one codebase | **Voice API** (beta) | Channel abstraction layer over CR |
+| Voice + SMS from one codebase | **Twilio APIs** | Build channel routing with Programmable Voice + Messaging APIs |
 | Post-call transcript analysis | **Voice Intelligence v2** | Batch processing of recordings |
 | Simple speech input (menus, numbers) | **`<Gather>`** | Single-turn input, no WebSocket needed |
 
@@ -331,7 +331,7 @@ Do NOT use `make_call(url=conference-TwiML)` — the `url` parameter controls th
 
 ### ConversationRelay + Voice Intelligence v2
 
-Add `intelligenceService` to get automatic post-call transcripts and Language Operator analysis without recording. The `intelligenceService` attribute accepts GA-prefixed SIDs (`GA...`) for Voice Intelligence v2. For Voice Intelligence (cross-channel, real-time), use the Voice AI pipeline (Conversations Configuration with `intelligenceConfigurationIds`). Do NOT pass Voice Intelligence IDs (`intelligence_configuration_*`) to `intelligenceService`.
+Add `intelligenceService` to get automatic post-call transcripts and Language Operator analysis without recording. The `intelligenceService` attribute accepts GA-prefixed SIDs (`GA...`) for Voice Intelligence v2.
 
 ```javascript
 connect.conversationRelay({
@@ -409,7 +409,7 @@ The `<Connect action>` URL receives `HandoffData` as a POST parameter. Return Tw
 
 17. **Voice Intelligence v2 transcripts don't need recordings**: `intelligenceService` creates transcripts directly from the CR session via Voice Intelligence v2. Source is `"ConversationRelay"` with `source_sid` = VX session SID. No `<Start><Recording>` required. [Evidence: CAb46f3db6 → GTa86955e6]
 
-18. **Voice Intelligence v2 is post-call only**: Language Operators execute after the CR session ends (when call hangs up or WS sends `end`). No real-time operator results during the call. For real-time analysis, use Voice Intelligence via Voice AI pipeline.
+18. **Voice Intelligence v2 is post-call only**: Language Operators execute after the CR session ends (when call hangs up or WS sends `end`). No real-time operator results during the call.
 
 19. **Voice Intelligence v2 is not PCI compliant**: Do not enable `intelligenceService` in workflows that handle payment card data.
 

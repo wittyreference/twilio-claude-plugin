@@ -30,7 +30,6 @@ If the user provided a use case or question, match it to the relevant skills bel
 ### AI Agents & Middleware
 | Skill | Use When |
 |-------|----------|
-| `` | Connecting LLM apps to Twilio voice/SMS via middleware,  integration |
 | `/conversationrelay` | Building voice AI agents with ConversationRelay — TwiML attributes, WebSocket protocol, STT/TTS providers, ngrok setup, CI integration |
 | `/synthetic-calls` | Generating bulk synthetic calls with customer personas, stress-testing voice AI, building demo data at scale |
 
@@ -55,10 +54,6 @@ If the user provided a use case or question, match it to the relevant skills bel
 |-------|----------|
 | `/segment` | Segment Connections — sources, destinations, custom Functions, Reverse ETL, Segment Spec, connection modes, data pipeline design |
 | `/sync` | Real-time state sync — Documents, Lists, Maps, Streams, TTL lifecycle, data type selection, MCP tool gaps, error codes |
-| `/` |  () — profiles, traits, observations, Recall, identity resolution, AI-powered personalization |
-| `/conversations` | Multi-channel conversation tracking (Conversations), omnichannel history, participant types, v1 migration |
-| `/voice-intelligence` | Real-time/post-call conversation analysis, Language Operators, sentiment, agent assist, cross-channel analytics (v3 API) |
-| `` | Unified Voice AI stack — Conversations +  + Voice Intelligence pipeline, end-to-end setup, cross-product integration patterns and gotchas |
 | `/taskrouter` | Skills-based routing — workflows, queues, expressions, reservations, assignment callbacks, 30 MCP tools |
 | `/event-streams` | Streaming Twilio events to webhooks/Kinesis/Segment — sinks, subscriptions, CloudEvents, deduplication |
 | `/event-streams` | Status webhooks, delivery receipts, event streaming |
@@ -109,9 +104,7 @@ If the user provided a use case or question, match it to the relevant skills bel
 | Check phone number type/carrier/fraud | `/lookup` |
 | Send SMS/MMS | `/messaging` |
 | Send transactional email | `/sendgrid-email` |
-| Build a voice AI agent | `/conversationrelay` or `` |
-| Connect LLM to Twilio with customer memory | `` then `/` |
-| Store customer context across sessions | `/` |
+| Build a voice AI agent | `/conversationrelay` |
 | Process real-time audio | `/media-streams` |
 | Handle payments over the phone | `/pay` |
 | Build a contact center | `/taskrouter` then `/voice` |
@@ -122,7 +115,6 @@ If the user provided a use case or question, match it to the relevant skills bel
 | Sync real-time state | `/sync` |
 | Connect my SIP infrastructure | `/sip` or `/elastic-sip-trunking` |
 | Set up A2P 10DLC | `/messaging-services` then `/compliance-regulatory` |
-| Analyze conversations with AI (sentiment, summary, agent assist) | `/voice-intelligence` |
 | Stream events to my analytics pipeline | `/event-streams` |
 | Debug a failing call | `/deep-validation` then `/operational-gotchas` |
 | Understand what MCP tools to use | `/tool-boundaries` |
