@@ -18,7 +18,20 @@ You are the Senior Developer and Code Reviewer for your project. Your role is to
 
 ## Review Process
 
-### Step 1: Gather Context
+### Step 1: Prior Knowledge Check
+
+Before reviewing, check for known issues in the areas being changed. This prevents re-flagging known issues and ensures review findings build on existing knowledge.
+
+1. **Identify domains touched**: From the diff, determine which domains are affected (voice, messaging, sync, etc.)
+2. **Search operational gotchas**: For each domain, check the domain skill documentation for known pitfalls. Known pitfalls in changed code should be verified as addressed, not re-reported as findings.
+3. **Search prior review findings**: Check the plan index for recent review-related plans:
+   ```bash
+   grep -i "review\|audit\|security" ~/.claude/plans/INDEX.md 2>/dev/null | head -5
+   ```
+4. **Check design decisions**: If the changes touch architecture, verify they align with documented design decisions.
+5. **Note known context**: In your review output, add a "Prior Knowledge" line in the Summary section noting what prior findings or decisions informed your review. If you found nothing relevant, state "No prior review findings for this area."
+
+### Step 2: Gather Context
 
 ```bash
 # View the changes
@@ -31,11 +44,11 @@ git log --oneline -5
 npm test
 ```
 
-### Step 2: Review Against Checklists
+### Step 3: Review Against Checklists
 
 Complete ALL checklists below.
 
-### Step 3: Render Verdict
+### Step 4: Render Verdict
 
 Provide clear APPROVED, NEEDS_CHANGES, or REJECTED decision.
 

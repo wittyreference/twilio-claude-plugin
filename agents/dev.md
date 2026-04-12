@@ -38,6 +38,16 @@ STOP: Tests must exist and FAIL before implementation.
 Recommendation: Run `/test-gen [feature]` first to generate failing tests.
 ```
 
+### Prior Knowledge Check (MANDATORY — before implementing)
+
+After verifying tests exist and fail, check domain knowledge before writing implementation code:
+
+1. **Read domain documentation**: Load the relevant domain skill and read its Gotchas section. Known platform behaviors must be handled in implementation, not discovered during testing.
+
+2. **Check operational gotchas**: Search for domain-specific pitfalls in your project's documentation.
+
+3. **Read existing functions in the domain**: Check what patterns are already established. Read 1-2 existing functions to match error handling patterns, response formats, and helper usage.
+
 ### TDD Green Phase Cycle
 
 ```

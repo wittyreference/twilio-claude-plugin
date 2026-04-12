@@ -473,12 +473,37 @@ Key context for next phase:
 
 Before starting a design review, optimize your context:
 
+### Step 0: Prior Knowledge Check (MANDATORY — do this FIRST)
+
+Before designing anything, check whether this problem has been addressed in prior work. This prevents re-discovering known patterns and re-planning already-designed approaches.
+
+1. **Search the plan index**: Extract 2-3 keywords from the user's request. Search `~/.claude/plans/INDEX.md` for matches. If prior plans exist for this topic, read them and note what was decided, what alternatives were rejected, and why.
+   ```bash
+   grep -i "keyword1\|keyword2\|keyword3" ~/.claude/plans/INDEX.md | head -5
+   ```
+
+2. **Search design decisions**: Check `DESIGN_DECISIONS.md` for relevant decisions (if it exists).
+   ```bash
+   grep -i "keyword" DESIGN_DECISIONS.md 2>/dev/null | head -5
+   ```
+
+3. **Search operational gotchas**: Check if this domain has known pitfalls in your project's documentation.
+
+4. **Report what you found**: Before proceeding with the design, state:
+   - Prior plans found (or "no prior plans for this topic")
+   - Relevant design decisions (or "no relevant decisions")
+   - Known gotchas (or "no known gotchas for this domain")
+   
+   If prior plans exist, explicitly state how this design builds on or diverges from them. Do NOT silently re-derive conclusions that were already reached.
+
 ### Load Relevant Context
 
 1. **Load domain skill**: If working on voice, load the voice skill
 2. **Reference similar functions**: Find existing patterns to follow
 3. **Load multi-agent patterns skill**: For complex designs
-4. **Check for external API docs**: If the feature uses APIs beyond Twilio's core (Stripe, OpenAI, etc.), check for current documentation.
+4. **Load voice use case product map**: When recommending Twilio products for a voice use case — provides definitive per-use-case product mappings
+5. **Check for external API docs**: If the feature uses APIs beyond Twilio's core (Stripe, OpenAI, etc.), check for current documentation.
+6. **Load operational gotchas**: Check for cross-cutting gotchas discovered through real debugging sessions.
 
 ### Manage Context During Review
 

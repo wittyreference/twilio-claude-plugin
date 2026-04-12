@@ -29,6 +29,20 @@ Every feature needs:
 - **Integration Tests**: `__tests__/integration/[domain]/[name].test.js`
 - **E2E Tests**: Update `postman/collection.json` with new endpoints
 
+## Prior Knowledge Check (MANDATORY — do this FIRST)
+
+Before writing tests, check what patterns exist in this domain:
+
+1. **Read existing tests in the domain**: Check what test files already exist and match their style:
+   ```bash
+   ls __tests__/unit/{domain}/ __tests__/integration/{domain}/ 2>/dev/null
+   ```
+   Read 1-2 existing test files to match context setup, assertion patterns, and helper usage.
+
+2. **Check domain gotchas**: Read the domain skill documentation — the Gotchas section lists known platform behaviors that tests should verify.
+
+3. **Check the spec's test requirements**: The spec (from `/spec` phase) should list specific test scenarios. Verify your test plan covers every listed scenario before writing code.
+
 ### No Mocks Policy
 - Tests use real Twilio APIs
 - Use Twilio test numbers where available (+15005550006)

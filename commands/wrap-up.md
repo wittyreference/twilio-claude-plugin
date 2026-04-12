@@ -153,6 +153,22 @@ If plans are not being archived after plan mode exits, verify the `archive-plan.
 
 Report any issues in the summary. Skip if healthy.
 
+### 7b. Knowledge Loop Closure
+
+Check the health of the knowledge system and close any open loops:
+
+**Plan index freshness:**
+Verify the plan index was updated this session:
+```bash
+ls -la ~/.claude/plans/INDEX.md 2>/dev/null | head -1
+```
+If INDEX.md doesn't exist or is older than today, run: `bash hooks/index-plans.sh`
+
+**Feedback loop health:**
+Quick check — did this session's pipeline commands use prior knowledge?
+- If pipeline commands were run (/architect, /spec, /dev, /test-gen, /review), check if they reported prior knowledge findings in their output
+- If no prior knowledge was reported during pipeline runs, note it — the prior knowledge checks may not be firing
+
 ### 8. Summary
 
 Output what was updated:
