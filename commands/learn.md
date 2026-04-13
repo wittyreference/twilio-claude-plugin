@@ -1,22 +1,22 @@
 ---
 description: Knowledge synthesis and articulation practice. Use when user wants to catch up on recent changes, practice explaining decisions, test gotcha knowledge, or build elevator-pitch fluency.
-argument-hint: [briefing|decision|gotcha|list|skip|review|generate]
+argument-hint: [briefing|decision|gotcha|quiz|list|skip|review|generate]
 ---
 
 # Learning & Knowledge System
 
-Build and maintain deep comprehension of your project — its architecture, decisions, gotchas, capabilities, and evolution.
+Build and maintain deep comprehension of your project -- its architecture, decisions, gotchas, capabilities, and evolution.
 
 ## Two Mindsets
 
-**Catch-up**: "I've been away. What happened?" → `/learn briefing`
-**Depth**: "I need to deeply understand and articulate X." → `/learn decision`, `/learn gotcha`
+**Catch-up**: "I've been away. What happened?" -> `/learn briefing`
+**Depth**: "I need to deeply understand and articulate X." -> `/learn decision`, `/learn gotcha`
 
 ## Rules
 
 - **Code exercises** (no-args mode): Max 2 per session
-- **All other modes**: No session cap — these serve information retrieval and articulation practice
-- **Exercise-first, answer-second**: For decision and gotcha modes — pose the challenge BEFORE revealing the answer. This is the generation effect.
+- **All other modes**: No session cap -- these serve information retrieval and articulation practice
+- **Exercise-first, answer-second**: For decision and gotcha modes -- pose the challenge BEFORE revealing the answer. This is the generation effect.
 - **Source-grounded feedback**: Every piece of feedback cites the actual source document and path
 - **Decline = suppress**: Only applies to code exercises, not other modes
 
@@ -37,6 +37,7 @@ Parse the first word of `$ARGUMENTS`:
 | `decision` | Decision deep-dive |
 | `gotcha` | Gotcha scenario exercise |
 | `quiz` | Rapid-fire knowledge check |
+| `status` or `dashboard` | Learning coverage dashboard |
 | `list` | List pending exercises |
 | `skip` | Suppress code exercises |
 | `review` | Retrieval practice |
@@ -46,7 +47,7 @@ Parse the first word of `$ARGUMENTS`:
 
 ## Mode: Code Exercises (no arguments)
 
-1. Look for recent commits from autonomous work (subagents, orchestrate, headless)
+1. Look for recent commits from autonomous work (subagents, orchestration, headless)
 2. Identify 2-3 interesting design decisions, patterns, or non-obvious code in the changed files
 3. Generate exercise questions on the spot from the most recent autonomous changes
 4. Present the list and ask which one to work on
@@ -66,30 +67,30 @@ Parse the first word of `$ARGUMENTS`:
 ### Parse arguments
 
 After the `briefing` keyword, check for:
-- `Nd` (e.g., `5d`) → use N days as the window
-- `since YYYY-MM-DD` → use that date as the start
-- Nothing → default to 3 days ago
+- `Nd` (e.g., `5d`) -> use N days as the window
+- `since YYYY-MM-DD` -> use that date as the start
+- Nothing -> default to 3 days ago
 
 ### Gather (read-only)
 
 1. **Git log**: Run `git log --oneline --since="YYYY-MM-DD" --no-merges`. Group commits by conventional prefix:
-   - `feat:` → Features
-   - `fix:` → Fixes
-   - `docs:` → Documentation
-   - `refactor:` / `chore:` / `style:` / `test:` → Maintenance
-   - Unprefixed → Other
+   - `feat:` -> Features
+   - `fix:` -> Fixes
+   - `docs:` -> Documentation
+   - `refactor:` / `chore:` / `style:` / `test:` -> Maintenance
+   - Unprefixed -> Other
 
 2. **New design decisions**: Check for changes to `DESIGN_DECISIONS.md` if it exists.
 
-3. **New learnings**: Check learnings file for entries within the window.
+3. **New learnings**: Check `.claude/learnings.md` for entries within the window.
 
 ### Synthesize and present
 
 ```markdown
-## Briefing: [start date] → [today]
+## Briefing: [start date] -> [today]
 
 ### Headlines
-- [most significant change — a feature, decision, or finding]
+- [most significant change -- a feature, decision, or finding]
 - [second most significant]
 - [third if warranted]
 
@@ -99,11 +100,11 @@ After the `briefing` keyword, check for:
 **Docs/Maintenance**: [one line per remaining commit, or "N docs, N refactors"]
 
 ### New Design Decisions
-- D[N]: [title] — [one-line rationale]
+- D[N]: [title] -- [one-line rationale]
 (or "None in this period")
 
 ### New Learnings
-- [date]: [topic] — [one-line summary]
+- [date]: [topic] -- [one-line summary]
 (or "None captured")
 ```
 
@@ -118,9 +119,9 @@ After presenting: "Want to drill into any of these? Pick a number, topic, or dec
 ### Parse arguments
 
 After the `decision` keyword:
-- A number (e.g., `1`, `13`, `45`) → look up that specific decision
-- A keyword (e.g., `mcp`, `risk`, `tdd`) → grep `DESIGN_DECISIONS.md` for matching decision titles
-- Nothing → show the full decision index
+- A number (e.g., `1`, `13`, `45`) -> look up that specific decision
+- A keyword (e.g., `mcp`, `risk`, `tdd`) -> grep `DESIGN_DECISIONS.md` for matching decision titles
+- Nothing -> show the full decision index
 
 ### Specific decision: Teaching Format
 
@@ -131,13 +132,13 @@ After the `decision` keyword:
 ## Decision [N]: [Title]
 
 ### The Problem
-[Restate the Context section in plain language — what situation forced this choice?]
+[Restate the Context section in plain language -- what situation forced this choice?]
 
 ### What We Chose
 [The Decision, stated succinctly]
 
 ### Why (The Trade-Off)
-[The Rationale — emphasize what we GAVE UP by choosing this. Every decision has a cost.]
+[The Rationale -- emphasize what we GAVE UP by choosing this. Every decision has a cost.]
 
 ### What This Means in Practice
 [The Consequences section, with concrete examples of how this decision shows up in the codebase]
@@ -168,13 +169,13 @@ After the `decision` keyword:
 ### Parse arguments
 
 After the `gotcha` keyword:
-- A domain name (e.g., `voice`, `sip`, `verify`, `serverless`, `cli`, `mcp`, `sync`, `taskrouter`, `video`) → scope to that domain
-- A specific topic keyword → search across gotcha sources for matches
-- Nothing → pick a random gotcha
+- A domain name (e.g., `voice`, `sip`, `verify`, `serverless`, `cli`, `mcp`, `sync`, `taskrouter`, `video`) -> scope to that domain
+- A specific topic keyword -> search across gotcha sources for matches
+- Nothing -> pick a random gotcha
 
 ### Gather gotchas
 
-Search project documentation for gotcha entries — skill files, invariant rules, operational references.
+Search project documentation for gotcha entries -- skill files, invariant rules, operational references.
 
 ### Present as scenario
 
@@ -220,6 +221,36 @@ Score and provide corrections for each miss. Cite sources.
 
 ---
 
+## Mode: Status (Dashboard)
+
+Show learning coverage across all knowledge sources.
+
+### Gather metrics
+
+1. **Code exercises**: Look for recent autonomous commits and potential exercises
+2. **Briefings**: Check git log for how many commits exist since last briefing
+3. **Decisions**: Count `## Decision` headers in `DESIGN_DECISIONS.md` if it exists
+4. **Gotchas**: Search project docs for gotcha entries
+5. **Recent activity**: Most recent commit dates for key areas
+
+### Present dashboard
+
+```
+## Learning Status
+
+| Area | Coverage | Last Activity |
+|------|----------|---------------|
+| Code exercises | [pending count] | [date or "never"] |
+| Briefings | [commits since last] | [last briefing date] |
+| Decisions | [total count] | [date or "never"] |
+| Gotchas | [total count] | [date or "never"] |
+
+### Suggested next action
+[Based on the biggest gap]
+```
+
+---
+
 ## Mode: List
 
 Show potential exercises derived from recent autonomous commits without starting one. Include:
@@ -239,7 +270,7 @@ Suppress code exercises for this session. Confirm: "Code exercises suppressed fo
 
 Retrieval practice on code you've worked with before:
 1. Pick a file the user has modified or reviewed recently
-2. Ask a recall question about its behavior — NOT a reading comprehension question, a prediction question
+2. Ask a recall question about its behavior -- NOT a reading comprehension question, a prediction question
 3. STOP and wait for the user's response
 4. Provide feedback by reading the actual code
 

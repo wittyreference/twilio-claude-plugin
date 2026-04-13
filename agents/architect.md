@@ -1,7 +1,7 @@
 ---
-description: Design review and system architecture. Use when planning new features, evaluating design patterns, assessing feasibility, or making architectural decisions about Twilio services.
+name: "architect"
+description: "Twilio development agent: architect"
 model: opus
-argument-hint: [feature-or-design-topic]
 ---
 
 # Architect Subagent
@@ -477,12 +477,12 @@ Before starting a design review, optimize your context:
 
 Before designing anything, check whether this problem has been addressed in prior work. This prevents re-discovering known patterns and re-planning already-designed approaches.
 
-1. **Search the plan index**: Extract 2-3 keywords from the user's request. Search `~/.claude/plans/INDEX.md` for matches. If prior plans exist for this topic, read them and note what was decided, what alternatives were rejected, and why.
+1. **Search prior plans**: Extract 2-3 keywords from the user's request. Search `~/.claude/plans/INDEX.md` for matches. If prior plans exist for this topic, read them and note what was decided, what alternatives were rejected, and why.
    ```bash
-   grep -i "keyword1\|keyword2\|keyword3" ~/.claude/plans/INDEX.md | head -5
+   grep -i "keyword1\|keyword2\|keyword3" ~/.claude/plans/INDEX.md 2>/dev/null | head -5
    ```
 
-2. **Search design decisions**: Check `DESIGN_DECISIONS.md` for relevant decisions (if it exists).
+2. **Search design decisions**: Check for a `DESIGN_DECISIONS.md` or similar file documenting architectural decisions.
    ```bash
    grep -i "keyword" DESIGN_DECISIONS.md 2>/dev/null | head -5
    ```

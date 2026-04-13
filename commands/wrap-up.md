@@ -40,7 +40,7 @@ For each flagged commit:
 Report flagged commits (if any) before proceeding to step 2:
 ```
 Potential un-captured learnings from commits:
-- abc1234: "fix: Verify FriendlyName rejects 5+ digits" — not found in learnings
+- abc1234: "fix: Verify FriendlyName rejects 5+ digits" -- not found in learnings
 ```
 
 Skip this step if no commits were made this session or none match signal words.
@@ -53,7 +53,7 @@ Review the session's changes and identify anything worth recording:
 - Patterns that worked (or didn't)
 - Configuration pitfalls
 
-Add entries to the learnings file using the standard format:
+Add entries to `.claude/learnings.md` using the standard format:
 ```markdown
 ## [YYYY-MM-DD] Topic
 
@@ -69,8 +69,8 @@ If a learning is stable and broadly applicable, promote it directly to the targe
 
 If learnings.md will be cleared (partially or fully):
 
-1. **First**: Append entries being removed to `learnings-archive.md` (same directory, insert below header, above existing entries)
-2. **Then**: Remove them from `learnings.md`
+1. **First**: Append entries being removed to `.claude/learnings-archive.md` (insert below header, above existing entries)
+2. **Then**: Remove them from `.claude/learnings.md`
 
 ### 3. Update Documentation
 
@@ -103,7 +103,7 @@ Only update docs where the session's changes actually warrant it. Don't touch do
 | Architectural decision (why X over Y) | design documentation |
 | Per-developer convention | Keep in auto-memory |
 
-After promoting, replace the detailed item with a pointer (e.g., "See voice docs Gotchas section"). Don't delete — pointers prevent re-discovery of the same gotcha.
+After promoting, replace the detailed item with a pointer (e.g., "See voice docs Gotchas section"). Don't delete -- pointers prevent re-discovery of the same gotcha.
 
 **Tag stale entries for auto-removal**: Entries that meet ANY of these criteria should be tagged with `<!-- prune -->` above their `##` header:
 
@@ -119,8 +119,8 @@ Example:
 ```
 
 **Cross-check learnings and auto-memory**: Ensure nothing fell through the cracks:
-- Read the session learnings file — are there entries that should also be in auto-memory (for cross-session persistence)?
-- Read auto-memory — are there entries from this session that should also be in the learnings file (for the promote/clear flywheel)?
+- Read the session learnings file -- are there entries that should also be in auto-memory (for cross-session persistence)?
+- Read auto-memory -- are there entries from this session that should also be in the learnings file?
 - Are there auto-memory entries that represent an architectural choice worth recording in design documentation? Signs: "we chose X over Y", "US1 is default because...", "regional requires explicit opt-in".
 
 **Capture inward**: Add session learnings that should persist across sessions to auto-memory at the auto-memory file.
@@ -138,7 +138,7 @@ MEMORY_PATH="$HOME/.claude/projects/$(pwd | sed 's|/|-|g')/memory/MEMORY.md"
 wc -l CLAUDE.md "$MEMORY_PATH" 2>/dev/null
 ```
 
-Report the MEMORY.md line count in the summary. If over 150 lines, flag it — entries beyond 200 are truncated and never seen. Prune by replacing promoted entries with pointers.
+Report the MEMORY.md line count in the summary. If over 150 lines, flag it -- entries beyond 200 are truncated and never seen. Prune by replacing promoted entries with pointers.
 
 ### 7. Infrastructure Health Checks
 
@@ -165,9 +165,9 @@ ls -la ~/.claude/plans/INDEX.md 2>/dev/null | head -1
 If INDEX.md doesn't exist or is older than today, run: `bash hooks/index-plans.sh`
 
 **Feedback loop health:**
-Quick check — did this session's pipeline commands use prior knowledge?
+Quick check -- did this session's pipeline commands use prior knowledge?
 - If pipeline commands were run (/architect, /spec, /dev, /test-gen, /review), check if they reported prior knowledge findings in their output
-- If no prior knowledge was reported during pipeline runs, note it — the prior knowledge checks may not be firing
+- If no prior knowledge was reported during pipeline runs, note it -- the prior knowledge checks may not be firing
 
 ### 8. Summary
 
@@ -186,13 +186,13 @@ Output what was updated:
 - [items checked off or updated]
 
 ### Ready to Commit
-[yes/no — and what to commit]
+[yes/no -- and what to commit]
 ```
 
 ## Notes
 
 - This is a review-and-update pass, not a rewrite. Make targeted edits.
-- If nothing meaningful was learned or no docs need updating, say so — don't manufacture busywork.
+- If nothing meaningful was learned or no docs need updating, say so -- don't manufacture busywork.
 - The user should review the changes before committing.
 
 ## Scope

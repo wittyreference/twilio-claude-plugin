@@ -34,7 +34,7 @@ For any **new** files (untracked), verify they start with a 2-line ABOUTME comme
 // ABOUTME: [Key behaviors or context]
 ```
 
-Flag any missing ones — do not commit without them.
+Flag any missing ones -- do not commit without them.
 
 ## Staging
 
@@ -67,7 +67,7 @@ git commit -m "$(cat <<'EOF'
 - Detail 1
 - Detail 2
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
 ```

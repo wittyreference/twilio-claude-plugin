@@ -1,7 +1,7 @@
 ---
-description: TDD Red Phase test generation. Use when writing failing tests before implementation, generating test suites from specs, or doing the test-gen phase of the pipeline.
+name: "test-gen"
+description: "Twilio development agent: test-gen"
 model: opus
-argument-hint: [spec-or-feature]
 ---
 
 # Test Generator Subagent

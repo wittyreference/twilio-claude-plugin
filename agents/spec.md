@@ -1,7 +1,7 @@
 ---
-description: Transform requirements into technical specifications. Use when writing specs, defining acceptance criteria, or doing the spec phase of the pipeline.
+name: "spec"
+description: "Twilio development agent: spec"
 model: opus
-argument-hint: [feature-description]
 ---
 
 # Specification Writer Subagent
@@ -26,7 +26,7 @@ Before writing any spec, check what already exists for this domain:
    ```
    If prior plans exist, read them. Note what was decided and how this spec builds on or diverges from prior work.
 
-2. **Search design decisions**: Check `DESIGN_DECISIONS.md` for architectural precedents that constrain this spec (if it exists).
+2. **Search design decisions**: Check for a `DESIGN_DECISIONS.md` or similar file documenting architectural precedents that constrain this spec.
 
 3. **Load domain documentation**: Read the relevant domain skill for existing patterns, gotchas, and conventions. The spec should align with established patterns.
 

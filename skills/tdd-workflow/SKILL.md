@@ -1,6 +1,6 @@
 ---
-name: tdd-workflow
-description: Test-driven development enforcement patterns. Use when working on the TDD pipeline, debugging red/green/refactor cycle issues, or understanding how test-gen and dev phases interact.
+name: "tdd-workflow"
+description: "Twilio development skill: tdd-workflow"
 ---
 
 # TDD Workflow Patterns
@@ -11,7 +11,7 @@ Test-Driven Development patterns for Twilio projects. Load this skill when worki
 
 When building Twilio integrations, TDD is especially valuable because:
 
-1. **Quality gate**: Tests define expected behavior upfront — critical for webhook-driven flows where debugging is hard
+1. **Quality gate**: Tests define expected behavior upfront -- critical for webhook-driven flows where debugging is hard
 2. **Reviewability**: Easier to review tests than implementation
 3. **Confidence**: Green tests = working code
 4. **Self-verification**: Validates work without manual Twilio API testing
@@ -19,24 +19,24 @@ When building Twilio integrations, TDD is especially valuable because:
 ## The TDD Cycle
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│   RED ────────────► GREEN ────────────► REFACTOR           │
-│    │                  │                    │                │
-│    │                  │                    │                │
-│  Write              Write               Improve             │
-│  failing            minimal             code                │
-│  tests              code to             while               │
-│                     pass                keeping             │
-│                     tests               tests               │
-│                                         green               │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+|                                                             |
+|   RED -------------> GREEN -------------> REFACTOR          |
+|    |                  |                    |                 |
+|    |                  |                    |                 |
+|  Write              Write               Improve             |
+|  failing            minimal             code                |
+|  tests              code to             while               |
+|                     pass                keeping             |
+|                     tests               tests               |
+|                                         green               |
+|                                                             |
++-------------------------------------------------------------+
 ```
 
 ### Red Phase (Write Failing Tests)
 
-Write tests that FAIL. This is critical — if tests pass before implementation, they're not testing new functionality.
+Write tests that FAIL. This is critical -- if tests pass before implementation, they're not testing new functionality.
 
 **What to do:**
 1. Read specification or requirements
@@ -93,7 +93,7 @@ Improve code quality while keeping tests green.
 Before the Green Phase (dev), verify TDD was followed:
 
 1. **Tests must exist**: At least one test file from the Red Phase
-2. **Tests must fail**: Test status must be `failing` — if tests pass before implementation, they aren't testing new functionality
+2. **Tests must fail**: Test status must be `failing` -- if tests pass before implementation, they aren't testing new functionality
 3. **Coverage threshold**: After Green Phase, verify minimum coverage (80%+ lines recommended)
 
 If any check fails, go back to the Red Phase and fix the tests before proceeding.
@@ -102,7 +102,7 @@ If any check fails, go back to the Red Phase and fix the tests before proceeding
 
 If you find yourself with passing tests before writing implementation:
 
-1. **Stop** — don't proceed to implementation
+1. **Stop** -- don't proceed to implementation
 2. Go back to the Red Phase
 3. Write tests for NEW functionality that doesn't exist yet
 4. Verify the new tests fail for the right reason (missing function/module, not syntax error)
@@ -250,26 +250,26 @@ describe('Voice transfer E2E', () => {
 });
 ```
 
-## TDD with Development Agents
+## TDD with Development Subagents
 
-When using the plugin's development agents:
+When using the plugin's development subagents:
 
-### test-gen Agent (Red Phase)
+### test-gen Subagent (Red Phase)
 1. Read spec from previous phase
 2. Identify test scenarios
 3. Write test files with failing tests
 4. Run tests to confirm failure
 5. Report test count and failure status
 
-### dev Agent (Green Phase)
+### dev Subagent (Green Phase)
 1. Verify failing tests exist
 2. Read test expectations
 3. Write minimal implementation
 4. Run tests iteratively until green
 5. Commit when all tests pass
 
-### review Agent (Verification)
-The review agent checks TDD discipline:
+### review Subagent (Verification)
+The review subagent checks TDD discipline:
 - Were tests written before implementation?
 - Were tests initially failing?
 - Is the implementation minimal?

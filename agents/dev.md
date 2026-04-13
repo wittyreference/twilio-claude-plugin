@@ -1,7 +1,7 @@
 ---
-description: TDD Green Phase implementation. Use when writing code to make failing tests pass, implementing features from specs, or doing the dev phase of the pipeline.
+name: "dev"
+description: "Twilio development agent: dev"
 model: opus
-argument-hint: [task-or-spec]
 ---
 
 # Developer Subagent
@@ -223,7 +223,7 @@ When implementation is complete:
 ### Tests Status
 ```
 npm test -- --testPathPattern="[feature]"
-✓ All tests passing
+All tests passing
 ```
 
 ### Commit

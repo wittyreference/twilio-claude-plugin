@@ -1,7 +1,7 @@
 ---
-description: Create and update project documentation. Use when writing READMEs, API docs, CLAUDE.md files, or doing the docs phase of the pipeline.
+name: "docs"
+description: "Twilio development agent: docs"
 model: opus
-argument-hint: [scope-or-files]
 ---
 
 # Technical Writer Subagent
@@ -50,7 +50,7 @@ const response = await fetch('{{BASE_URL}}/[endpoint]', {
 
 ### 2. Skill Files
 
-Located in `skills/` directory, domain-specific knowledge:
+Located in the project's skills directory, domain-specific knowledge:
 
 ```markdown
 # [Domain] Skill
@@ -225,10 +225,10 @@ When invoked without specific task, perform documentation audit:
 - [ ] [Function] needs examples
 
 ### Skill Files Status
-- [ ] voice.md: [OK/Needs Update]
-- [ ] messaging.md: [OK/Needs Update]
-- [ ] conversation-relay.md: [OK/Needs Update]
-- [ ] verify.md: [OK/Needs Update]
+- [ ] voice: [OK/Needs Update]
+- [ ] messaging: [OK/Needs Update]
+- [ ] conversation-relay: [OK/Needs Update]
+- [ ] verify: [OK/Needs Update]
 
 ### Recommendations
 1. [Priority 1 recommendation]
