@@ -29,6 +29,8 @@ Explicit list of things developers commonly assume work but don't:
 - **Cannot use PII in friendlyName** — compliance requirement, not just a suggestion
 - **Cannot create a conference with 0 call legs and get Insights data** — Insights requires ≥1 participant call attempt
 - **Cannot poll Insights immediately after conference end** — takes 15-30+ minutes even for `in_progress` state
+- **Cannot do CRM screen pops** — Conference provides call events; displaying caller context in a CRM is your application's JavaScript (Voice SDK call event → extract caller info → open CRM URL). Flex has built-in CRM panels; custom contact centers must build this.
+- **Cannot compute EWT** — Conference and TaskRouter provide queue statistics but not Estimated Wait Time calculations or announcements. You must poll queue stats, compute estimates, and serve them via a custom `waitUrl` handler.
 
 ## What Conference Actually Is
 

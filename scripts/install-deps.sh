@@ -48,7 +48,7 @@ elif [[ "$OSTYPE" == "linux"* ]]; then
   fi
 fi
 
-TOTAL_STEPS=6
+TOTAL_STEPS=7
 
 echo -e "${BOLD}Twilio Claude Plugin — Dependency Installer${NC}"
 echo -e "OS detected: ${BOLD}${OS}${NC}"
@@ -86,9 +86,60 @@ check_homebrew() {
   fi
 }
 
-# --- Step 2: Node.js 20+ ---
+# --- Step 2: jq (required by safety hooks) ---
+check_jq() {
+  print_step 2 "jq"
+
+  if command -v jq &>/dev/null; then
+    local jq_version
+    jq_version=$(jq --version 2>/dev/null || echo "unknown")
+    echo -e "  ${PASS} Already installed (${jq_version})"
+    log_result "jq" "skipped" "${jq_version} already installed"
+    return 0
+  fi
+
+  echo -e "  ${INFO} Installing jq (required by plugin safety hooks)..."
+
+  if [[ "$OS" == "macos" ]]; then
+    if command -v brew &>/dev/null; then
+      brew install jq
+    else
+      echo -e "  ${FAIL} Homebrew not available. Install jq manually:"
+      echo "       https://jqlang.github.io/jq/download/"
+      log_result "jq" "failed" "no package manager"
+      return 1
+    fi
+  elif [[ "$OS" == "linux" ]]; then
+    if [[ "$LINUX_PKG" == "apt" ]]; then
+      sudo apt-get install -y jq
+    elif [[ "$LINUX_PKG" == "dnf" ]]; then
+      sudo dnf install -y jq
+    elif [[ "$LINUX_PKG" == "yum" ]]; then
+      sudo yum install -y jq
+    else
+      echo -e "  ${FAIL} Unknown package manager. Install jq manually:"
+      echo "       https://jqlang.github.io/jq/download/"
+      log_result "jq" "failed" "unknown package manager"
+      return 1
+    fi
+  fi
+
+  if command -v jq &>/dev/null; then
+    local installed_version
+    installed_version=$(jq --version 2>/dev/null || echo "unknown")
+    echo -e "  ${PASS} Installed (${installed_version})"
+    log_result "jq" "installed" "${installed_version}"
+  else
+    echo -e "  ${FAIL} Installation failed"
+    echo -e "  ${INFO} Install manually: https://jqlang.github.io/jq/download/"
+    log_result "jq" "failed" ""
+    return 1
+  fi
+}
+
+# --- Step 3: Node.js 20+ ---
 check_node() {
-  print_step 2 "Node.js 20+"
+  print_step 3 "Node.js 20+"
 
   if command -v node &>/dev/null; then
     local node_version
@@ -153,9 +204,9 @@ check_node() {
   fi
 }
 
-# --- Step 3: npm ---
+# --- Step 4: npm ---
 check_npm() {
-  print_step 3 "npm"
+  print_step 4 "npm"
 
   if command -v npm &>/dev/null; then
     local npm_version
@@ -171,9 +222,9 @@ check_npm() {
   return 1
 }
 
-# --- Step 4: Twilio CLI ---
+# --- Step 5: Twilio CLI ---
 check_twilio_cli() {
-  print_step 4 "Twilio CLI"
+  print_step 5 "Twilio CLI"
 
   if command -v twilio &>/dev/null; then
     local twilio_version
@@ -199,9 +250,9 @@ check_twilio_cli() {
   fi
 }
 
-# --- Step 5: Serverless Plugin ---
+# --- Step 6: Serverless Plugin ---
 check_serverless_plugin() {
-  print_step 5 "Serverless Plugin"
+  print_step 6 "Serverless Plugin"
 
   if ! command -v twilio &>/dev/null; then
     echo -e "  ${SKIP} Skipped (Twilio CLI not installed)"
@@ -229,9 +280,9 @@ check_serverless_plugin() {
   fi
 }
 
-# --- Step 6: Claude Code ---
+# --- Step 7: Claude Code ---
 check_claude_code() {
-  print_step 6 "Claude Code"
+  print_step 7 "Claude Code"
 
   if command -v claude &>/dev/null; then
     local claude_version
@@ -283,6 +334,7 @@ print_summary() {
 
 # --- Main ---
 check_homebrew || true
+check_jq || true
 check_node || true
 check_npm || true
 check_twilio_cli || true

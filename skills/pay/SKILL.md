@@ -77,7 +77,7 @@ The `action` URL receives these parameters:
 
 | File | Access | Description |
 |------|--------|-------------|
-| `pay-simulator.js` | Public | Test payment processor for Generic Pay Connector (simple/robust modes) |
+| `pay-simulator.protected.js` | Protected | Test payment processor for Generic Pay Connector (simple/robust modes) |
 | `payment-status-sync.protected.js` | Protected | `<Pay>` statusCallback → writes to Sync for real-time observability |
 
 ## Agent-Assisted Payment Flow (REST API)
@@ -103,8 +103,8 @@ Status callback with Result=success or payment-connector-error
 ## Generic Pay Connector Setup
 
 1. Console → Voice → Pay Connectors → Create Generic Pay Connector
-2. Endpoint URL: `https://prototype-8922-dev.twil.io/pay/pay-simulator`
-3. Username/Password: `pay_user`/`pay_pass`
+2. Endpoint URL: your deployed `pay-simulator` function URL (e.g., `https://{service}-{hash}-dev.twil.io/pay/pay-simulator`)
+3. Username/Password: set `PAY_CONNECTOR_USERNAME` and `PAY_CONNECTOR_PASSWORD` in your `.env` file
 4. Mode: TEST for development, LIVE for production
 
 The connector sends POST with lowercase fields: `method`, `cardnumber`, `expiry_month`, `expiry_year`, `cvv`, `postal_code`, `amount`.

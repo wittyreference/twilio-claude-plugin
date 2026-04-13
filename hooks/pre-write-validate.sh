@@ -1,6 +1,11 @@
 #!/bin/bash
-# ABOUTME: Pre-write validation hook for credential safety, ABOUTME, and pipeline gates.
-# ABOUTME: Blocks writes containing hardcoded credentials, missing headers, or violating worktree isolation.
+# ABOUTME: Pre-write validation hook for credential safety, ABOUTME, and meta isolation.
+# ABOUTME: Blocks writes containing hardcoded credentials, missing headers, or violating meta mode.
+#
+# META MODE BYPASS: Use Bash with inline env var to write to production paths:
+#   CLAUDE_ALLOW_PRODUCTION_WRITE=true cat > functions/path/file.js << 'EOF'
+#   ...
+#   EOF
 
 # Claude Code passes tool input as JSON on stdin, not env vars.
 HOOK_INPUT=""
@@ -15,7 +20,7 @@ if [ -n "$HOOK_INPUT" ] && ! command -v jq &> /dev/null; then
     if command -v brew &>/dev/null; then echo "  Install: brew install jq" >&2
     elif command -v apt-get &>/dev/null; then echo "  Install: sudo apt-get install -y jq" >&2
     else echo "  Install jq: https://jqlang.github.io/jq/download/" >&2; fi
-    echo "  See .claude/references/hook-troubleshooting.md for details." >&2
+    echo "  Then restart Claude Code." >&2
     exit 2
 fi
 if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
@@ -31,8 +36,14 @@ if [ -z "$CONTENT" ] && [[ ! "$FILE_PATH" =~ learnings\.md$ ]]; then
     exit 0
 fi
 
-# Hook directory for sourcing helpers
+# ============================================
+# META-MODE ISOLATION CHECK
+# ============================================
+
+# Source meta-mode detection
 HOOK_DIR="$(dirname "$0")"
+if [ -f "$HOOK_DIR/_meta-mode.sh" ]; then
+fi
 
 # Lazy bypass event logger — sources _emit-event.sh on first call only
 _log_bypass() {
@@ -47,122 +58,95 @@ _log_bypass() {
     emit_event "bypass_used" "$(jq -nc         --arg var "$var_name"         --arg tier "$tier"         --arg ctx "$context"         '{bypass_var:$var, tier:$tier, context:$ctx}' 2>/dev/null)" 2>/dev/null || true
 }
 
-# ============================================
-# WORKTREE ISOLATION CHECK (BLOCKING)
-# ============================================
-# Sessions that write code MUST use a worktree. Concurrent sessions on the main
-# tree cause merge conflicts and silent overwrites. Exempt: plans, logs, learnings,
-# and other session-infrastructure paths that don't affect production code.
-# Bypass: CLAUDE_ALLOW_MAIN_WRITE=true
-
-if [ "${CLAUDE_ALLOW_MAIN_WRITE:-}" != "true" ] && [ "${CI:-}" != "true" ]; then
+# Check meta-mode isolation (can be bypassed with CLAUDE_ALLOW_PRODUCTION_WRITE=true)
+    # Get project root for path comparison
     PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
-    _GIT_COMMON="$(git rev-parse --git-dir 2>/dev/null || echo "")"
 
-    # Not in a worktree if git-dir does NOT contain /worktrees/
-    if [ -n "$_GIT_COMMON" ] && ! echo "$_GIT_COMMON" | grep -q '/worktrees/'; then
-        # Check if file is inside the repo
-        _WC_DIR="$(dirname "$FILE_PATH")"
-        _WC_RESOLVED_DIR="$(realpath "$_WC_DIR" 2>/dev/null || echo "$_WC_DIR")"
-        _WC_RESOLVED_FILE="$_WC_RESOLVED_DIR/$(basename "$FILE_PATH")"
-        _WC_RESOLVED_ROOT="$(realpath "$PROJECT_ROOT" 2>/dev/null || echo "$PROJECT_ROOT")"
-        _WC_REL="${_WC_RESOLVED_FILE#$_WC_RESOLVED_ROOT/}"
-        if [[ "$_WC_REL" == "$_WC_RESOLVED_FILE" ]]; then
-            _WC_REL="${FILE_PATH#$_WC_RESOLVED_ROOT/}"
-            if [[ "$_WC_REL" == "$FILE_PATH" ]]; then
-                _WC_REL="${FILE_PATH#$PROJECT_ROOT/}"
-            fi
-        fi
+    # Resolve symlinks in both paths to handle macOS /tmp → /private/tmp
+    # For new files, resolve directory portion (file doesn't exist yet)
+    _META_DIR="$(dirname "$FILE_PATH")"
+    _META_RESOLVED_DIR="$(realpath "$_META_DIR" 2>/dev/null || echo "$_META_DIR")"
+    RESOLVED_FILE_PATH="$_META_RESOLVED_DIR/$(basename "$FILE_PATH")"
+    RESOLVED_PROJECT_ROOT="$(realpath "$PROJECT_ROOT" 2>/dev/null || echo "$PROJECT_ROOT")"
 
-        # Only enforce for files inside the project root
-        if [[ "$_WC_REL" != "$FILE_PATH" ]]; then
-            _WC_EXEMPT=false
-            case "$_WC_REL" in
-                .claude/plans/*)        _WC_EXEMPT=true ;;
-                .claude/logs/*)         _WC_EXEMPT=true ;;
-                .claude/pending-actions.json) _WC_EXEMPT=true ;;
-                .claude/learnings.md)   _WC_EXEMPT=true ;;
-                .claude/.update-cache/*) _WC_EXEMPT=true ;;
-            esac
-
-            if [ "$_WC_EXEMPT" = "false" ]; then
-                echo "BLOCKED: Write to repo file outside of a worktree" >&2
-                echo "" >&2
-                echo "  File: $_WC_REL" >&2
-                echo "" >&2
-                echo "  Sessions that write code MUST use a worktree for isolation." >&2
-                echo "  Run /worktree-start or call EnterWorktree() first." >&2
-                echo "" >&2
-                echo "  If this is a one-off edit that genuinely doesn't need isolation:" >&2
-                echo "    CLAUDE_ALLOW_MAIN_WRITE=true <your command>" >&2
-                echo "" >&2
-                exit 2
-            fi
+    # Compute relative path from both resolved and raw FILE_PATH.
+    # FILE_PATH is guaranteed absolute (CC v2.1.88+) but not symlink-resolved.
+    # realpath resolves it outside PROJECT_ROOT, breaking the prefix strip.
+    # Fall back to the raw FILE_PATH (relative to PROJECT_ROOT) for pattern matching.
+    RELATIVE_PATH="${RESOLVED_FILE_PATH#$RESOLVED_PROJECT_ROOT/}"
+    if [[ "$RELATIVE_PATH" == "$RESOLVED_FILE_PATH" ]]; then
+        # Resolved path is outside project root — use raw path instead
+        RELATIVE_PATH="${FILE_PATH#$RESOLVED_PROJECT_ROOT/}"
+        # If strip failed, try with unresolved PROJECT_ROOT
+        # (handles case where PROJECT_ROOT itself is under a symlink)
+        if [[ "$RELATIVE_PATH" == "$FILE_PATH" ]]; then
+            RELATIVE_PATH="${FILE_PATH#$PROJECT_ROOT/}"
         fi
     fi
-else
-    _log_bypass "CLAUDE_ALLOW_MAIN_WRITE" "1" "worktree isolation bypassed for: ${FILE_PATH##*/}"
-fi
 
-# ============================================
-# LEARNINGS ARCHIVAL GUARD
-# ============================================
-# Blocks bulk truncation of learnings.md without a recent archive update.
-# Prevents the doc-flywheel Step 3 archival step from being skipped.
-# Bypass: SKIP_LEARNINGS_GUARD=true
+    # Only enforce meta-mode isolation for files INSIDE the project root.
+    # Files outside (e.g., ~/.claude/plans/, ~/.claude/memory/) are not
+    # production code — credential checks below still apply to them.
+    if [[ "$RELATIVE_PATH" != "$FILE_PATH" ]]; then
+        # Allowed paths in meta mode
+        # - .claude/* - Claude Code configuration (hooks, plans, etc.)
+        # - scripts/* - development scripts (often need updating)
+        # - __tests__/* - test files (part of development)
+        # - *.md in root - documentation files
 
-if [[ "$SKIP_LEARNINGS_GUARD" = "true" ]] && [[ "$FILE_PATH" =~ learnings\.md$ ]]; then
-    _log_bypass "SKIP_LEARNINGS_GUARD" "2" "learnings archival guard bypassed"
-fi
-if [[ "$SKIP_LEARNINGS_GUARD" != "true" ]] && \
-   [[ "$FILE_PATH" =~ learnings\.md$ ]] && \
-   [[ ! "$FILE_PATH" =~ learnings-archive\.md$ ]]; then
-    # Resolve the actual file (may be behind a symlink)
-    _LEARNINGS_DIR="$(dirname "$FILE_PATH")"
-    _LEARNINGS_REAL_DIR="$(realpath "$_LEARNINGS_DIR" 2>/dev/null || echo "$_LEARNINGS_DIR")"
-    _LEARNINGS_REAL="$_LEARNINGS_REAL_DIR/$(basename "$FILE_PATH")"
-    if [ -f "$_LEARNINGS_REAL" ]; then
-        _CURRENT_LINES=$(wc -l < "$_LEARNINGS_REAL" | tr -d ' ')
-        # Compute expected line count after this operation
-        if [ -n "$OLD_STRING" ]; then
-            # Edit operation: expected = current - removed + added
-            _OLD_LINES=$(printf '%s' "$OLD_STRING" | wc -l | tr -d ' ')
-            if [ -n "$CONTENT" ]; then
-                _ADD_LINES=$(printf '%s' "$CONTENT" | wc -l | tr -d ' ')
-            else
-                _ADD_LINES=0
-            fi
-            _NEW_LINES=$(( _CURRENT_LINES - _OLD_LINES + _ADD_LINES ))
-            [ "$_NEW_LINES" -lt 0 ] && _NEW_LINES=0
-        else
-            # Write operation: CONTENT is the full replacement file
-            _NEW_LINES=$(printf '%s' "$CONTENT" | wc -l | tr -d ' ')
-        fi
-        # Trigger: file >100 lines being reduced to <50% of current size
-        if [ "$_CURRENT_LINES" -gt 100 ] && [ "$_NEW_LINES" -lt $(( _CURRENT_LINES / 2 )) ]; then
-            _ARCHIVE_REAL="$_LEARNINGS_REAL_DIR/learnings-archive.md"
-            _ARCHIVE_FRESH=false
-            if [ -f "$_ARCHIVE_REAL" ]; then
-                _ARCHIVE_MTIME=$(stat -f %m "$_ARCHIVE_REAL" 2>/dev/null || stat -c %Y "$_ARCHIVE_REAL" 2>/dev/null || echo 0)
-                _NOW=$(date +%s)
-                # Archive must have been modified within last 5 minutes
-                if [ $(( _NOW - _ARCHIVE_MTIME )) -lt 300 ]; then
-                    _ARCHIVE_FRESH=true
+        ALLOWED=false
+        case "$RELATIVE_PATH" in
+                ALLOWED=true
+                ;;
+            .claude/*)
+                ALLOWED=true
+                ;;
+            scripts/*)
+                ALLOWED=true
+                ;;
+            .github/*)
+                ALLOWED=true
+                ;;
+            __tests__/*)
+                ALLOWED=true
+                ;;
+            agents/*)
+                ALLOWED=true
+                ;;
+            .env|.env.*)
+                # .env files are gitignored local config, not production code
+                ALLOWED=true
+                ;;
+            */CLAUDE.md)
+                # Domain CLAUDE.md files are development documentation, not production code
+                ALLOWED=true
+                ;;
+            *.md)
+                # Root-level markdown files are docs
+                if [[ "$RELATIVE_PATH" != */* ]]; then
+                    ALLOWED=true
                 fi
-            fi
-            if [ "$_ARCHIVE_FRESH" = "false" ]; then
-                echo "BLOCKED: learnings.md is being reduced from $_CURRENT_LINES to $_NEW_LINES lines" >&2
-                echo "without a recent update to learnings-archive.md." >&2
-                echo "" >&2
-                echo "Per doc-flywheel Step 3: ALWAYS copy entries to learnings-archive.md" >&2
-                echo "before clearing them from learnings.md." >&2
-                echo "" >&2
-                echo "To fix: append entries to learnings-archive.md first, then clear." >&2
-                echo "Override: SKIP_LEARNINGS_GUARD=true" >&2
-                exit 2
-            fi
+                ;;
+        esac
+
+        if [ "$ALLOWED" = "false" ]; then
+            echo "BLOCKED: Meta mode active - changes to production code blocked!" >&2
+            echo "" >&2
+            echo "" >&2
+            echo "Attempted to write: $RELATIVE_PATH" >&2
+            echo "" >&2
+            echo "Allowed paths in meta mode:" >&2
+            echo "  - .claude/plans/*" >&2
+            echo "  - .claude/archive/*" >&2
+            echo "" >&2
+            echo "To intentionally promote changes to production code:" >&2
+            echo "  CLAUDE_ALLOW_PRODUCTION_WRITE=true <command>" >&2
+            echo "" >&2
+            echo "" >&2
+            exit 2
         fi
     fi
+    _log_bypass "CLAUDE_ALLOW_PRODUCTION_WRITE" "1" "meta-mode isolation bypassed for: ${FILE_PATH##*/}"
 fi
 
 # ============================================
@@ -292,83 +276,6 @@ if [ "$SKIP_INJECTION" = "false" ] && [ -n "$CONTENT" ]; then
         echo "  - Review the content and use Bash write if needed" >&2
         echo "" >&2
         exit 2
-    fi
-fi
-
-# ============================================
-# ABOUTME VALIDATION FOR NEW JS FILES
-# ============================================
-
-# Check if this is a new JavaScript function file (not a test)
-# Use both raw and resolved paths to handle macOS /tmp → /private/tmp symlinks
-if { [[ "$FILE_PATH" =~ functions/.*\.js$ ]] || [[ "$RESOLVED_FILE_PATH" =~ functions/.*\.js$ ]]; } && \
-   [[ ! "$FILE_PATH" =~ \.test\.js$ ]]; then
-    # Check if file doesn't exist yet (new file) — check both path forms
-    if [ ! -f "$FILE_PATH" ] && [ ! -f "$RESOLVED_FILE_PATH" ]; then
-        # Validate ABOUTME is present in content being written
-        if ! echo "$CONTENT" | head -5 | grep -q "// ABOUTME:"; then
-            echo "BLOCKED: New function file missing ABOUTME comment!" >&2
-            echo "" >&2
-            echo "All code files must start with a 2-line ABOUTME comment:" >&2
-            echo "" >&2
-            echo "// ABOUTME: [What this file does - action-oriented]" >&2
-            echo "// ABOUTME: [Additional context - key behaviors, dependencies]" >&2
-            echo "" >&2
-            echo "Example:" >&2
-            echo "// ABOUTME: Handles incoming voice calls with greeting and input gathering." >&2
-            echo "// ABOUTME: Uses Polly.Amy voice and supports DTMF and speech input." >&2
-            echo "" >&2
-            exit 2
-        fi
-    fi
-fi
-
-# ============================================
-# PIPELINE GATE — New functions require tests
-# ============================================
-
-# Only check new function files (not tests, not helpers/private utilities)
-if { [[ "$FILE_PATH" =~ functions/.*\.js$ ]] || [[ "$RESOLVED_FILE_PATH" =~ functions/.*\.js$ ]]; } && \
-   [[ ! "$FILE_PATH" =~ \.test\.js$ ]] && \
-   [[ ! "$FILE_PATH" =~ _test\.go$ ]] && \
-   [[ ! "$FILE_PATH" =~ /helpers/ ]]; then
-
-    if [ ! -f "$FILE_PATH" ] && [ ! -f "$RESOLVED_FILE_PATH" ]; then
-        # Skip if override is set
-        if [ "${SKIP_PIPELINE_GATE:-}" = "true" ]; then
-            echo "Pipeline gate bypassed (SKIP_PIPELINE_GATE=true)" >&2
-            _log_bypass "SKIP_PIPELINE_GATE" "1" "TDD pipeline gate bypassed for: ${FILE_PATH##*/}"
-        else
-            # Derive expected test path
-            # functions/voice/ivr-welcome.js → __tests__/unit/voice/ivr-welcome.test.js
-            # functions/voice/ivr-welcome.protected.js → __tests__/unit/voice/ivr-welcome.test.js
-            REL_FUNC="${FILE_PATH#*/functions/}"
-            DOMAIN=$(dirname "$REL_FUNC")
-            BASENAME=$(basename "$REL_FUNC" .js)
-            BASENAME="${BASENAME%.protected}"
-            BASENAME="${BASENAME%.private}"
-            TEST_PATH="__tests__/unit/${DOMAIN}/${BASENAME}.test.js"
-
-            if [ ! -f "$PROJECT_ROOT/$TEST_PATH" ] && [ ! -f "$RESOLVED_PROJECT_ROOT/$TEST_PATH" ]; then
-                echo "" >&2
-                echo "BLOCKED: New function file has no corresponding tests!" >&2
-                echo "" >&2
-                echo "  Function:  functions/${REL_FUNC}" >&2
-                echo "  Expected:  ${TEST_PATH}" >&2
-                echo "" >&2
-                echo "This project enforces pipeline-driven development." >&2
-                echo "For new features, use the development pipeline:" >&2
-                echo "" >&2
-                echo "  /architect [feature]   # Start with design review" >&2
-                echo "  /test-gen [feature]    # Write failing tests first" >&2
-                echo "  /dev [task]            # Then implement" >&2
-                echo "" >&2
-                echo "See .claude/references/workflow-patterns.md for full phase sequences." >&2
-                echo "" >&2
-                echo "Override: SKIP_PIPELINE_GATE=true (for emergency fixes)" >&2
-                exit 2
-            fi
-        fi
     fi
 fi
 

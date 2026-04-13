@@ -300,6 +300,7 @@ await client.calls(callSid).recordings('Twilio.CURRENT').update({
 - [Video skill](/skills/video/SKILL.md) — Video room recordings and compositions
 - [CLAUDE.md](/CLAUDE.md) — TwiML patterns, `<Start><Recording>` syntax
 - [CLAUDE.md](/CLAUDE.md) — Voice AI recording + transcription patterns
+- [Conversational Intelligence v3 Skill](/skills/conversational-intelligence/SKILL.md) — v3 API: Language Operators, real-time/post-call analysis (separate from v2 transcription pipeline)
 - [recording-complete.protected.js](/recording-complete.protected.js) — Production recording callback → Voice Intelligence
 
 ---

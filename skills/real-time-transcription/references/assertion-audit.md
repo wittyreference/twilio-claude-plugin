@@ -104,7 +104,7 @@ Note: 177 raw assertions were extracted; 25 were duplicates of the same claim st
 | 8, 45-46 | Can stop via TwiML `<Stop>` or REST API with Status=stopped | CONFIRMED | twilio.com/docs/voice/api/realtime-transcription-resource — Update endpoint |
 | 11 | RTT is speech-to-text only | CONFIRMED | No TTS parameters in TwiML or API reference |
 | 12-13 | Language Operators execute post-call, not during call | CONFIRMED | twilio.com changelog: "extract actionable insights at scale by storing and analyzing transcripts initially generated in real-time" |
-| 16-17, 144-145 | Intelligence Services cannot be created via API; Console only | CONFIRMED | twilio.com/docs/voice-intelligence/onboarding — Console-based setup |
+| 16-17, 144-145 | Intelligence Services cannot be created via API; Console only | CONFIRMED | twilio.com/docs/conversational-intelligence/onboarding — Console-based setup |
 | 59, 158 | Multi-language detection: Deepgram Nova-3, `languageCode="multi"`, beta | CONFIRMED | twilio.com changelog: "Multi-language Detection Public Beta" |
 | 63-64 | HIPAA eligibility for persisted transcripts (both engines) | CONFIRMED | twilio.com changelog: "HIPAA Eligible Service" (Oct 2025) |
 | 93-95 | `statusCallbackUrl` must be absolute URL | CONFIRMED | twilio.com/docs: "absolute URL of an endpoint" |

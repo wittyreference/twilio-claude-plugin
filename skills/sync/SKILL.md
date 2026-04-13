@@ -55,6 +55,10 @@ Evidence date: 2026-03-25. Account prefix: AC... Service: IS8d793d.
 - **TTL enforcement is not instantaneous** — Twilio docs say "there can be a delay between the expiration time and the resource's deletion." In practice, enforcement is prompt (10s TTL gone within 15s), but do not rely on exact-second deletion. <!-- verified: ETccd0ec2d expired within 15s of 10s TTL -->
 - **Write rate degrades with payload size** — Sustained 20 writes/s per object for small payloads. Objects >1 KiB face stricter limits; 10 KiB+ capped at 2 writes/s. Stream messages >3 KiB capped at 7 msg/s. <!-- verified: twilio.com/docs/sync/limits -->
 
+### Beyond Platform: Real-Time Dashboards
+
+Sync provides the **data transport layer** for real-time dashboards (Documents for agent state, Maps for queue metrics, Streams for event feeds), but the dashboard itself — UI, visualization, aggregation, filtering — is entirely your application. Twilio does not provide a workforce management dashboard. Common pattern: Sync webhooks push state changes to your web app via WebSocket, which renders them in a frontend framework (React, Vue, etc.).
+
 ## Quick Decision
 
 | Need | Use | Why |

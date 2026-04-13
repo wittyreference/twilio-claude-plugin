@@ -219,7 +219,7 @@ Requires authentication via IP ACL or credentials.
 SIP Trunking bypasses PV, but two upstack features are available:
 
 - **Voice Insights Advanced Features** — enabled at the account level (all-or-nothing). Monitors call quality: jitter, packet loss, latency, codec issues.
-- **Trunk-level recording** — enabled per trunk (all-or-nothing, records every call on the trunk). Recorded calls can technically be sent to Voice Intelligence for transcription, but this is uncommon since cost is usually the driving factor for choosing trunking.
+- **Trunk-level recording** — enabled per trunk (all-or-nothing, records every call on the trunk). Recorded calls can technically be sent to Conversational Intelligence for transcription, but this is uncommon since cost is usually the driving factor for choosing trunking.
 
 ### Recording
 

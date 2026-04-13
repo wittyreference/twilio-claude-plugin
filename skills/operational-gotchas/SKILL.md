@@ -41,6 +41,12 @@ Cross-cutting gotchas discovered through real debugging sessions. Domain-specifi
 
 ## Deployment
 
+- **`services.json` only supports single-level directory names**: Using `voice/orange` as a directory entry fails because the deploy script can't create nested symlinks. Use flat names like `orange` → ``.
+
+- **Twilio Serverless env var context limit is 3583 bytes**: The deploy script auto-filters to only vars referenced via `context.VAR_NAME` in each service's functions. To fix an already over-limit service: delete the service and re-deploy fresh — `--override-existing-project` checks the EXISTING service's context first and rejects before applying the new deploy.
+
+- **macOS `grep -R --include` does NOT follow symlinks**: The deploy build dir uses symlinks to source directories. `grep -R` silently returns empty results. Use `find -L ... -exec grep` instead.
+
 - **CLI `--value` flag double-escapes JSON strings** — `twilio api:...:variables:create --value '{"k":"v"}'` stores escaped JSON. Use `.env` file + redeploy instead for JSON env vars.
 
 - **Inbound leg CallSid differs from outbound API call SID** — When initiating outbound to a tracking number, the function sees a different CallSid (inbound child). Sync docs keyed by inbound SID, recordings on outbound SID.
@@ -128,6 +134,16 @@ Cross-cutting gotchas discovered through real debugging sessions. Domain-specifi
 - **Geographic Permissions API booleans must be strings** — `client.voice.v1.dialingPermissions.bulkCountryUpdates.create()` accepts a JSON string of update objects where boolean values must be `"true"`/`"false"` (strings), not actual booleans. Passing native booleans silently fails.
 
 - **GitHub branch protection requires prior CI runs** — The "Add checks" search in GitHub rulesets only shows status checks that have previously run against the default branch via a PR. If you've only pushed directly to main, the check names won't appear. Push via PR first, then add the check.
+
+## Sierra Stack (Pre-GA)
+
+- **IP-based auth restrictions on pre-GA APIs** — Conversations v2, Customer Memory, and CI v3 APIs reject requests from cloud VM IPs (DigitalOcean, AWS, etc.) with 401 "invalid username". Same credentials work from local machines. Pre-GA demos must run from a trusted/registered IP. (Discovered 2026-04-03)
+
+- **ENVIRONMENT=dev routes to non-existent regional endpoints** — TAC SDK reads `ENVIRONMENT` env var and constructs URLs like `conversations.dev-us1.twilio.com`. These don't resolve → `ENOTFOUND` → "fetch failed". Always use `ENVIRONMENT=prod` or omit (defaults to prod). (Discovered 2026-04-03)
+
+- **CI v3 operator PUT creates an inactive version with no activation API** — Updating a pre-GA operator via PUT creates a new version but does not activate it. The operator silently stops producing results. No REST API to activate a version. Must delete and POST to recreate. (Discovered 2026-04-03)
+
+- **CI v3 API response shapes differ from v2 and from docs** — List endpoints return `items[]` not `operatorResults[]` or `conversations[]`. Operator results use `result.label` not `output.label`. Dates are `dateCreated` not `createdAt`. Channels are `channels[]` array not `channel` string. Pagination uses `meta.nextToken` not `nextPageUrl`. Operator results don't include `displayName` — only `operator.id`; resolve names via separate `GET /v3/ControlPlane/Operators`. (Discovered 2026-04-06)
 
 ## ngrok
 

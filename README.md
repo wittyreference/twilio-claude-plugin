@@ -1,4 +1,4 @@
-# Twilio Claude Plugin (v1.2.0)
+# Twilio Claude Plugin (v1.3.0)
 
 A Claude Code plugin that brings Twilio CPaaS expertise to any project. Provides specialized agents, commands, and skills for building voice, messaging, and real-time communication applications with Twilio.
 
@@ -6,10 +6,12 @@ A Claude Code plugin that brings Twilio CPaaS expertise to any project. Provides
 
 The plugin requires these tools to be installed:
 
-| Tool | Required Version | Purpose |
-|------|-----------------|---------|
+| Requirement | Version | Purpose |
+|-------------|---------|---------|
+| Twilio Account | — | [Sign up free](https://www.twilio.com/try-twilio) — need Account SID + Auth Token |
 | Node.js | 20+ | Runtime for Twilio Functions |
 | npm | (bundled with Node) | Package management |
+| jq | Latest | JSON processing (required by safety hooks) |
 | Twilio CLI | Latest | Deploy, manage numbers, debug |
 | Serverless Plugin | Latest | `twilio serverless:start` and `serverless:deploy` |
 | Claude Code | Latest | AI development environment |
@@ -38,6 +40,31 @@ Or clone and install locally:
 git clone https://github.com/wittyreference/twilio-claude-plugin.git
 claude plugin add ./twilio-claude-plugin
 ```
+
+## Quick Start
+
+```bash
+# 1. Install the plugin
+claude plugin add github:wittyreference/twilio-claude-plugin
+
+# 2. Create .env in your project root
+cat > .env << 'EOF'
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
+EOF
+
+# 3. Start Claude Code and verify setup
+claude
+# Then run: /preflight
+```
+
+Once verified, try prompts like:
+- "Send a test SMS to +15551234567"
+- "Build a voice IVR that routes callers to sales or support"
+- "Add phone verification to the signup flow using Twilio Verify"
+
+Run `/help-twilio` to discover all available skills and capabilities.
 
 ## Permissions
 
@@ -184,7 +211,14 @@ Automated guardrails that run during development:
 <details>
 <summary>Manual Hook Installation</summary>
 
-Add to `~/.claude/settings.json`:
+First, find your plugin cache path:
+
+```bash
+# The version directory changes with each plugin update
+ls ~/.claude/plugins/cache/twilio-claude-plugin/twilio-claude-plugin/
+```
+
+Then add to `~/.claude/settings.json` (replace `VERSION` with the version from above):
 
 ```json
 {
@@ -195,7 +229,7 @@ Add to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/plugins/cache/twilio-claude-plugin/twilio-claude-plugin/1.0.0/hooks/pre-write-validate.sh"
+            "command": "~/.claude/plugins/cache/twilio-claude-plugin/twilio-claude-plugin/VERSION/hooks/pre-write-validate.sh"
           }
         ]
       },
@@ -204,7 +238,7 @@ Add to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/plugins/cache/twilio-claude-plugin/twilio-claude-plugin/1.0.0/hooks/pre-bash-validate.sh"
+            "command": "~/.claude/plugins/cache/twilio-claude-plugin/twilio-claude-plugin/VERSION/hooks/pre-bash-validate.sh"
           }
         ]
       }
@@ -271,6 +305,15 @@ TWILIO_MESSAGING_SERVICE_SID=MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # Messaging Ser
 TEST_PHONE_NUMBER=+1234567890                                    # Recipient for test messages/calls
 ```
 
+### Credential Resolution Priority
+
+The MCP server resolves credentials in this order (highest priority first):
+
+1. **Shell environment** — Variables from `.zshrc`, `.bashrc`, or `export` statements
+2. **direnv** — `.envrc` file if `direnv` is configured
+3. **`.env` file** — Loaded by the MCP server at startup
+4. **Twilio CLI profile** — From `twilio login` (CLI commands only, not MCP tools)
+
 > **If you already have `TWILIO_*` env vars in your shell** (from `.zshrc`, another project, or Twilio CLI), they will silently override your `.env` values and cause auth failures. The Twilio SDK also auto-reads `TWILIO_REGION` and `TWILIO_EDGE`, which can silently route API calls to the wrong region.
 
 **Diagnose conflicts:**
@@ -293,6 +336,16 @@ brew install direnv
 echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
 direnv allow
 ```
+
+## Interactive Setup
+
+For guided provisioning of Twilio resources (phone numbers, Verify service, Sync service, TaskRouter workspace, Messaging Service):
+
+```bash
+node scripts/setup.js
+```
+
+The script walks you through each resource, creates what's needed, and updates your `.env` automatically.
 
 ## Usage Examples
 

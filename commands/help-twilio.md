@@ -30,8 +30,10 @@ If the user provided a use case or question, match it to the relevant skills bel
 ### AI Agents & Middleware
 | Skill | Use When |
 |-------|----------|
+| `/agent-connect` | Connecting LLM apps to Twilio voice/SMS via TAC middleware, Customer Memory integration |
 | `/conversationrelay` | Building voice AI agents with ConversationRelay — TwiML attributes, WebSocket protocol, STT/TTS providers, ngrok setup, CI integration |
 | `/synthetic-calls` | Generating bulk synthetic calls with customer personas, stress-testing voice AI, building demo data at scale |
+| `/coval` | Coval voice AI evaluation — benchmarking with simulated calls, LLM-judge metrics, personas with noise/interruptions, production call monitoring, A/B testing, scheduled regression |
 
 ### Messaging & Email
 | Skill | Use When |
@@ -54,6 +56,10 @@ If the user provided a use case or question, match it to the relevant skills bel
 |-------|----------|
 | `/segment` | Segment Connections — sources, destinations, custom Functions, Reverse ETL, Segment Spec, connection modes, data pipeline design |
 | `/sync` | Real-time state sync — Documents, Lists, Maps, Streams, TTL lifecycle, data type selection, MCP tool gaps, error codes |
+| `/customer-memory` | Customer Memory (Memora) — profiles, traits, observations, Recall, identity resolution, AI-powered personalization |
+| `/conversations-v2` | Multi-channel conversation tracking (Maestro), omnichannel history, participant types, v1 migration |
+| `/conversational-intelligence` | Real-time/post-call conversation analysis, Language Operators, sentiment, agent assist, cross-channel analytics (v3 API) |
+| `/sierra` | Unified Sierra stack — Conversations v2 + Customer Memory + Intelligence v3 pipeline, end-to-end setup, cross-product integration patterns and gotchas |
 | `/taskrouter` | Skills-based routing — workflows, queues, expressions, reservations, assignment callbacks, 30 MCP tools |
 | `/event-streams` | Streaming Twilio events to webhooks/Kinesis/Segment — sinks, subscriptions, CloudEvents, deduplication |
 | `/event-streams` | Status webhooks, delivery receipts, event streaming |
@@ -104,7 +110,9 @@ If the user provided a use case or question, match it to the relevant skills bel
 | Check phone number type/carrier/fraud | `/lookup` |
 | Send SMS/MMS | `/messaging` |
 | Send transactional email | `/sendgrid-email` |
-| Build a voice AI agent | `/conversationrelay` |
+| Build a voice AI agent | `/conversationrelay` or `/agent-connect` |
+| Connect LLM to Twilio with customer memory | `/agent-connect` then `/customer-memory` |
+| Store customer context across sessions | `/customer-memory` |
 | Process real-time audio | `/media-streams` |
 | Handle payments over the phone | `/pay` |
 | Build a contact center | `/taskrouter` then `/voice` |
@@ -115,6 +123,7 @@ If the user provided a use case or question, match it to the relevant skills bel
 | Sync real-time state | `/sync` |
 | Connect my SIP infrastructure | `/sip` or `/elastic-sip-trunking` |
 | Set up A2P 10DLC | `/messaging-services` then `/compliance-regulatory` |
+| Analyze conversations with AI (sentiment, summary, agent assist) | `/conversational-intelligence` |
 | Stream events to my analytics pipeline | `/event-streams` |
 | Debug a failing call | `/deep-validation` then `/operational-gotchas` |
 | Understand what MCP tools to use | `/tool-boundaries` |

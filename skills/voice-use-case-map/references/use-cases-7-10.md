@@ -23,7 +23,7 @@ Enforcing quiet hours requires knowing the recipient's time zone, which Twilio d
 
 ### Software Tools
 
-- **Voice Intelligence**: Analyze sales conversations at scale. Detect buying signals, objection patterns, competitor mentions, and successful closing techniques. Train new sales reps by surfacing top-performer conversation patterns.
+- **Conversational Intelligence**: Analyze sales conversations at scale. Detect buying signals, objection patterns, competitor mentions, and successful closing techniques. Train new sales reps by surfacing top-performer conversation patterns.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Studio**: Per project convention, **always use Functions**.
@@ -50,8 +50,8 @@ Enforcing quiet hours requires knowing the recipient's time zone, which Twilio d
 
 - **Recording**: Record every sales call. Required for sales compliance, dispute resolution, and performance coaching. Use conference recording to capture the full interaction.
 
-- **`<Transcribe>`**: Transcribe sales calls for Voice Intelligence analysis, coaching, and compliance review.
-  - Prereqs: Voice Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
+- **`<Transcribe>`**: Transcribe sales calls for Conversational Intelligence analysis, coaching, and compliance review.
+  - Prereqs: Conversational Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
 
 - **Voice Insights**: Sales campaign performance analytics — connect rates, call quality, agent performance comparisons.
 
@@ -146,7 +146,7 @@ This is your application's responsibility — Twilio's Calls API has no built-in
 
 ### Software Tools
 
-- **Voice Intelligence**: Analyze call tracking recordings to extract marketing intelligence — what products are callers asking about, what campaigns drive the highest-quality leads (not just volume).
+- **Conversational Intelligence**: Analyze call tracking recordings to extract marketing intelligence — what products are callers asking about, what campaigns drive the highest-quality leads (not just volume).
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Studio**: Simple call tracking flows can use Studio, but **Functions are preferred** per project convention.
@@ -164,7 +164,7 @@ This is your application's responsibility — Twilio's Calls API has no built-in
 - **Recording**: Record tracked calls for lead qualification and marketing analysis. Which campaigns generate calls that convert?
 
 - **`<Transcribe>`**: Transcribe tracked calls for keyword analysis and lead scoring.
-  - Prereqs: Voice Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
+  - Prereqs: Conversational Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
 
 - **Voice Insights**: Call quality and performance metrics per tracking number (campaign).
 
@@ -251,7 +251,7 @@ await syncService.syncMaps('number-pool').syncMapItems.create({
 
 ### Software Tools
 
-- **Voice Intelligence**: Analyze recordings from SIP Trunk traffic for quality monitoring and compliance.
+- **Conversational Intelligence**: Analyze recordings from SIP Trunk traffic for quality monitoring and compliance.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Event Streams**: Stream trunk-level events for monitoring call volume, routing, and failures.
@@ -316,17 +316,17 @@ Elastic SIP Trunking scales elastically — there is no fixed concurrent call li
 
 ### Software Tools
 
-- **Voice Intelligence**: The primary product for this use case. Provides transcription, entity detection, sentiment analysis, PII redaction, topic detection, and custom language operators. Process thousands of calls to extract business intelligence at scale.
+- **Conversational Intelligence**: The primary product for this use case. Provides transcription, entity detection, sentiment analysis, PII redaction, topic detection, and custom language operators. Process thousands of calls to extract business intelligence at scale.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Event Streams**: Stream transcription completion events and intelligence results to downstream analytics pipelines.
   - Prereqs: Sink configured (Webhook URL, Kinesis ARN + IAM role, or Segment write key).
 
-- **Functions**: Host transcription webhooks, processing logic, and integrations with downstream systems. Trigger Voice Intelligence jobs, process results, and route intelligence to the right systems.
+- **Functions**: Host transcription webhooks, processing logic, and integrations with downstream systems. Trigger Conversational Intelligence jobs, process results, and route intelligence to the right systems.
 
 - **Assets**: Host language operator configurations, custom vocabulary files, and processing templates.
 
-- **CLI**: Manage Voice Intelligence configuration and deploy processing functions.
+- **CLI**: Manage Conversational Intelligence configuration and deploy processing functions.
 
 ### Core Services
 
@@ -334,14 +334,14 @@ Elastic SIP Trunking scales elastically — there is no fixed concurrent call li
   - Prereqs: WebSocket server at `wss://` endpoint, ngrok or public URL for development.
   - Gotcha: Voice name format differs from `<Say>` for Chirp3-HD voices — use `en-US-Chirp3-HD-Aoede` not `Google.en-US-Chirp3-HD-Aoede` (Neural2 voices keep the `Google.` prefix: `Google.en-US-Neural2-F`). 10 consecutive malformed WebSocket messages terminates connection (error 64105). Check `message.last`, never `message.isFinal`.
 
-- **Recording**: The input for batch transcription. Calls must be recorded before they can be transcribed at scale. Configure recording on calls, conferences, or trunks, then process the recordings through Voice Intelligence.
+- **Recording**: The input for batch transcription. Calls must be recorded before they can be transcribed at scale. Configure recording on calls, conferences, or trunks, then process the recordings through Conversational Intelligence.
   - Gotcha: Use `source_sid` (Recording SID) for Voice Intelligence transcript creation, NOT `media_url`. The Intelligence API cannot authenticate against protected URLs.
 
-- **`<Transcribe>`**: Twilio's built-in transcription capability. Attach to recordings for automatic transcription. Simpler than full Voice Intelligence but lacks advanced features (entity detection, sentiment, PII redaction).
-  - Prereqs: Voice Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
+- **`<Transcribe>`**: Twilio's built-in transcription capability. Attach to recordings for automatic transcription. Simpler than full Conversational Intelligence but lacks advanced features (entity detection, sentiment, PII redaction).
+  - Prereqs: Conversational Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
 
 - **`<Transcription>`**: Near real-time transcription during live calls via `<Start><Transcription>`. Twilio-managed STT (Google or Deepgram engine) delivers transcript events to your webhook with 1-2 second latency. Supports dual-track transcription (`inbound_track`, `outbound_track`, `both_tracks`) for speaker diarization. When `intelligenceService` SID is specified, the transcript is automatically persisted and Language Operators run post-call — bridging real-time transcription with post-call analytics without additional API calls.
-  - Prereqs: StatusCallback URL to receive transcription events. Voice Intelligence Service SID for `intelligenceService` integration.
+  - Prereqs: StatusCallback URL to receive transcription events. Conversational Intelligence Service SID for `intelligenceService` integration.
   - Gotcha: Callback payload is form-encoded (not JSON). `partialResults="true"` generates high webhook traffic — budget for sustained volume. Encrypted recordings cannot be transcribed. Short utterances (<200ms) may not produce output. Engine-specific `speechModel` values are not interchangeable between Google and Deepgram.
 
 - **Action Item Extraction**: Not a built-in feature — requires a custom Language Operator. Configure a `text-generation` type operator with a prompt like "Extract action items from this call transcript as a numbered list." Attach the operator to your Intelligence Service, and it runs automatically on each transcript post-call. Results are available via the Intelligence API alongside other operator outputs. For structured extraction (assignee, due date, description), use a `text-generation` operator that returns JSON.
@@ -374,4 +374,4 @@ Elastic SIP Trunking scales elastically — there is no fixed concurrent call li
 
 - **HIPAA**: Required for transcribing calls containing protected health information.
 - **GDPR**: EU data protection compliance for transcription data — includes PII redaction requirements.
-- **PCI**: Compliance for transcribing calls that contain payment information. Voice Intelligence supports PII/PCI redaction in transcripts.
+- **PCI**: Compliance for transcribing calls that contain payment information. Conversational Intelligence supports PII/PCI redaction in transcripts.

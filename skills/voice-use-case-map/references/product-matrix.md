@@ -32,7 +32,7 @@ Each product entry within a use case includes:
 
 | Product | Notif | IVR | InCC | OutCC | AI-B | AI-3P | Sales | Track | PSTN | Trans |
 |---------|:-----:|:---:|:----:|:-----:|:----:|:-----:|:-----:|:-----:|:----:|:-----:|
-| Voice Intelligence | X | X | X | X | X | X | X | X | X | X |
+| Conversational Intelligence | X | X | X | X | X | X | X | X | X | X |
 | Studio | X | X | X | X | | | X | X | | |
 | Event Streams | X | X | X | X | X | X | X | | X | X |
 | TaskRouter | | | X | X | | | | | | |

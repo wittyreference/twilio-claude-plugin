@@ -47,7 +47,7 @@ unset CONFERENCE_PARTICIPANT_2
 # --- Step 2: Auto-switch Node version via fnm if .node-version exists ---
 if has fnm && [ -f .node-version ]; then
   eval "$(fnm env --use-on-cd)"
-  fnm use
+  fnm use --silent-if-unchanged
 fi
 
 # --- Step 3: Load project .env if it exists ---

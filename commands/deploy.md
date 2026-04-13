@@ -67,7 +67,7 @@ Manifest: `services.json`
 ## Post-Deployment
 
 1. **Update `.env`** with domains from deploy output (CORE_BASE_URL, AI_BASE_URL, LABS_BASE_URL)
-2. **Wire phone numbers**: `./scripts/wire-phone-numbers.sh`
+2. **Wire phone numbers**: Configure voice/messaging webhooks on your Twilio phone numbers via Console or CLI (see DESIGN_DECISIONS.md D45)
 3. **Verify endpoints** — make test calls using MCP `make_call` / `send_sms`, validate with `validate_call(callSid)`
 4. **Check debugger**: `validate_debugger(lookbackSeconds: 300)`
 

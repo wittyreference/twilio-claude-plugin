@@ -213,7 +213,10 @@ Covers the Segment Connections product: Sources, Destinations, Functions, Revers
 - [Rate Limits](https://www.twilio.com/docs/segment/connections/rate-limits)
 
 ### Related Skills
-- `/event-streams` — Twilio Event Streams can deliver events to Segment sinks. See Event Streams skill for sink configuration.
+- `/customer-memory` — Segment Profiles can feed Customer Memory for voice AI personalization
+- `/conversational-intelligence` — Segment events can trigger Intelligence analysis
+- `/sierra` — Unified stack where Segment data enriches customer profiles
+- `/event-streams` — Twilio Event Streams can deliver events to Segment sinks. See Event Streams skill for sink configuration. For CloudEvents to Segment field mapping when using Event Streams as a source, see `/skills/event-streams/SKILL.md` -> "CloudEvents to Segment Spec Field Mapping".
 
 ### MCP Tools (P2 Tier — 50 tools)
 - **Management** (42 tools): `segment_get_workspace`, `segment_create_source`, `segment_list_sources`, `segment_get_source`, `segment_update_source`, `segment_delete_source`, `segment_create_write_key`, `segment_delete_write_key`, `segment_create_destination`, `segment_list_destinations`, `segment_get_destination`, `segment_update_destination`, `segment_delete_destination`, `segment_list_destination_subscriptions`, `segment_get_delivery_metrics`, `segment_create_destination_filter`, `segment_list_destination_filters`, `segment_update_destination_filter`, `segment_delete_destination_filter`, `segment_preview_destination_filter`, `segment_create_function`, `segment_list_functions`, `segment_get_function`, `segment_update_function`, `segment_delete_function`, `segment_deploy_function`, `segment_list_function_versions`, `segment_restore_function_version`, `segment_create_tracking_plan`, `segment_list_tracking_plans`, `segment_get_tracking_plan`, `segment_update_tracking_plan`, `segment_delete_tracking_plan`, `segment_list_tracking_plan_rules`, `segment_update_tracking_plan_rules`, `segment_list_source_catalog`, `segment_list_destination_catalog`, `segment_get_source_metadata`, `segment_get_destination_metadata`, `segment_get_events_volume`, `segment_get_daily_api_calls`, `segment_get_daily_mtu`

@@ -83,10 +83,15 @@ See [`test-ivr/CLAUDE.md`](./test-ivr/CLAUDE.md) for the full tree structure and
 ### Voice SDK / WebRTC
 | File | Access | Description |
 |------|--------|-------------|
-| `token.js` | Public* | Generates Twilio Voice SDK access tokens (JWTs) with VoiceGrant |
+| `token.js` | Public (auth-gated) | Generates Twilio Voice SDK access tokens (JWTs) with VoiceGrant |
 | `sdk-handler.protected.js` | Protected | Routes browser-originated Voice SDK calls to PSTN or other clients |
 
-*`token.js` is intentionally public because browser clients cannot generate Twilio request signatures. For production, add application-level auth (API key, session token, CORS).
+`token.js` is public (not `.protected`) because browser clients cannot generate Twilio request signatures. Auth is enforced via `TOKEN_API_KEY` — callers must pass a matching `apiKey` parameter. The endpoint returns 403 if `TOKEN_API_KEY` is not configured.
+
+### Test Utilities
+| File | Access | Description |
+|------|--------|-------------|
+| `stay-on-line.js` | Public | Keeps a call alive for conference testing — plays a looping message for up to 10 minutes |
 
 ## TwiML Voice Verbs
 

@@ -110,3 +110,94 @@ Nodes with `promptSummary` starting with `[Redirect to ...]` generate:
 ```javascript
 twiml.redirect('/voice/migrated-ivr/{targetNodeHandler}');
 ```
+
+## Sequential Payment IVR Patterns
+
+Payment IVRs differ from menu trees. They're linear flows with entry+confirm loops and conditional branches. The Orange migration established these patterns:
+
+### Entry+Confirm Handler Pattern
+
+For nodes that collect input and confirm it (account#, ZIP, amounts, card#):
+
+```javascript
+exports.handler = async (context, event, callback) => {
+  const phase = event.phase || 'entry';
+  const enteredValue = event.enteredValue || '';
+  
+  if (phase === 'confirm') {
+    const classification = classifyConfirmation(event.Digits, event.SpeechResult);
+    if (classification === 'correct') {
+      twiml.redirect('/orange/next-handler?...');
+    } else if (classification === 'incorrect') {
+      twiml.redirect('/orange/this-handler?phase=entry&...');
+    } else {
+      // Re-render confirm Gather
+    }
+  } else {
+    if (event.Digits) {
+      // Digits received — redirect to confirm
+      twiml.redirect(`/orange/this-handler?phase=confirm&enteredValue=${event.Digits}&...`);
+    } else {
+      // Render entry Gather
+    }
+  }
+};
+
+function classifyConfirmation(digits, speechResult) {
+  if (digits === '1') return 'correct';
+  if (digits === '2') return 'incorrect';
+  if (speechResult) {
+    const lower = speechResult.toLowerCase();
+    // IMPORTANT: check 'incorrect'/'no' BEFORE 'correct'/'yes'
+    // because "incorrect" contains "correct" as a substring
+    if (lower.includes('incorrect') || lower.includes('no')) return 'incorrect';
+    if (lower.includes('yes') || lower.includes('correct')) return 'correct';
+  }
+  return 'unknown';
+}
+```
+
+### Multi-Variant Handler Pattern
+
+When the same IVR exists in DTMF-only and Voice+DTMF variants:
+
+```javascript
+const variant = event.variant || 'dtmf';
+const isVoice = variant === 'voice';
+
+const gatherOpts = {
+  numDigits: 1,
+  timeout: 5,
+  action: `/orange/handler?${buildQs({ variant, ppm })}`,
+};
+
+if (isVoice) {
+  gatherOpts.input = 'dtmf speech';
+  gatherOpts.speechTimeout = 'auto';
+  gatherOpts.hints = 'option one, option two';
+} else {
+  gatherOpts.input = 'dtmf';
+}
+```
+
+### Query Parameter State Management
+
+Payment flows carry state forward through the chain via query params:
+- `variant` — input mode (dtmf/voice)
+- `ppm` — pre-paid meter bypass
+- `phase` — entry/confirm state
+- `enteredValue` — collected digits
+- `retryCount` — retry counter
+- `amount` — payment amount in cents
+- `cardLast4` — for readback in authorization
+- `step` — sub-step in multi-menu handlers
+
+Helper pattern:
+```javascript
+function buildQs(params) {
+  return Object.entries(params)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&');
+}
+```

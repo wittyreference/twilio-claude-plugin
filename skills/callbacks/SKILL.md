@@ -27,6 +27,11 @@ These functions enable **deep validation** of Twilio API operations. Instead of 
 | `verification-status.protected.js` | Verify webhook | Logs verification status |
 | `fallback.protected.js` | Any FallbackUrl | Catches primary webhook failures |
 | `pizza-order-status.protected.js` | RecordingStatusCallback | Triggers transcription, stores pizza order in Sync, sends SMS confirmation |
+| `conference-health-monitor.protected.js` | Conference StatusCallback | Monitors conference participant events to detect orphaned participants (SUV-003) |
+| `event-stream.js` | Event Streams webhook | Receives CloudEvents from Twilio Event Streams; stores in Sync List for inspection |
+| `recording-test-status.protected.js` | RecordingStatusCallback | Captures full recording callback payloads to Sync for cross-method validation |
+| `transcript-validation-status.protected.js` | Voice Intelligence webhook | Captures transcript completion and operator results to Sync for validation |
+| `transcription-status.protected.js` | TranscriptionStatusCallback | Logs real-time transcription events (started, content, stopped, error) to Sync |
 
 ## Sync Schema
 

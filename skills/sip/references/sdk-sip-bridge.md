@@ -1,6 +1,6 @@
 ---
-name: "sip"
-description: "Twilio development skill: sip"
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Voice SDK to SIP bridging patterns, decision matrix, codec negotiation. -->

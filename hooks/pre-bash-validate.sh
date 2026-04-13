@@ -14,7 +14,7 @@ if [ -n "$HOOK_INPUT" ] && ! command -v jq &> /dev/null; then
     if command -v brew &>/dev/null; then echo "  Install: brew install jq" >&2
     elif command -v apt-get &>/dev/null; then echo "  Install: sudo apt-get install -y jq" >&2
     else echo "  Install jq: https://jqlang.github.io/jq/download/" >&2; fi
-    echo "  See .claude/references/hook-troubleshooting.md for details." >&2
+    echo "  Then restart Claude Code." >&2
     exit 2
 fi
 if [ -n "$HOOK_INPUT" ] && command -v jq &> /dev/null; then
@@ -77,76 +77,6 @@ if echo "$COMMAND" | grep -qE "git\s+(\S+\s+)*commit.*\s-[a-mo-z]*n[a-mo-z]*(\s|
     echo "Pre-commit hooks must run to ensure code quality." >&2
     echo "" >&2
     exit 2
-fi
-
-# ============================================
-# WORKTREE ISOLATION CHECK (BLOCKING)
-# ============================================
-# Sessions that commit code MUST use a worktree. Concurrent sessions on the main
-# tree cause merge conflicts and silent overwrites.
-# Bypass: CLAUDE_ALLOW_MAIN_WRITE=true
-
-if echo "$COMMAND" | grep -qE "^git\s+commit" && [ "${CLAUDE_ALLOW_MAIN_WRITE:-}" != "true" ] && [ "${CI:-}" != "true" ]; then
-    _GIT_COMMON="$(git rev-parse --git-dir 2>/dev/null || echo "")"
-    if [ -n "$_GIT_COMMON" ] && ! echo "$_GIT_COMMON" | grep -q '/worktrees/'; then
-        echo "" >&2
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
-        echo "BLOCKED: git commit on main tree without worktree isolation" >&2
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
-        echo "" >&2
-        echo "  Concurrent sessions sharing the main tree cause merge conflicts" >&2
-        echo "  and silent overwrites. Use a worktree for all commit work." >&2
-        echo "" >&2
-        echo "  Run /worktree-start or call EnterWorktree() first." >&2
-        echo "" >&2
-        echo "  Override: CLAUDE_ALLOW_MAIN_WRITE=true git commit ..." >&2
-        echo "" >&2
-        exit 2
-    fi
-fi
-# Log if worktree commit check was bypassed
-if echo "$COMMAND" | grep -qE "^git\s+commit" && [ "${CLAUDE_ALLOW_MAIN_WRITE:-}" = "true" ]; then
-    _log_bypass "CLAUDE_ALLOW_MAIN_WRITE" "1" "worktree commit isolation bypassed"
-fi
-
-# ============================================
-# D44: SYMLINK LEAK PREVENTION (BLOCKING)
-# ============================================
-# Worktree setup symlinks node_modules and dist/ for efficiency.
-# If those symlinks get staged, they poison every branch on checkout.
-# Block any staged symlink (mode 120000) for a gitignored path.
-
-if echo "$COMMAND" | grep -qE "^git\s+commit"; then
-    # Check for ANY staged symlink (mode 120000) being added or present.
-    # Previous version used --diff-filter=A (new files only), which missed
-    # already-tracked symlinks that were never properly removed from the index.
-    # Exclude deletions (D) — removing a tracked symlink is the fix, not the problem.
-    SYMLINKS=$(git diff --cached --diff-filter=d --raw 2>/dev/null | awk '/120000/{print $NF}')
-    if [ -z "$SYMLINKS" ]; then
-        # Also check the index directly for tracked symlinks in known-bad paths
-        SYMLINKS=$(git ls-files --stage 2>/dev/null | awk '$1 == "120000" && ($4 == "node_modules" || $4 ~ /^agents\/mcp-servers\/twilio\/dist/) {print $4}')
-    fi
-    if [ -n "$SYMLINKS" ]; then
-        BLOCKED=""
-        for f in $SYMLINKS; do
-            if git check-ignore -q "$f" 2>/dev/null; then
-                BLOCKED="$BLOCKED $f"
-            fi
-        done
-        if [ -n "$BLOCKED" ]; then
-            echo "" >&2
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
-            echo "BLOCKED: Staged symlinks for gitignored paths:$BLOCKED" >&2
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
-            echo "" >&2
-            echo "This usually means a worktree symlink leaked into the commit." >&2
-            echo "Fix: git rm --cached$BLOCKED" >&2
-            echo "" >&2
-            echo "See DESIGN_DECISIONS.md D44 for context." >&2
-            echo "" >&2
-            exit 2
-        fi
-    fi
 fi
 
 # ============================================
@@ -243,6 +173,20 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
     fi
 
     # ============================================
+    # META REFERENCE LEAKAGE WARNING
+    # ============================================
+        echo "" >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "" >&2
+        echo "This may indicate meta-development content leaking into shipped code." >&2
+        echo "" >&2
+        echo "If this is intentional documentation about the separation, proceed." >&2
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        echo "" >&2
+    fi
+
+    # ============================================
     # LOCAL PATH LEAKAGE CHECK (BLOCKING)
     # ============================================
     # Block commits that ship hardcoded local directory paths.
@@ -271,6 +215,57 @@ if echo "$COMMAND" | grep -qE "^git\s+commit"; then
             exit 2
         else
             _log_bypass "SKIP_PATH_CHECK" "2" "local path leakage check bypassed"
+        fi
+    fi
+
+    # ============================================
+    # META-ONLY HOOK REGISTRATION CHECK (BLOCKING)
+    # ============================================
+    # Block commits that register meta-only scripts as shipped hooks.
+    # meaning it does nothing for fresh-clone users — dead code in settings.json.
+    if git diff --staged --name-only 2>/dev/null | grep -qF '.claude/settings.json'; then
+        # Extract hook script filenames from added lines in the diff
+        NEW_HOOK_FILES=$(git diff --staged -- .claude/settings.json 2>/dev/null \
+            | grep '^+' | grep '\.sh"' \
+            | grep -oE '[a-zA-Z0-9_-]+\.sh' \
+            | sort -u)
+
+        if [ -n "$NEW_HOOK_FILES" ]; then
+            META_ONLY_HOOKS=""
+            for hook_file in $NEW_HOOK_FILES; do
+                # Resolve to full path (hooks live in .claude/hooks/)
+                hook_path="$PROJECT_ROOT/.claude/hooks/$hook_file"
+                [ -f "$hook_path" ] || continue
+
+                # Check first 20 lines for meta-mode-only guard:
+                if head -20 "$hook_path" | tr '\n' ' ' \
+                    META_ONLY_HOOKS="${META_ONLY_HOOKS}  → ${hook_file} (exits when not in meta-mode)\n"
+                fi
+            done
+
+            if [ -n "$META_ONLY_HOOKS" ]; then
+                echo "" >&2
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "BLOCKED: Meta-only script registered as a shipped hook" >&2
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "" >&2
+                printf "%b" "$META_ONLY_HOOKS" >&2
+                echo "" >&2
+                echo "Scripts that exit 0 outside meta-mode do nothing for" >&2
+                echo "fresh-clone users. Don't register them in settings.json." >&2
+                echo "" >&2
+                echo "Instead: put the script in scripts/ and call it from" >&2
+                echo "/wrap-up (step 7b/7c, meta-mode section)." >&2
+                echo "" >&2
+                echo "Override: SKIP_META_HOOK_CHECK=true git commit ..." >&2
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+                echo "" >&2
+                if [ "${SKIP_META_HOOK_CHECK:-}" != "true" ]; then
+                    exit 2
+                else
+                    _log_bypass "SKIP_META_HOOK_CHECK" "2" "meta-only hook registration check bypassed"
+                fi
+            fi
         fi
     fi
 

@@ -42,7 +42,7 @@ All claims backed by live testing (2026-03-28, account ACxx...xx). See [referenc
 2. **No custom STT/TTS engines** — limited to Google + Deepgram (STT) and Google + Amazon + ElevenLabs (TTS)
 3. **No WebSocket auto-reconnection** — if WS drops, call disconnects. Implement recovery via `<Connect action>` URL
 4. **No mid-session voice/provider changes** — voice and provider are set at TwiML time. Only language can be switched mid-session via the `language` WebSocket message
-5. **No SMS/messaging** — voice only
+5. **No SMS/messaging** — voice only. For omnichannel, see Agent Connect (public beta)
 6. **No built-in memory/context** — BYO conversation history and context management
 7. **Not PCI compliant with Voice Intelligence v2** — do not enable `intelligenceService` in PCI workflows
 8. **No LLM integration** — pure transport layer. You bring your own LLM via the WebSocket server
@@ -59,7 +59,7 @@ All claims backed by live testing (2026-03-28, account ACxx...xx). See [referenc
 | LLM-powered voice agent | **ConversationRelay** | Built-in STT/TTS, JSON protocol, fastest path |
 | Custom STT/TTS engine | **Media Streams** | Raw audio access via `<Connect><Stream>` |
 | Real-time transcription alongside other TwiML | **`<Start><Transcription>`** | Non-blocking, runs in background |
-| Voice + SMS from one codebase | **Twilio APIs** | Build channel routing with Programmable Voice + Messaging APIs |
+| Voice + SMS from one codebase | **Agent Connect** (beta) | Channel abstraction layer over CR |
 | Post-call transcript analysis | **Voice Intelligence v2** | Batch processing of recordings |
 | Simple speech input (menus, numbers) | **`<Gather>`** | Single-turn input, no WebSocket needed |
 
@@ -331,7 +331,7 @@ Do NOT use `make_call(url=conference-TwiML)` — the `url` parameter controls th
 
 ### ConversationRelay + Voice Intelligence v2
 
-Add `intelligenceService` to get automatic post-call transcripts and Language Operator analysis without recording. The `intelligenceService` attribute accepts GA-prefixed SIDs (`GA...`) for Voice Intelligence v2.
+Add `intelligenceService` to get automatic post-call transcripts and Language Operator analysis without recording. The `intelligenceService` attribute accepts GA-prefixed SIDs (`GA...`) for Voice Intelligence v2. For Intelligence v3 (cross-channel, real-time), use the Sierra pipeline (Conversations v2 Configuration with `intelligenceConfigurationIds`). Do NOT pass Intelligence v3 IDs (`intelligence_configuration_*`) to `intelligenceService`.
 
 ```javascript
 connect.conversationRelay({
@@ -409,7 +409,7 @@ The `<Connect action>` URL receives `HandoffData` as a POST parameter. Return Tw
 
 17. **Voice Intelligence v2 transcripts don't need recordings**: `intelligenceService` creates transcripts directly from the CR session via Voice Intelligence v2. Source is `"ConversationRelay"` with `source_sid` = VX session SID. No `<Start><Recording>` required. [Evidence: CAb46f3db6 → GTa86955e6]
 
-18. **Voice Intelligence v2 is post-call only**: Language Operators execute after the CR session ends (when call hangs up or WS sends `end`). No real-time operator results during the call.
+18. **Voice Intelligence v2 is post-call only**: Language Operators execute after the CR session ends (when call hangs up or WS sends `end`). No real-time operator results during the call. For real-time analysis, use Intelligence v3 via Sierra pipeline.
 
 19. **Voice Intelligence v2 is not PCI compliant**: Do not enable `intelligenceService` in workflows that handle payment card data.
 
@@ -453,7 +453,7 @@ The `<Connect action>` URL receives `HandoffData` as a POST parameter. Return Tw
 | Call recording with CR | [Recordings skill](/skills/recordings/SKILL.md) |
 | Voice use case routing | [Voice Use Case Map](/skills/voice-use-case-map/SKILL.md) |
 | Real-time transcription | [RTT skill](/skills/real-time-transcription/SKILL.md) |
-| Voice Intelligence v2 | `/voice-intelligence` skill (private beta — gitignored) |
+| Voice Intelligence v2 | `/conversational-intelligence` skill (private beta — gitignored) |
 | Domain functions | `` ([CLAUDE.md](../../CLAUDE.md)) |
 | MCP tools | `mcp__twilio__make_call`, `mcp__twilio__validate_call`, `mcp__twilio__get_call` |
 

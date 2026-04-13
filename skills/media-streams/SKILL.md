@@ -111,134 +111,9 @@ return callback(null, twiml);
 
 ## WebSocket Protocol
 
-### Incoming Messages (Twilio → Your Server)
+The WebSocket protocol defines message types for both directions: Twilio sends `connected`, `start`, `media`, `dtmf`, `mark`, and `stop` events to your server; your server can send `media` (audio), `mark` (playback tracking), and `clear` (interrupt) messages back to Twilio.
 
-#### `connected` — WebSocket established
-```json
-{
-  "event": "connected",
-  "protocol": "Call",
-  "version": "1.0.0"
-}
-```
-
-#### `start` — Stream metadata (sent once)
-```json
-{
-  "event": "start",
-  "sequenceNumber": "1",
-  "start": {
-    "accountSid": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "streamSid": "MZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "callSid": "CAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "tracks": ["inbound"],
-    "mediaFormat": {
-      "encoding": "audio/x-mulaw",
-      "sampleRate": 8000,
-      "channels": 1
-    },
-    "customParameters": {
-      "callerNumber": "+15551234567"
-    }
-  },
-  "streamSid": "MZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-}
-```
-
-#### `media` — Audio data
-```json
-{
-  "event": "media",
-  "sequenceNumber": "3",
-  "media": {
-    "track": "inbound",
-    "chunk": "1",
-    "timestamp": "5",
-    "payload": "<base64-encoded-mulaw-audio>"
-  },
-  "streamSid": "MZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-}
-```
-
-- `track`: `"inbound"` (caller audio) or `"outbound"` (TTS/played audio)
-- `timestamp`: Milliseconds from stream start
-- `payload`: Base64-encoded mulaw audio, 8kHz, mono, no file headers
-
-#### `dtmf` — Keypress detected (bidirectional only)
-```json
-{
-  "event": "dtmf",
-  "sequenceNumber": "5",
-  "dtmf": {
-    "track": "inbound_track",
-    "digit": "1"
-  },
-  "streamSid": "MZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-}
-```
-
-#### `mark` — Playback milestone reached (bidirectional only)
-```json
-{
-  "event": "mark",
-  "sequenceNumber": "4",
-  "mark": {
-    "name": "my-label"
-  },
-  "streamSid": "MZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-}
-```
-
-Sent when audio preceding a sent mark has finished playing.
-
-#### `stop` — Stream ended
-```json
-{
-  "event": "stop",
-  "sequenceNumber": "5",
-  "stop": {
-    "accountSid": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "callSid": "CAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  },
-  "streamSid": "MZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-}
-```
-
-### Outgoing Messages (Your Server → Twilio)
-
-#### Send audio
-```json
-{
-  "event": "media",
-  "streamSid": "MZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-  "media": {
-    "payload": "<base64-encoded-mulaw-audio>"
-  }
-}
-```
-
-Audio must be mulaw-encoded at 8000 Hz, mono, base64-encoded, with no WAV/file headers.
-
-#### Send mark (track playback position)
-```json
-{
-  "event": "mark",
-  "streamSid": "MZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-  "mark": {
-    "name": "utterance-end"
-  }
-}
-```
-
-#### Clear audio buffer (interrupt)
-```json
-{
-  "event": "clear",
-  "streamSid": "MZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-}
-```
-
-Empties the queued audio buffer. Use this for barge-in/interruption.
+See [references/protocol-reference.md](references/protocol-reference.md) for the full WebSocket message format specification.
 
 ---
 
@@ -437,6 +312,50 @@ const client = new TranscribeStreamingClient({ region: 'us-east-1' });
 
 ---
 
+## Backpressure and Audio Buffering
+
+Media packets arrive every ~20ms (160 bytes of mulaw per packet = 8KB/s per stream). If your processing pipeline (STT inference, audio analysis) cannot keep up, packets queue in the WebSocket buffer.
+
+**Detecting lag:**
+- Node.js `ws` library: monitor `ws.bufferedAmount`. Values above 64KB (~8 seconds of audio) indicate the consumer is falling behind.
+- Track the `timestamp` field in media messages. If the gap between the packet timestamp and wall-clock time exceeds your latency budget (typically 1-3 seconds for real-time STT), you are lagging.
+
+**Backpressure strategies:**
+- **Drop oldest frames**: For real-time STT, stale audio is useless. Maintain a ring buffer of the last N packets and discard older ones when the processing queue exceeds a threshold. This preserves the most recent speech context.
+- **Adaptive quality**: Reduce STT model complexity or switch to a lighter model when lag is detected. For example, switch from a large Whisper model to a streaming Deepgram endpoint during peak load.
+- **Horizontal scaling**: Route new WebSocket connections to additional server instances. Each bidirectional stream is independent — no shared state between streams — so horizontal scaling requires no sticky sessions.
+
+**STT provider considerations:**
+- Google Cloud Speech streaming has its own flow control. If you send audio faster than it can process, interim results lag but audio is not lost. Monitor `data.results[0].resultEndTime` relative to stream elapsed time.
+- Deepgram streaming accepts audio as fast as you send it but interim results may lag under load. Monitor the `start` field in transcript messages.
+- Amazon Transcribe streaming has a 15-second buffer. If your pipeline falls 15+ seconds behind, the stream is terminated.
+
+---
+
+## Scaling Concurrent Streams
+
+Each active call with a bidirectional stream requires one persistent WebSocket connection. N concurrent calls = N WebSocket connections to your server.
+
+**Single-server capacity:**
+- Node.js: practical limit of ~1,000-5,000 concurrent WebSocket connections per process, depending on per-connection CPU usage (audio processing is CPU-bound, not I/O-bound).
+- Python (asyncio/websockets): similar range, but GIL limits CPU-bound audio processing to one core per process. Use multiprocessing for CPU-heavy STT.
+- Go: higher raw connection capacity (~10,000+) due to goroutine efficiency, but STT inference is still the bottleneck.
+
+**Horizontal scaling:**
+- Use a load balancer with WebSocket support (ALB, nginx with `proxy_pass` + `Upgrade` headers, or Cloudflare).
+- Sticky sessions are NOT required — each WebSocket connection is independent with no shared state.
+- Scale based on concurrent connection count, not request rate. Monitor active WebSocket connections as the primary scaling metric.
+
+**Cost scaling:**
+- Each concurrent stream requires a separate streaming recognition session with your STT provider. Google charges per 15-second increment. Deepgram charges per audio-hour. Budget for N concurrent sessions at peak.
+- Twilio charges per-minute for the call itself. The stream adds no additional Twilio charge beyond the call cost.
+
+**Twilio-side limits:**
+- No documented per-account limit on concurrent streams specifically. Subject to your account's concurrent call limit.
+- If you need more than your default concurrent call limit, request an increase through Twilio support or your account team.
+
+---
+
 ## Gotchas
 
 ### Media Streams ≠ ConversationRelay
@@ -470,6 +389,21 @@ Relative WebSocket URLs are not supported. Always use a full `wss://` URL.
 ### Recording + Stream Independence
 
 `<Start><Recording>` and `<Start><Stream>` are independent background operations. Recording captures the full call audio; the stream provides a real-time copy. Both can run simultaneously.
+
+### WebSocket Hang vs Drop
+
+A WebSocket **drop** (connection close) is well-documented: the stream ends, `<Connect>` completes, and TwiML execution resumes. A WebSocket **hang** (server stops responding without closing the connection) is different and more dangerous:
+
+- The TCP connection remains open, so Twilio doesn't detect a failure
+- `<Connect><Stream>` continues to block TwiML execution
+- The caller hears silence indefinitely
+- Twilio has no documented ping/pong timeout that would auto-close a hung connection
+
+**Detection (server-side)**: Implement a self-watchdog in your WebSocket server. Track the timestamp of the last processed audio frame. If no frame is processed for >5 seconds despite receiving media events, the processing pipeline is hung. Close the WebSocket connection to trigger Twilio's stream-end behavior.
+
+**Detection (platform-side)**: Monitor call duration. If a Media Streams call exceeds the expected maximum duration, use the REST API to end the call: `calls(callSid).update({ status: 'completed' })`. This is the only way to recover from a hung stream without the caller hanging up.
+
+**Prevention**: Use `setTimeout` or equivalent in your WebSocket handler to detect processing stalls. If your STT/TTS pipeline doesn't respond within N seconds, close the WebSocket gracefully rather than waiting indefinitely.
 
 ---
 

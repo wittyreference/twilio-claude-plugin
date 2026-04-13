@@ -54,6 +54,25 @@ if [ -n "$_POST_BASH_SESSION_ID" ]; then
 fi
 
 # ============================================
+# WORKTREE LAST-ACTIVE KEEPALIVE
+# ============================================
+# Update .last-active timestamp so worktree-status.sh can accurately
+# detect stale vs active worktrees. Throttled to once per 60s.
+
+_PB_GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || echo "")
+if echo "$_PB_GIT_DIR" | grep -q '/worktrees/'; then
+    _PB_WT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+    if [ -n "$_PB_WT_ROOT" ]; then
+        _PB_LAST_ACTIVE="$_PB_WT_ROOT/.last-active"
+        _PB_NOW=$(date +%s)
+        _PB_LAST_TS=$(head -1 "$_PB_LAST_ACTIVE" 2>/dev/null || echo "0")
+        if [ $(( _PB_NOW - _PB_LAST_TS )) -gt 60 ] 2>/dev/null; then
+            echo "$_PB_NOW" > "$_PB_LAST_ACTIVE"
+        fi
+    fi
+fi
+
+# ============================================
 # DEPLOYMENT COMPLETION
 # ============================================
 

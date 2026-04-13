@@ -1,6 +1,6 @@
 ---
-name: "conference"
-description: "Twilio development skill: conference"
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 <!-- ABOUTME: Behavior when combining Conference with Real-Time Transcription (RTT). -->

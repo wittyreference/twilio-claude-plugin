@@ -19,7 +19,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 ### Software Tools
 
-- **Voice Intelligence**: Post-call analysis of notification campaigns at scale. Use to detect opt-out intent in recorded responses, monitor sentiment across thousands of calls, and identify failed delivery patterns. Don't use for real-time decisions during the notification call itself.
+- **Conversational Intelligence**: Post-call analysis of notification campaigns at scale. Use to detect opt-out intent in recorded responses, monitor sentiment across thousands of calls, and identify failed delivery patterns. Don't use for real-time decisions during the notification call itself.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Studio**: Visual flow builder for notification sequences. Relevant for teams without developer resources who need to build simple outbound flows. Per project convention, **always prefer Functions over Studio** — Claude Code handles the complexity better.
@@ -41,7 +41,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
   - Gotcha: Use `source_sid` (Recording SID) for Voice Intelligence transcript creation, NOT `media_url`. The Intelligence API cannot authenticate against protected URLs.
 
 - **`<Transcribe>`**: Transcribe recorded notification calls for searchable compliance archives. Most useful when combined with `<Gather speech>` to capture and log what the recipient said in response. Not needed for simple one-way announcements with no interaction.
-  - Prereqs: Voice Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
+  - Prereqs: Conversational Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
 
 - **Voice Insights**: Monitor notification campaign performance — answer rates, call duration, call quality scores. The Reports API provides aggregate metrics across campaigns. Use Call Summary to investigate individual failed deliveries. Essential for optimizing large-volume notification systems.
 
@@ -100,7 +100,7 @@ Different industries have distinct IVR structures, but all share the same Twilio
 
 ### Software Tools
 
-- **Voice Intelligence**: Analyze self-service interactions to find where callers abandon or escalate. Detect recurring intents that the IVR doesn't handle well. Use entity detection to identify products, account types, or issues mentioned during AI-powered self-service sessions.
+- **Conversational Intelligence**: Analyze self-service interactions to find where callers abandon or escalate. Detect recurring intents that the IVR doesn't handle well. Use entity detection to identify products, account types, or issues mentioned during AI-powered self-service sessions.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Studio**: Visual IVR builder. Per project convention, **always prefer Functions** — complex IVR flows in Studio become unmaintainable spider webs.
@@ -134,7 +134,7 @@ Different industries have distinct IVR structures, but all share the same Twilio
 - **Recording**: Record self-service sessions for QA, compliance, and dispute resolution. Especially important for payment and account-change interactions. Use `<Start><Record>` to begin recording at specific points in the flow rather than recording the entire call.
 
 - **`<Transcribe>`**: Transcribe self-service interactions for searchable records. Useful for AI-powered sessions where you need to audit what the AI said and what the caller requested.
-  - Prereqs: Voice Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
+  - Prereqs: Conversational Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
 
 - **Voice Insights**: Monitor IVR performance — call duration distributions, drop-off points, quality scores. Use Call Events to see the TwiML execution timeline and identify slow or failing steps in the IVR flow.
 
@@ -194,7 +194,7 @@ Different industries have distinct IVR structures, but all share the same Twilio
 
 ### Software Tools
 
-- **Voice Intelligence**: Real-time and post-call analysis of agent-customer interactions. Detect sentiment shifts, identify coaching opportunities, flag compliance violations. At scale, reveals which agents handle which topics best.
+- **Conversational Intelligence**: Real-time and post-call analysis of agent-customer interactions. Detect sentiment shifts, identify coaching opportunities, flag compliance violations. At scale, reveals which agents handle which topics best.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Studio**: Visual flow builder for routing logic. Per project convention, **always use Functions instead**.
@@ -237,7 +237,7 @@ Different industries have distinct IVR structures, but all share the same Twilio
 - **Recording**: Record all agent-customer interactions for QA, compliance, training, and dispute resolution. Use conference-level recording for the full interaction, or per-participant recording when you need to isolate agent vs customer audio.
 
 - **`<Transcribe>`**: Real-time or post-call transcription of agent interactions. Powers live captioning, real-time agent assist, and post-call summarization.
-  - Prereqs: Voice Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
+  - Prereqs: Conversational Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
 
 - **Voice Insights**: Monitor call quality across the contact center. Identify agents with poor audio quality, detect network issues, and track call disposition patterns. Conference Insights specifically shows participant-level quality.
 
@@ -340,7 +340,7 @@ Different industries have distinct IVR structures, but all share the same Twilio
 
 *Same infrastructure as Inbound Contact Center (Use Case 3) — TaskRouter, Sync, Event Streams, Functions, etc. The software tooling is identical; the difference is in call flow patterns.*
 
-- **Voice Intelligence**: Analyze outbound campaign effectiveness. Detect customer sentiment, identify successful pitch patterns, and flag compliance issues across thousands of outbound calls.
+- **Conversational Intelligence**: Analyze outbound campaign effectiveness. Detect customer sentiment, identify successful pitch patterns, and flag compliance issues across thousands of outbound calls.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Studio**: Per project convention, **always use Functions**.
@@ -383,7 +383,7 @@ Different industries have distinct IVR structures, but all share the same Twilio
 - **Recording**: Record all outbound calls for compliance (TCPA, TSR), quality monitoring, and dispute resolution. Especially critical for collections and sales where regulatory scrutiny is high.
 
 - **`<Transcribe>`**: Transcribe outbound calls for compliance auditing. Regulators may require proof of what was said during collections or sales calls.
-  - Prereqs: Voice Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
+  - Prereqs: Conversational Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
 
 - **Voice Insights**: Campaign analytics — connect rates, average handle time, agent performance, call quality. Reports API provides aggregate campaign metrics.
 

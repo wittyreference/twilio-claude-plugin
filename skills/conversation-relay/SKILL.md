@@ -47,6 +47,11 @@ For LLM integration code, ngrok setup, full configuration, and code patterns, se
 | `customer-agent-inbound.protected.js` | Protected | Customer Agent ConversationRelay handler |
 | `dtmf-hold.js` | Public | Hold endpoint for DTMF Injector — returns long pause TwiML |
 
+### Recording Validation
+| File | Access | Description |
+|------|--------|-------------|
+| `recording-test-inbound.protected.js` | Protected | Parameterized TwiML handler for recording validation — accepts query params to configure recording method, then connects to ConversationRelay |
+
 ### Callbacks
 | File | Access | Description |
 |------|--------|-------------|

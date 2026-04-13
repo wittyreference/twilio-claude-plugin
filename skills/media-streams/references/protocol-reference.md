@@ -1,6 +1,6 @@
 ---
-name: "media-streams"
-description: "Twilio development skill: media-streams"
+name: "references"
+description: "Twilio development skill: references"
 ---
 
 # Media Streams WebSocket Protocol Reference

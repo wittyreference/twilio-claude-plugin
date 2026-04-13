@@ -17,7 +17,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 ### Software Tools
 
-- **Voice Intelligence**: Post-call analysis of AI agent interactions. Detect hallucinations, identify conversations where the AI failed to resolve the caller's need, and monitor prompt injection attempts. Essential for AI agent quality assurance at scale.
+- **Conversational Intelligence**: Post-call analysis of AI agent interactions. Detect hallucinations, identify conversations where the AI failed to resolve the caller's need, and monitor prompt injection attempts. Essential for AI agent quality assurance at scale.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Event Streams**: Stream AI agent events for monitoring dashboards. Track conversation duration, escalation rates, and error events across all AI agent sessions.
@@ -46,7 +46,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
   - Gotcha: Use `source_sid` (Recording SID) for Voice Intelligence transcript creation, NOT `media_url`. The Intelligence API cannot authenticate against protected URLs.
 
 - **`<Transcribe>`**: Transcribe AI agent conversations for compliance logging and quality review. ConversationRelay provides real-time transcripts, but `<Transcribe>` creates permanent searchable records.
-  - Prereqs: Voice Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
+  - Prereqs: Conversational Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
 
 - **Voice Insights**: Monitor AI agent call quality — audio issues, latency, dropped calls. Poor audio quality directly degrades AI agent performance because STT accuracy drops.
 
@@ -86,7 +86,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
 
 ### Software Tools
 
-- **Voice Intelligence**: Post-call analysis of third-party AI interactions. Works the same as Use Case 5 — analyze recordings and transcriptions after the call, regardless of which AI platform handled the conversation.
+- **Conversational Intelligence**: Post-call analysis of third-party AI interactions. Works the same as Use Case 5 — analyze recordings and transcriptions after the call, regardless of which AI platform handled the conversation.
   - Prereqs: Intelligence Service SID created in Twilio Console (no API to create — must be manual).
 
 - **Event Streams**: Stream call events for monitoring your AI platform's performance.
@@ -108,7 +108,7 @@ See [SKILL.md](../SKILL.md) for the quick reference table and decision tree. See
   - Gotcha: Use `source_sid` (Recording SID) for Voice Intelligence transcript creation, NOT `media_url`. The Intelligence API cannot authenticate against protected URLs.
 
 - **`<Transcribe>`**: Post-call transcription via Twilio's engine. Your AI platform likely produces its own transcripts, but `<Transcribe>` provides an independent Twilio-side record.
-  - Prereqs: Voice Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
+  - Prereqs: Conversational Intelligence Service SID for advanced features (entity detection, PII redaction). Basic transcription works without it.
 
 - **Voice Insights**: Monitor call quality. Poor audio quality on the Twilio side will degrade your AI platform's STT accuracy — Voice Insights helps isolate whether quality issues are on the Twilio leg or your platform.
 

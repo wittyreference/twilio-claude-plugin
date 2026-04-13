@@ -1,4 +1,9 @@
 ---
+name: "adversarial-review"
+description: "Twilio development skill: adversarial-review"
+---
+
+---
 name: adversarial-review
 description: Four-phase adversarial review — initial expert assessment, isolated advocate + critic, objective arbiter synthesis. Use for technology adoption decisions, architectural changes, process changes, or any decision that benefits from structured debate.
 ---

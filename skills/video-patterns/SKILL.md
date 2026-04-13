@@ -11,13 +11,13 @@ This directory contains Twilio Video API functions for video rooms, token genera
 
 | Function | Access | Purpose |
 |----------|--------|---------|
-| `token.js` | Public* | Generate Video SDK access tokens |
+| `token.js` | Public (auth-gated) | Generate Video SDK access tokens |
 | `callbacks/room-status.protected.js` | Protected | Room and participant status callbacks |
 | `callbacks/recording-status.protected.js` | Protected | Track recording callbacks |
 | `callbacks/composition-status.protected.js` | Protected | Composition callbacks |
 | `callbacks/transcription-status.protected.js` | Protected | Real-time transcription callbacks |
 
-*`token.js` is intentionally public because browser clients cannot generate Twilio request signatures. For production, add application-level auth (API key, session token, CORS).
+`token.js` is public (not `.protected`) because browser clients cannot generate Twilio request signatures. Auth is enforced via `TOKEN_API_KEY` — callers must pass a matching `apiKey` parameter. The endpoint returns 403 if `TOKEN_API_KEY` is not configured.
 
 ## Room Types
 

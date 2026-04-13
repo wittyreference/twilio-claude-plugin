@@ -52,6 +52,15 @@ Evidence date: 2026-03-25. Account prefix: AC... Workspace: WS04a6cec1 (deleted 
 - **Tasks auto-cancel after 1,000 rejections** — If a task cycles through 1,000 reservation rejections, it is automatically canceled. <!-- verified: twilio.com/docs/taskrouter/api/task -->
 - **`page` query param not supported** — Use `PageToken` for pagination. `page` returns error 40153. <!-- verified: twilio.com/docs/taskrouter/api/task -->
 
+### Beyond Platform (Your Responsibility)
+
+These are commonly requested in contact center projects but are **not Twilio features** — they require custom application code:
+
+- **Estimated Wait Time (EWT) announcements** — Twilio provides queue statistics (pending tasks, average service time) via the TaskQueue Statistics API, but does NOT compute or announce EWT. You must: (1) poll `get_queue_statistics` periodically, (2) calculate estimates from historical data, (3) serve announcements via a custom `waitUrl` handler on `<Enqueue>` that fetches the estimate and `<Say>`s it.
+- **CRM screen pops** — Twilio has no CRM integration feature. The pattern is: Voice SDK fires a call event to the agent's browser, your application JavaScript extracts caller info (ANI, task attributes), and opens a CRM URL with pre-filled data. Twilio provides the event; the screen pop is 100% your code. Flex has built-in CRM panels, but custom contact centers must build this.
+- **Workforce dashboards** — Twilio Sync provides real-time data transport (Documents for agent state, Maps for queue metrics), but the dashboard UI, visualization, and aggregation are entirely custom. Use Event Streams for analytics pipeline feeding and Sync for live operational displays.
+- **Genesys Architect equivalent** — TaskRouter Workflows (JSON routing rules) + Twilio Functions (webhook logic). There is no visual flow builder equivalent; Studio exists but Functions are preferred.
+
 ## Quick Decision
 
 | Need | Use | Why |

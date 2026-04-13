@@ -138,6 +138,24 @@ All REST API calls: `https://events.twilio.com/v1/`
 |-----------|----------|-------|
 | `write_key` | Yes | Segment source write key |
 
+### CloudEvents to Segment Spec Field Mapping
+
+When routing Twilio Event Streams to a Segment sink, the CloudEvents envelope maps to Segment track calls:
+
+| CloudEvents Field | Segment Field | Notes |
+|---|---|---|
+| `type` (e.g., `com.twilio.messaging.message.sent`) | `event` | Use the full CloudEvents type as the Segment event name |
+| `data.*` | `properties` | The entire `data` object becomes Segment event properties |
+| `time` (ISO 8601) | `timestamp` | Direct mapping — both use ISO 8601 |
+| `id` | `messageId` | Use as deduplication key — CloudEvents IDs are unique per event |
+| `source` | `context.source_id` | Identifies the Twilio account/resource that emitted the event |
+| `dataschema` | `properties._schema` | Optional — preserves schema version for downstream consumers |
+| `specversion` | (omit) | CloudEvents metadata — not meaningful in Segment context |
+
+**Deduplication**: Use `id` as `messageId` to prevent duplicate processing. Event Streams guarantees at-least-once delivery, so duplicates are expected.
+
+**Identity resolution**: CloudEvents do not include a Segment `userId` or `anonymousId`. Set `anonymousId` to the resource SID (e.g., `CallSid`, `MessageSid`) from `data.*`, or use a Segment Function to resolve identity from your user database.
+
 ## CloudEvents Envelope
 
 Every event is wrapped in a CloudEvents v1.0 envelope:

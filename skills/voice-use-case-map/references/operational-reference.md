@@ -44,7 +44,7 @@ See [SKILL.md](../SKILL.md) for the cross-cutting gotchas summary.
 
 - **STT provider selection**: Google is the default and works best in clean audio environments. Deepgram may perform better in noisy environments or with heavy accents. Specify via the `speechModel` attribute.
 - **Reconnection pattern**: ConversationRelay WebSocket disconnection ends the call. Implement an `action` URL on the `<Connect>` verb to catch disconnections and either reconnect or gracefully end the call.
-- **`intelligenceService` attribute**: Pass the Voice Intelligence Service SID directly in the `<ConversationRelay>` TwiML to enable automatic post-call analysis without separate API calls.
+- **`intelligenceService` attribute**: Pass the Conversational Intelligence Service SID directly in the `<ConversationRelay>` TwiML to enable automatic post-call analysis without separate API calls.
 - **TTS with ElevenLabs**: ElevenLabs is a supported TTS provider. When using it, be aware that text normalization (numbers, abbreviations) may differ from Google. Test with your specific content.
 
 ## Event Streams
@@ -54,11 +54,11 @@ See [SKILL.md](../SKILL.md) for the cross-cutting gotchas summary.
 - **Sink types**: Three options — Webhook (HTTP POST), Kinesis (AWS stream), Segment (customer data platform write key). Choose based on your analytics infrastructure.
 - **Analytics, not real-time state**: Event Streams provides analytics events for dashboards and reporting. Do not use them for real-time call state management — use StatusCallbacks for that.
 
-## Voice Intelligence
+## Conversational Intelligence
 
 - **PII audio redaction**: Audio-level PII redaction (bleeping out sensitive audio) is only available for `en-US`. Text-level PII redaction works for all supported languages.
 - **Dual-channel recording**: Recommended for speaker diarization. Single-channel recordings require the system to guess who is speaking, which reduces accuracy.
-- **Product name**: The product was renamed from "Voice Intelligence" to "Voice Intelligence." API paths still use `intelligence/v2`. Documentation may reference either name.
+- **Product name**: The product was renamed from "Voice Intelligence" to "Conversational Intelligence." API paths still use `intelligence/v2`. Documentation may reference either name.
 
 ## Recording
 

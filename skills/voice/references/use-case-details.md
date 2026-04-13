@@ -135,7 +135,7 @@ AI agents require additional monitoring:
 **Both require:**
 - Recordings (compliance, debugging)
 - Transcriptions (QA, guardrails)
-- Voice Intelligence (entity detection, sentiment)
+- Conversational Intelligence (entity detection, sentiment)
 - Prompt injection monitoring
 - Hallucination detection
 
@@ -151,7 +151,7 @@ Currently less common but increasing. Consider starting with Conference if AI ag
 - AMD critical for efficiency
 - Branded Calling essential for answer rates
 - Voice Insights Reports API for campaign analytics
-- Voice Intelligence for propensity-to-buy signals
+- Conversational Intelligence for propensity-to-buy signals
 
 ## Call Tracking
 
@@ -290,7 +290,7 @@ For outbound calls, implement all four:
 | Batch (Voice Intelligence) | After call | Compliance, QA at scale |
 | Gather speech | During call | Simple intent detection |
 
-**Voice Intelligence features:**
+**Conversational Intelligence features:**
 - Entity detection (competitors, products)
 - Sentiment analysis
 - PII redaction
@@ -313,7 +313,7 @@ Context for what customers are asking for today:
 
 ### Theme 2: Turn Calls Into Actionable Content
 "We have 5,000 years of calls and don't know what's in them"
-→ Recordings, transcriptions, Voice Intelligence
+→ Recordings, transcriptions, Conversational Intelligence
 
 "We want to feed call content to AI/train models"
 → Media Streams, transcription APIs

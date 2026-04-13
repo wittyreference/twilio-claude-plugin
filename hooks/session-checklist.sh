@@ -23,6 +23,35 @@ if [[ "$UNPUSHED" -gt 0 ]]; then
     ITEMS+=("[MANUAL] UNPUSHED: $UNPUSHED commit(s) not pushed to remote")
 fi
 
+# --- 2b. Worktree shipping status ---
+# If session is in a worktree with commits ahead of main, check PR status.
+_SC_GIT_DIR=$(git -C "$PROJECT_ROOT" rev-parse --git-dir 2>/dev/null || echo "")
+if echo "$_SC_GIT_DIR" | grep -q '/worktrees/'; then
+    _SC_BRANCH=$(git -C "$PROJECT_ROOT" branch --show-current 2>/dev/null)
+    if [[ -n "$_SC_BRANCH" ]] && [[ "$_SC_BRANCH" != "main" ]]; then
+        _SC_AHEAD=$(git -C "$PROJECT_ROOT" rev-list --count "$(git -C "$PROJECT_ROOT" merge-base HEAD main 2>/dev/null || echo HEAD)..HEAD" 2>/dev/null || echo "0")
+        if [[ "$_SC_AHEAD" != "0" ]]; then
+            if command -v gh &>/dev/null; then
+                # Network call — timeout after 5s to avoid blocking session exit
+                _SC_PR_JSON=$(timeout 5 gh pr view -H "$_SC_BRANCH" --json state,number 2>/dev/null || echo "")
+                if [[ -z "$_SC_PR_JSON" ]]; then
+                    ITEMS+=("[MANUAL] WORKTREE: $_SC_AHEAD commit(s) on '$_SC_BRANCH' with no PR — run /ship or /push")
+                else
+                    _SC_PR_STATE=$(echo "$_SC_PR_JSON" | jq -r '.state // ""' 2>/dev/null)
+                    _SC_PR_NUM=$(echo "$_SC_PR_JSON" | jq -r '.number // ""' 2>/dev/null)
+                    if [[ "$_SC_PR_STATE" == "OPEN" ]]; then
+                        ITEMS+=("[MANUAL] WORKTREE: PR #$_SC_PR_NUM open but not merged — check CI")
+                    elif [[ "$_SC_PR_STATE" != "MERGED" ]]; then
+                        ITEMS+=("[MANUAL] WORKTREE: PR #$_SC_PR_NUM state=$_SC_PR_STATE — may need attention")
+                    fi
+                fi
+            else
+                ITEMS+=("[MANUAL] WORKTREE: $_SC_AHEAD commit(s) on '$_SC_BRANCH' not on main")
+            fi
+        fi
+    fi
+fi
+
 # --- 3. Learnings freshness ---
 # Check if the learnings file was modified during this session (within last 4 hours)
 if [[ -f "$CLAUDE_LEARNINGS" ]]; then

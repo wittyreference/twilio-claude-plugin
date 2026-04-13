@@ -67,17 +67,14 @@ A central coordinator manages the workflow, invoking specialists in sequence.
 
 ### Structure
 
-```
-                    ┌─────────────┐
-                    │  Claude Code │
-                    │  (sequencer) │
-                    └──────┬──────┘
-                           │
-     ┌─────────┬───────────┼───────────┬─────────┐
-     ▼         ▼           ▼           ▼         ▼
-┌─────────┐ ┌─────┐ ┌──────────┐ ┌─────┐ ┌────────┐
-│/architect│ │/spec│ │/test-gen │ │/dev │ │/review │
-└─────────┘ └─────┘ └──────────┘ └─────┘ └────────┘
+```mermaid
+graph TD
+    CC["Claude Code\n(sequencer)"]
+    CC --> A["/architect"]
+    CC --> S["/spec"]
+    CC --> T["/test-gen"]
+    CC --> D["/dev"]
+    CC --> R["/review"]
 ```
 
 ### When to Use
@@ -140,16 +137,12 @@ Agents work in parallel on related but independent tasks. For true parallel coor
 
 ### Structure
 
-```
-        ┌─────────────┐
-        │    User     │
-        └──────┬──────┘
-               │
-       ┌───────┴───────┐
-       ▼               ▼
-  ┌─────────┐    ┌─────────┐
-  │ Agent A │◄──►│ Agent B │
-  └─────────┘    └─────────┘
+```mermaid
+graph TD
+    U["User"]
+    U --> A["Agent A"]
+    U --> B["Agent B"]
+    A <--> B
 ```
 
 ### When to Use
@@ -203,22 +196,20 @@ A lead agent delegates to sub-agents, which may further delegate.
 
 ### Structure
 
-```
-              ┌──────────────┐
-              │  Lead Agent  │
-              │  /architect  │
-              └───────┬──────┘
-                      │
-        ┌─────────────┼─────────────┐
-        ▼             ▼             ▼
-   ┌─────────┐   ┌─────────┐   ┌─────────┐
-   │  Voice  │   │   SMS   │   │ Verify  │
-   │  Team   │   │  Team   │   │  Team   │
-   └────┬────┘   └────┬────┘   └────┬────┘
-        │             │             │
-     ┌──┴──┐       ┌──┴──┐       ┌──┴──┐
-     ▼     ▼       ▼     ▼       ▼     ▼
-   /spec  /dev   /spec  /dev   /spec  /dev
+```mermaid
+graph TD
+    LA["Lead Agent\n/architect"]
+    VT["Voice Team"]
+    ST["SMS Team"]
+    VFT["Verify Team"]
+
+    LA --> VT
+    LA --> ST
+    LA --> VFT
+
+    VT --> VS["/spec"] & VD["/dev"]
+    ST --> SS["/spec "] & SD["/dev "]
+    VFT --> VFS["/spec  "] & VFD["/dev  "]
 ```
 
 ### When to Use
@@ -278,17 +269,11 @@ An evaluator agent assesses work quality against standards.
 
 ### Structure
 
-```
-┌─────────┐     ┌───────────┐     ┌──────────┐
-│Producer │────►│ Evaluator │────►│ Decision │
-│  /dev   │     │  /review  │     │PASS/FAIL │
-└─────────┘     └───────────┘     └──────────┘
-                      │
-                      ▼
-               ┌────────────┐
-               │ Feedback   │
-               │ Loop       │
-               └────────────┘
+```mermaid
+graph LR
+    P["Producer\n/dev"] --> E["Evaluator\n/review"] --> D["Decision\nPASS/FAIL"]
+    E --> F["Feedback Loop"]
+    F -.-> P
 ```
 
 ### When to Use
@@ -330,20 +315,15 @@ Real parallel coordination with inter-agent messaging. Unlike subagents (which s
 
 ### Structure
 
-```
-              ┌──────────────┐
-              │   Lead Agent │
-              │  (delegate   │
-              │    mode)     │
-              └───────┬──────┘
-                      │ shared task list
-        ┌─────────────┼─────────────┐
-        ▼             ▼             ▼
-   ┌─────────┐  ┌─────────┐  ┌─────────┐
-   │Teammate │◄►│Teammate │◄►│Teammate │
-   │    A    │  │    B    │  │    C    │
-   └─────────┘  └─────────┘  └─────────┘
-        ◄── direct messaging ──►
+```mermaid
+graph TD
+    LA["Lead Agent\n(delegate mode)"]
+    LA -- "shared task list" --> A["Teammate A"]
+    LA -- "shared task list" --> B["Teammate B"]
+    LA -- "shared task list" --> C["Teammate C"]
+    A <-- "direct messaging" --> B
+    B <-- "direct messaging" --> C
+    A <-- "direct messaging" --> C
 ```
 
 ### When to Use
@@ -429,11 +409,14 @@ Is work sequential with clear phases?
 
 Twilio webhooks naturally follow orchestrator pattern:
 
-```
-Incoming Call → IVR Menu → Gather Input → Route Call → Record → Hangup
-     │              │            │            │           │
-     ▼              ▼            ▼            ▼           ▼
-  Handler 1    Handler 2    Handler 3    Handler 4   Handler 5
+```mermaid
+graph LR
+    IC["Incoming Call"] --> IVR["IVR Menu"] --> GI["Gather Input"] --> RC["Route Call"] --> REC["Record"] --> HU["Hangup"]
+    IC -.-> H1["Handler 1"]
+    IVR -.-> H2["Handler 2"]
+    GI -.-> H3["Handler 3"]
+    RC -.-> H4["Handler 4"]
+    REC -.-> H5["Handler 5"]
 ```
 
 Each handler is a function that passes control to the next via TwiML action URLs.
@@ -442,18 +425,11 @@ Each handler is a function that passes control to the next via TwiML action URLs
 
 ConversationRelay and real-time features benefit from peer coordination:
 
-```
-┌─────────────────┐     ┌─────────────────┐
-│  Voice Handler  │◄───►│  WebSocket AI   │
-│  (TwiML setup)  │     │  (LLM backend)  │
-└─────────────────┘     └─────────────────┘
-         │                       │
-         └───────────┬───────────┘
-                     ▼
-              ┌─────────────┐
-              │ Shared State│
-              │  (context)  │
-              └─────────────┘
+```mermaid
+graph TD
+    VH["Voice Handler\n(TwiML setup)"] <--> WS["WebSocket AI\n(LLM backend)"]
+    VH --> SS["Shared State\n(context)"]
+    WS --> SS
 ```
 
 ### Multi-Channel = Hierarchical

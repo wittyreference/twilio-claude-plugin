@@ -196,7 +196,7 @@ The `DisasterRecoveryUrl` is a trunk-level webhook fallback invoked when all ori
 
 **Trigger conditions** — the DR URL is invoked when:
 - All origination URLs are unreachable (connection timeout, connection refused, DNS resolution failure)
-- All origination URLs return SIP 5xx server errors
+- All origination URLs are unreachable or return server errors (5xx, timeouts, connection refused, DNS failure)
 - No origination URLs are configured on the trunk
 - All origination URLs are disabled (`enabled: false`)
 

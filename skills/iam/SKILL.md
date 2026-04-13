@@ -160,7 +160,7 @@ Permissions follow the pattern `/twilio/{product}/{resource}/{action}`:
 
 Invalid permission paths return error 70002: `"assertion '/twilio/fakepermission/doesnotexist' is invalid"`.
 
-Supported products: Studio, Voice, Voice Intelligence, Voice Insights, SIP, Messaging, Phone Numbers, Regulatory Compliance, TaskRouter, Monitor, Lookup, Verify, Video, Event Streams, Usage Records, Serverless, IAM, Flex (private beta).
+Supported products: Studio, Voice, Conversational Intelligence, Voice Insights, SIP, Messaging, Phone Numbers, Regulatory Compliance, TaskRouter, Monitor, Lookup, Verify, Video, Event Streams, Usage Records, Serverless, IAM, Flex (private beta).
 
 ## Test Credentials
 

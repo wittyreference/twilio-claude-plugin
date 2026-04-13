@@ -344,13 +344,25 @@ exports.handler = function (context, event, callback) {
 
 19. **Error response format varies**: Some endpoints return `{ errors: [{ message, field, help }] }` while others return `{ error: "string" }`. The SDK normalizes these into `error.response.body.errors` but direct REST callers should handle both shapes.
 
-20. **`413 Payload Too Large` has no helpful message**: Exceeding the 30MB attachment limit returns `413` with no body. The error is not in the `errors` array format — it's just an empty response with the status code.
+20. **`413 Payload Too Large` returns nginx HTML**: Exceeding the 30MB attachment limit returns `413` with nginx's default HTML error page (`text/html`), not a JSON error body. Check Content-Type before parsing. See also gotcha #23.
 
 ### Suppressions
 
 21. **Suppressions are global by default**: If a recipient bounces or reports spam on any email from your account, they are suppressed from all future sends — not just from the category/group that triggered it. Use ASM suppression groups to scope unsubscribes to specific email types.
 
 22. **Removing a suppression does not guarantee delivery**: Deleting a bounce record lets you attempt to send again, but the underlying deliverability issue (invalid mailbox, full inbox) likely persists. Re-sending to hard bounces damages your sender reputation.
+
+### Live Validation Discoveries
+
+23. **`413 Payload Too Large` returns nginx HTML, not an empty body**: Exceeding the 30MB limit returns nginx's default `<h1>413 Request Entity Too Large</h1>` HTML page. Content-Type is `text/html`, not JSON. Error handling must check Content-Type before attempting `JSON.parse()`.
+
+24. **Sandbox mode returns `200`, not `202`**: Real sends return `202 Accepted` (queued). Sandbox mode returns `200 OK` (validated). Don't use status code alone to distinguish sandbox from production behavior.
+
+25. **Webhook URL must be HTTPS even when disabled**: `PATCH /v3/user/webhooks/event/settings` with `enabled: false` and an empty URL returns "webhook url must use https". Must set a dummy HTTPS URL even to disable the webhook.
+
+26. **`sg_event_id` is base64-encoded structured data**: Decodes to something like `bounce-0-82866599-iqx_SgInRC-5ZrHjhmaFZQ-0`. Can be used opaque for deduplication or decoded for event type extraction.
+
+27. **Domain Authentication API returns stale entries**: `GET /v3/whitelabel/domains` includes invalid old entries alongside valid ones. Must filter by `valid: true` to get only currently authenticated domains.
 
 ---
 
@@ -374,9 +386,12 @@ SendGrid is Twilio's email delivery engine. Other Twilio products reference emai
 | Product | Role with Email | Sends email? | Skill |
 |---------|----------------|--------------|-------|
 | **SendGrid** (this skill) | Delivers transactional + bulk email, templates, webhooks, Inbound Parse | Yes | this file |
+| **Conversations v2** (Maestro) | Tracks EMAIL as a channel type — participants, communications, capture rules | No — logs/tracks only | `/skills/conversations-v2/SKILL.md` |
 | **Verify** | Sends OTP codes via `channel: 'email'` | Delegates to SendGrid via Mailer config | `/skills/verify/SKILL.md` |
+| **Sierra** (unified stack) | EMAIL communications flow through Maestro into Memory + Intelligence pipelines | No — orchestrates only | `/skills/sierra/SKILL.md` |
 
 **If you need to send email**: use this skill (SendGrid API).
+**If you need to track email in omnichannel conversations**: use Conversations v2 for tracking, SendGrid for delivery.
 **If you need email OTP verification**: use Verify (which uses SendGrid under the hood — configure a Mailer on the Verify Service).
 
 ---
@@ -386,6 +401,8 @@ SendGrid is Twilio's email delivery engine. Other Twilio products reference emai
 | Resource | Path | When to use |
 |----------|------|-------------|
 | Verify skill | `/skills/verify/SKILL.md` | SendGrid is the email channel provider for Twilio Verify email OTPs |
+| Conversations v2 skill | `/skills/conversations-v2/SKILL.md` | EMAIL channel tracking in omnichannel conversations |
+| Sierra skill | `/skills/sierra/SKILL.md` | Full Maestro + Memory + Intelligence pipeline with email |
 | Twilio CLI guide | `/skills/twilio-cli/SKILL.md` | For deploying functions that use SendGrid |
 | SendGrid Node.js SDK | npm `@sendgrid/mail` (v8.x) | Primary SDK for email operations |
 | SendGrid Client SDK | npm `@sendgrid/client` (v8.x) | For non-mail endpoints (batch IDs, suppressions, templates) |

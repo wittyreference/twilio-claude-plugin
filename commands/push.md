@@ -133,6 +133,8 @@ Commits:
 - <sha> <message>
 
 Total: <count> commits
+
+In a worktree? Use /ship next time to handle commit → PR → merge → worktree exit in one step.
 ```
 
 ## Push Target
