@@ -101,12 +101,12 @@ if [[ -x "$DRIFT_SCRIPT" ]] && command -v jq &>/dev/null; then
 fi
 
 # --- 8. Pending learning exercises ---
-    EXERCISE_FILE="$CLAUDE_LEARNING_DIR/exercises.md"
-    if [ -f "$EXERCISE_FILE" ]; then
-        EXERCISE_COUNT=$(grep -c '^## ' "$EXERCISE_FILE" 2>/dev/null) || EXERCISE_COUNT=0
-        if [[ "$EXERCISE_COUNT" -gt 0 ]]; then
-            ITEMS+=("[MANUAL] LEARNING: $EXERCISE_COUNT exercise(s) pending — use /learn to build comprehension of autonomous work")
-        fi
+CLAUDE_LEARNING_DIR="${CLAUDE_LEARNING_DIR:-$PROJECT_ROOT/.claude/learning}"
+EXERCISE_FILE="$CLAUDE_LEARNING_DIR/exercises.md"
+if [ -f "$EXERCISE_FILE" ]; then
+    EXERCISE_COUNT=$(grep -c '^## ' "$EXERCISE_FILE" 2>/dev/null) || EXERCISE_COUNT=0
+    if [[ "$EXERCISE_COUNT" -gt 0 ]]; then
+        ITEMS+=("[MANUAL] LEARNING: $EXERCISE_COUNT exercise(s) pending — use /learn to build comprehension of autonomous work")
     fi
 fi
 
@@ -119,16 +119,15 @@ if [[ -f "$MEMORY_FILE" ]]; then
     fi
 fi
 
-# --- 10. Architect summary drift check (meta mode only) ---
+# --- 10. Architect summary drift check ---
 ARCHITECT_METRICS="$PROJECT_ROOT/scripts/architect-metrics.sh"
-    ARCHITECT_SNAPSHOT="$CLAUDE_META_DIR/architect-metrics.json"
-    if [[ -f "$ARCHITECT_SNAPSHOT" ]]; then
-        DRIFT_OUTPUT=$("$ARCHITECT_METRICS" --diff "$ARCHITECT_SNAPSHOT" 2>/dev/null) && DRIFT_RC=0 || DRIFT_RC=$?
-        if [[ $DRIFT_RC -ne 0 ]]; then
-            DRIFT_ITEMS=$(echo "$DRIFT_OUTPUT" | grep '^ *-' | sed 's/^ *- //' | paste -sd', ' -)
-            if [[ -n "$DRIFT_ITEMS" ]]; then
-                ITEMS+=("[AUTO] ARCHITECT: Summary drift ($DRIFT_ITEMS) — /wrap-up step 7b handles this")
-            fi
+ARCHITECT_SNAPSHOT="$PROJECT_ROOT/.claude/architect-metrics.json"
+if [[ -f "$ARCHITECT_SNAPSHOT" ]] && [[ -x "$ARCHITECT_METRICS" ]]; then
+    DRIFT_OUTPUT=$("$ARCHITECT_METRICS" --diff "$ARCHITECT_SNAPSHOT" 2>/dev/null) && DRIFT_RC=0 || DRIFT_RC=$?
+    if [[ $DRIFT_RC -ne 0 ]]; then
+        DRIFT_ITEMS=$(echo "$DRIFT_OUTPUT" | grep '^ *-' | sed 's/^ *- //' | paste -sd', ' -)
+        if [[ -n "$DRIFT_ITEMS" ]]; then
+            ITEMS+=("[AUTO] ARCHITECT: Summary drift ($DRIFT_ITEMS)")
         fi
     fi
 fi
@@ -142,12 +141,12 @@ if [[ -x "$README_DRIFT_SCRIPT" ]]; then
     fi
 fi
 
-# --- 13. Value leakage candidates (meta mode only) ---
-    if [ -f "$PENDING_FILE" ]; then
-        VALUE_COUNT=$(grep -c '"reviewed":false' "$PENDING_FILE" 2>/dev/null) || VALUE_COUNT=0
-        if [[ "$VALUE_COUNT" -gt 0 ]]; then
-            ITEMS+=("[MANUAL] VALUE: $VALUE_COUNT file(s) not in any sync map — /wrap-up will review (or run /value-audit)")
-        fi
+# --- 13. Value leakage candidates ---
+PENDING_FILE="${PENDING_FILE:-$PROJECT_ROOT/.claude/value-audit/pending.jsonl}"
+if [ -f "$PENDING_FILE" ]; then
+    VALUE_COUNT=$(grep -c '"reviewed":false' "$PENDING_FILE" 2>/dev/null) || VALUE_COUNT=0
+    if [[ "$VALUE_COUNT" -gt 0 ]]; then
+        ITEMS+=("[MANUAL] VALUE: $VALUE_COUNT file(s) not in any sync map — run /value-audit to review")
     fi
 fi
 

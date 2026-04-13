@@ -42,10 +42,6 @@ emit_event "permission_denied" "$(jq -nc \
 # --- Retry logic for Write/Edit denials on known-safe paths ---
 if [[ "$TOOL_NAME" == "Write" || "$TOOL_NAME" == "Edit" ]] && [ -n "$FILE_PATH" ]; then
     case "$FILE_PATH" in
-        # Meta-development files
-            echo '{"retry": true}'
-            exit 0
-            ;;
         # Plan files
         "$HOME/.claude/plans/"*)
             echo '{"retry": true}'
